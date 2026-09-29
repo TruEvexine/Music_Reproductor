@@ -1,3 +1,5 @@
+# Creado por Rogelio Emmanuel Ceja Acosta
+
 # Music Reproductor
 
 Reproductor web local construido con Vite, React y TypeScript. La biblioteca combina las canciones de demo incluidas al compilar el proyecto con archivos que se importan desde el navegador.
