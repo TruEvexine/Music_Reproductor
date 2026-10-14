@@ -8,3 +8,11 @@ dist/
 .idea/
 coverage/
 *.log
+
+# Audio de prueba local: nunca se versiona (copyright y peso)
+src/assets/music/*
+!src/assets/music/README.md
+
+# Archivos generados por la CLI de Supabase (contienen refs del proyecto)
+supabase/.temp/
+supabase/.branches/
