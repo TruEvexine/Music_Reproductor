@@ -27,4 +27,22 @@ export interface SecureStore {
   removeItem(key: string): Promise<void>;
 }
 
+/**
+ * Integración con el sistema: pantalla de bloqueo, notificación de medios y botones de auriculares.
+ * Web: Media Session API. Nativo: además debe mantener la reproducción viva en segundo plano
+ * (Android: servicio en primer plano mediaPlayback; iOS: modo de fondo de audio).
+ */
+export interface AudioSession {
+  setHandlers(handlers: {
+    play(): void;
+    pause(): void;
+    next(): void;
+    previous(): void;
+    seekTo(position: number): void;
+    seekBy(seconds: number): void;
+  }): void;
+  setTrack(track: { title: string; artist: string; album: string; artworkUrl?: string } | null): void;
+  setState(state: { playing: boolean; position: number; duration: number }): void;
+}
+
 export type Target = "web" | "android" | "ios";

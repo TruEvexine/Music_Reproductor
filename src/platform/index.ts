@@ -6,4 +6,4 @@ import type { Target } from "./types";
 export const target: Target = (import.meta.env.VITE_TARGET as Target | undefined) ?? "web";
 export const isNative = target !== "web";
 
-export { connectivity, storage } from "./web";
+export { audioSession, connectivity, storage } from "./web";

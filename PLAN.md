@@ -1,6 +1,6 @@
 # PLAN.md — Plan maestro del reproductor
 
-> **Última actualización:** 2026-11-10 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase compartido, hosting en Vercel). **Fases 0 y 1 completas; siguiente: Fase 2 (motor de audio).**
+> **Última actualización:** 2026-11-10 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase compartido, hosting en Vercel). **Fases 0, 1 y 2 completas; siguiente: Fase 3 (biblioteca local).**
 > **Rama de trabajo:** `desarrollo` (nunca `main`). Pendientes del usuario: `DECISIONES_PENDIENTES.md`. Auditoría de diseño: `docs/AUDITORIA_DISENO.md`. Arquitectura de apps: `docs/ARQUITECTURA_APP.md`.
 > **Este documento manda.** Si contradice a `DESIGN.md`, `AGENTS.md`, `SUPABASE.md` o al README, gana este archivo hasta que esos documentos se actualicen (tarea de la Fase 1).
 > **Antes de escribir código:** leer `SECURITY_AUDIT.md` y completar la **Fase 0**. Es bloqueante.
@@ -389,11 +389,26 @@ Límites conocidos de la Fase 1 (se resuelven en la fase indicada):
 - Landing sin prerender ni SEO (Fase 7).
 
 ### Fase 2 — Motor de audio
-- [ ] Volumen + mute, shuffle (sin repetir hasta agotar), anterior reinicia si > 3 s
-- [ ] Grafo Web Audio (§3.3), dos `<audio>` con precarga y crossfade configurable
-- [ ] Media Session completa
-- [ ] ReplayGain, temporizador de apagado
-- [ ] Atajos de teclado
+- [x] Volumen + silencio (por Web Audio, también válido en iOS), aleatorio sin repetir hasta agotar la cola, anterior reinicia si pasaron > 3 s — 2026-11-10
+- [x] Grafo Web Audio (§3.3): dos `<audio>`, ReplayGain, preamp automático, EQ de 10 bandas, limitador y analizador; precarga de la siguiente pista (gapless aproximado) y crossfade 0–12 s — 2026-11-10
+- [x] Media Session (frontera `AudioSession`, `src/platform/web`): metadatos, portada, estado y posición, play/pausa/anterior/siguiente/seek — 2026-11-10
+- [x] ReplayGain por pista o álbum leído de las etiquetas; sin etiqueta no se toca — 2026-11-10
+- [x] Temporizador de apagado (15/30/60 min o al terminar la canción) con fundido final de 5 s — 2026-11-10
+- [x] Atajos: Espacio, ←/→ ±5 s, Mayús+←/→ anterior/siguiente, ↑/↓ volumen, M, S, R, Q. No actúan con diálogos o campos de texto enfocados — 2026-11-10
+- [x] Ecualizador con preajustes y bandas editables, ajustes de audio persistentes en IndexedDB — 2026-11-10
+
+Verificado con `node scripts/prueba-audio.mjs` (19 comprobaciones en Chromium con tonos sintéticos): reproducir, avance real del tiempo, pausa/reanudar, fin de pista, repetir pista, anterior/siguiente, seek, volumen, silencio, EQ y crossfade persistentes, crossfade efectivo, archivo corrupto, temporizador y restauración de sesión. 47 tests unitarios en `core`.
+
+Skills aplicadas: ponytail (un solo motor con dos decks, ajustes como datos puros, sin librería de audio), source-driven-development (Media Session y Web Audio con APIs estándar), design-motion-principles (sin animación en el transporte).
+
+Límites conocidos de la Fase 2:
+- **No verificado a oído ni en dispositivo:** la prueba comprueba el comportamiento (estado, tiempos, títulos), no la calidad del sonido. El efecto real del EQ y la ausencia de clics en el crossfade requieren escucharlos.
+- **Media Session no se puede comprobar en Chromium sin interfaz**: está implementada con la API estándar pero falta probarla en pantalla de bloqueo y con auriculares en un móvil real.
+- **ReplayGain** solo tiene test unitario del cálculo; no hay fixture con etiquetas `REPLAYGAIN_*`.
+- **Gapless exacto no se promete:** con dos `<audio>` el hueco depende del navegador (documentado en §3.3).
+- **Modo Ritmo:** el analizador existe (`player.analyser()`) pero aún no hay fondo que lo use (Fase 4).
+- Audio en segundo plano con la pantalla apagada en móvil: en la web depende del navegador; la garantía real llega con la app nativa (Fase 11).
+- Sin ayuda de atajos visible (`?`); entra en la Fase 5.
 
 ### Fase 3 — Biblioteca local
 - [ ] Abrir carpetas (File System Access + fallback `webkitdirectory` + arrastrar carpeta)

@@ -18,6 +18,8 @@ export type TrackMetadata = Pick<
   | "bitsPerSample"
   | "codec"
   | "lossless"
+  | "gainTrackDb"
+  | "gainAlbumDb"
 >;
 
 const MAX_COVER_BYTES = 12 * 1024 * 1024;
@@ -55,6 +57,8 @@ export async function readTrackMetadata(fileName: string, source: Blob | string)
     bitsPerSample: positive(metadata.format.bitsPerSample),
     codec: metadata.format.codec,
     lossless: metadata.format.lossless,
+    gainTrackDb: tags.replaygain_track_gain?.dB,
+    gainAlbumDb: tags.replaygain_album_gain?.dB,
   };
 }
 

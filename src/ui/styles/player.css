@@ -329,3 +329,59 @@
     animation: none;
   }
 }
+
+/* Volumen (solo en la barra de escritorio: en móvil mandan los botones del dispositivo) */
+.volume {
+  display: flex;
+  align-items: center;
+}
+
+.volume input,
+.eq-band input {
+  appearance: none;
+  background: none;
+  cursor: pointer;
+}
+
+.volume input {
+  width: 96px;
+  height: var(--tap);
+  margin: 0;
+}
+
+.volume input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--ink-2) var(--progress, 0%), var(--surface-3) var(--progress, 0%));
+}
+
+.volume input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.volume input::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--ink-2);
+}
+
+.volume input::-webkit-slider-thumb,
+.eq-band input::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.volume input::-moz-range-thumb,
+.eq-band input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}

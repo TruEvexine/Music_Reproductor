@@ -20,6 +20,7 @@ import { useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
 import { Cover, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
+import { SettingsButton, VolumeControl } from "./Settings";
 
 export function useCurrentTrack(): Track | undefined {
   const current = usePlayer((state) => state.queue.current);
@@ -91,7 +92,7 @@ function Seek() {
 }
 
 /** Barra persistente: mini reproductor en móvil, barra completa en escritorio. */
-export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
+export function PlayerBar({ onSettings, queueOpen }: { onSettings: () => void; queueOpen: boolean }) {
   const track = useCurrentTrack();
   const isPlaying = usePlayer((state) => state.isPlaying);
   const progress = usePlayer((state) => (state.duration > 0 ? (state.position / state.duration) * 100 : 0));
@@ -120,6 +121,8 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
       </div>
       <div className="bar-end">
         <span className="quality">{qualityLabel(track)}</span>
+        <VolumeControl />
+        <SettingsButton onOpen={onSettings} />
         <IconButton
           aria-expanded={queueOpen}
           className={queueOpen ? "is-on" : ""}

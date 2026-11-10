@@ -19,6 +19,9 @@ export interface Track {
   bitsPerSample?: number;
   codec?: string;
   lossless?: boolean;
+  /** ReplayGain leído de los tags, en dB. */
+  gainTrackDb?: number;
+  gainAlbumDb?: number;
   metadataStatus: MetadataStatus;
   /** El navegador no pudo decodificarla: se muestra marcada y se salta. */
   unplayable?: boolean;
