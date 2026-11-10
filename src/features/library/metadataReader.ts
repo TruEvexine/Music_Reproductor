@@ -1,3 +1,4 @@
+import { safeCoverMime } from "../../core/coverMime";
 import type { Track } from "./model/Track";
 
 export interface TrackMetadata {
@@ -44,19 +45,15 @@ export async function readTrackMetadata(
         })();
     const tags = metadata.common;
     const picture = selectCover(tags.picture);
+    const coverType = safeCoverMime(picture?.format);
     const coverBytes =
-      picture && picture.data.byteLength <= 12 * 1024 * 1024
+      picture && coverType && picture.data.byteLength <= 12 * 1024 * 1024
         ? new Uint8Array(picture.data.byteLength)
         : undefined;
     if (coverBytes && picture) coverBytes.set(picture.data);
-    const coverUrl =
-      picture && coverBytes
-        ? URL.createObjectURL(
-            new Blob([coverBytes.buffer], {
-              type: picture.format || "image/jpeg",
-            }),
-          )
-        : undefined;
+    const coverUrl = coverBytes
+      ? URL.createObjectURL(new Blob([coverBytes.buffer], { type: coverType }))
+      : undefined;
     const trackNumber = positiveNumber(tags.track.no ?? undefined);
     const duration = positiveNumber(metadata.format.duration);
     const bitrate = positiveNumber(metadata.format.bitrate);

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { createAttemptLimiter, SIGN_UP_SENT, signInMessage, signUpMessage } from "../../core/authMessages";
 import { supabase, supabaseConfigured } from "./supabaseClient";
+
+const signInLimiter = createAttemptLimiter();
 
 export type AuthMode = "sign-in" | "sign-up";
 export type DatabaseConnectionState =
@@ -34,13 +37,9 @@ export function useAuthController() {
         if (error) throw error;
         if (active) setSession(sessionData.session);
       })
-      .catch((error: unknown) => {
+      .catch(() => {
         if (active) {
-          setAuthError(
-            error instanceof Error
-              ? error.message
-              : "No se pudo comprobar la sesión de Supabase.",
-          );
+          setAuthError("No se pudo comprobar la sesión.");
         }
       });
 
@@ -69,7 +68,7 @@ export function useAuthController() {
         if (!active) return;
         if (error) {
           setDatabaseState("error");
-          setDatabaseError(error.message);
+          setDatabaseError("No se pudo leer tu perfil. Inténtalo más tarde.");
           return;
         }
         setDatabaseState("connected");
@@ -83,6 +82,11 @@ export function useAuthController() {
   const signIn = useCallback(async (email: string, password: string) => {
     if (!supabase) return;
 
+    const wait = signInLimiter.waitSeconds();
+    if (wait > 0) {
+      setAuthError(`Demasiados intentos. Espera ${wait} s y vuelve a probar.`);
+      return;
+    }
     setIsSubmitting(true);
     setAuthError(null);
     setAuthNotice(null);
@@ -92,10 +96,10 @@ export function useAuthController() {
         password,
       });
       if (error) throw error;
+      signInLimiter.succeed();
     } catch (error: unknown) {
-      setAuthError(
-        error instanceof Error ? error.message : "No se pudo iniciar sesión.",
-      );
+      signInLimiter.fail();
+      setAuthError(signInMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -115,15 +119,11 @@ export function useAuthController() {
           options: { data: { display_name: displayName } },
         });
         if (error) throw error;
-        if (!data.session) {
-          setAuthNotice(
-            "Cuenta creada. Revisa tu correo para confirmar el registro.",
-          );
-        }
+        if (!data.session) setAuthNotice(SIGN_UP_SENT);
       } catch (error: unknown) {
-        setAuthError(
-          error instanceof Error ? error.message : "No se pudo crear la cuenta.",
-        );
+        const message = signUpMessage(error);
+        setAuthError(message.error ?? null);
+        setAuthNotice(message.notice ?? null);
       } finally {
         setIsSubmitting(false);
       }
@@ -136,7 +136,7 @@ export function useAuthController() {
 
     setAuthError(null);
     const { error } = await supabase.auth.signOut();
-    if (error) setAuthError(error.message);
+    if (error) setAuthError("No se pudo cerrar la sesión.");
   }, []);
 
   const clearAuthMessages = useCallback(() => {
