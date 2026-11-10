@@ -1,0 +1,73 @@
+// Genera audio SINTÉTICO (tonos) para pruebas en tests/fixtures/audio/ (ignorado por git).
+// WAV se escribe en Node puro; los demás formatos y las portadas requieren ffmpeg en el PATH (opcional).
+import { execFileSync } from "node:child_process";
+import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
+
+const out = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
+mkdirSync(out, { recursive: true });
+
+function wav(file, freq, seconds, rate = 44100) {
+  const n = rate * seconds;
+  const buf = Buffer.alloc(44 + n * 2);
+  buf.write("RIFF", 0);
+  buf.writeUInt32LE(36 + n * 2, 4);
+  buf.write("WAVEfmt ", 8);
+  buf.writeUInt32LE(16, 16);
+  buf.writeUInt16LE(1, 20); // PCM
+  buf.writeUInt16LE(1, 22); // mono
+  buf.writeUInt32LE(rate, 24);
+  buf.writeUInt32LE(rate * 2, 28);
+  buf.writeUInt16LE(2, 32);
+  buf.writeUInt16LE(16, 34);
+  buf.write("data", 36);
+  buf.writeUInt32LE(n * 2, 40);
+  for (let i = 0; i < n; i++) {
+    buf.writeInt16LE(Math.round(Math.sin((2 * Math.PI * freq * i) / rate) * 9000), 44 + i * 2);
+  }
+  writeFileSync(join(out, file), buf);
+}
+
+wav("tono-sin-metadatos.wav", 330, 4);
+wav("tono-corto.wav", 523, 2);
+writeFileSync(join(out, "corrupto.mp3"), Buffer.from("esto no es audio ".repeat(200)));
+
+let hasFfmpeg = true;
+try {
+  execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
+} catch {
+  hasFfmpeg = false;
+  console.log("ffmpeg no encontrado: solo se generaron WAV y el archivo corrupto.");
+}
+
+if (hasFfmpeg) {
+  const ff = (args) => execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...args], { stdio: "inherit" });
+  // [archivo, título, artista, álbum, nº, año, género, freq, seg, colores de portada, args de códec]
+  const tracks = [
+    ["01-amanecer.flac", "Amanecer en La", "Los Osciladores", "Ondas Puras", 1, 2024, "Electrónica", 440, 8, ["#c2410c", "#1e3a8a"], ["-c:a", "flac"]],
+    ["02-marea.flac", "Marea de Fase", "Los Osciladores", "Ondas Puras", 2, 2024, "Electrónica", 392, 6, ["#c2410c", "#1e3a8a"], ["-c:a", "flac"]],
+    ["03-hires.flac", "Noventa y Seis Mil", "Cuarteto Nyquist", "Alta Resolución", 1, 2025, "Ambient", 261, 6, ["#0f766e", "#022c22"], ["-c:a", "flac", "-sample_fmt", "s32", "-bits_per_raw_sample", "24", "-ar", "96000"]],
+    ["04-senoidal.mp3", "Senoidal Nocturna", "Ana Armónica", "Frecuencias", 1, 2023, "Pop", 349, 7, ["#be185d", "#312e81"], ["-c:a", "libmp3lame", "-b:a", "320k", "-id3v2_version", "3"]],
+    ["05-titulo-largo.mp3", "Un Título Deliberadamente Larguísimo Para Probar el Truncamiento en Pantallas Pequeñas", "Ana Armónica con la Orquesta Sinfónica de Pruebas", "Frecuencias", 2, 2023, "Pop", 294, 5, ["#be185d", "#312e81"], ["-c:a", "libmp3lame", "-b:a", "192k", "-id3v2_version", "3"]],
+    ["06-cuadrada.m4a", "Onda Cuadrada", "Ñandú Eléctrico", "Canción de Prueba", 1, 2022, "Rock", 220, 6, ["#ca8a04", "#431407"], ["-c:a", "aac", "-b:a", "256k"]],
+    ["07-opus.opus", "Códec Abierto", "Ñandú Eléctrico", "Canción de Prueba", 2, 2022, "Rock", 587, 5, null, ["-c:a", "libopus", "-b:a", "128k"]],
+    ["08-vorbis.ogg", "Vorbis Vespertino", "Cuarteto Nyquist", "Alta Resolución", 2, 2025, "Ambient", 466, 5, null, ["-c:a", "libvorbis"]],
+    ["09-sin-portada.flac", "Sin Portada", "Anónimo", "", 0, 0, "", 311, 4, null, ["-c:a", "flac"]],
+  ];
+  for (const [file, title, artist, album, no, year, genre, freq, sec, colors, codec] of tracks) {
+    const target = join(out, file);
+    if (existsSync(target)) continue;
+    const meta = [["title", title], ["artist", artist], ["album", album], ["track", no], ["date", year], ["genre", genre]]
+      .filter(([, v]) => v)
+      .flatMap(([k, v]) => ["-metadata", `${k}=${v}`]);
+    const audio = ["-f", "lavfi", "-i", `sine=frequency=${freq}:duration=${sec}`];
+    if (colors) {
+      const cover = join(out, `${file}.png`);
+      ff(["-f", "lavfi", "-i", `gradients=s=600x600:c0=${colors[0]}:c1=${colors[1]}:x0=0:y0=0:x1=600:y1=600`, "-frames:v", "1", cover]);
+      ff([...audio, "-i", cover, "-map", "0:a", "-map", "1:v", ...codec, "-c:v", "png", "-disposition:v", "attached_pic", ...meta, target]);
+    } else {
+      ff([...audio, ...codec, ...meta, target]);
+    }
+  }
+}
+console.log(`Audio sintético listo en ${out}`);
