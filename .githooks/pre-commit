@@ -1,0 +1,33 @@
+#!/bin/sh
+# Bloquea secretos, audio y archivos grandes antes de que entren al historial.
+# Activar en cada clon: npm run setup
+fail=0
+block() { echo "pre-commit BLOQUEADO: $1" >&2; fail=1; }
+
+IFS='
+'
+for f in $(git diff --cached --name-only --diff-filter=ACMR); do
+  base=$(basename "$f")
+  lower=$(printf '%s' "$f" | tr 'A-Z' 'a-z')
+  case "$base" in
+    .env.example) ;;
+    .env|.env.*) block "$f (archivo .env)" ;;
+  esac
+  case "$lower" in
+    *.flac|*.mp3|*.m4a|*.wav|*.ogg|*.opus|*.aac|*.alac|*.aiff) block "$f (audio)" ;;
+    *.keystore|*.jks|*.pem|*.key|*.p12) block "$f (clave o keystore)" ;;
+    supabase/.temp/*|supabase/.branches/*) block "$f (archivos de la CLI de Supabase)" ;;
+  esac
+  size=$(git cat-file -s ":$f" 2>/dev/null || echo 0)
+  if [ "$size" -gt 2097152 ]; then block "$f (pesa más de 2 MB)"; fi
+done
+
+# Patrones de secretos solo en las líneas añadidas.
+secrets='SERVICE_ROLE[A-Z_]*["'"'"']?[[:space:]]*[=:][[:space:]]*["'"'"']?[A-Za-z0-9._-]{20,}|sb_secret_[A-Za-z0-9_-]{8,}|eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}|postgres(ql)?://[^:/[:space:]]+:[^@[:space:]]+@|BEGIN [A-Z ]*PRIVATE KEY'
+found=$(git diff --cached -U0 --diff-filter=ACMR -- . ':!.githooks' | grep -E '^\+[^+]' | grep -nE "$secrets")
+if [ -n "$found" ]; then
+  block "posible secreto en los cambios:"
+  printf '%s\n' "$found" | cut -c1-120 >&2
+fi
+
+exit $fail

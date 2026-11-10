@@ -1,18 +1,49 @@
 node_modules/
 dist/
 *.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+.taste-skill/
+*.log
+logs/
+.DS_Store
+.idea/
+.vercel/
+.claude/settings.local.json
+
+# Secretos: nunca se versionan
 .env
 .env.*
 !.env.example
-.vercel/
-.idea/
-coverage/
-*.log
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+local.properties
 
-# Audio de prueba local: nunca se versiona (copyright y peso)
+# Audio: nunca se versiona, en ninguna carpeta (copyright y peso)
+*.flac
+*.mp3
+*.m4a
+*.wav
+*.ogg
+*.opus
+*.aac
+*.alac
+*.aiff
 src/assets/music/*
 !src/assets/music/README.md
+tests/fixtures/audio/
 
 # Archivos generados por la CLI de Supabase (contienen refs del proyecto)
 supabase/.temp/
 supabase/.branches/
+
+# Proyectos nativos: artefactos de build
+android/build/
+android/app/build/
+android/.gradle/
+ios/App/Pods/
+ios/App/build/
