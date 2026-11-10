@@ -322,7 +322,10 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 - [x] Borrar `README (1).md` y `SUPABASE (1).md` (S9) — 2026-10-14
 - [ ] `CLAUDE.md` → una línea que apunte a `AGENTS.md` (S9)
 - [x] Migración de límites en BD (S6) — `20261014120000_hardening_limits.sql`
-- [ ] Ejecutar la limpieza del proyecto `Undefeated_Star_Web_Page` y crear el proyecto dedicado (S3, ver `SUPABASE.md` §16)
+- [x] Decisión 2026-11-10: **el proyecto de Supabase se queda compartido** (`Undefeated_Star_Web_Page`, también lo usa la app de matemáticas `math_*`). Se descarta la limpieza y el proyecto dedicado por ahora (S3 aceptado); reabrir en Fase 8 si se necesita plan Pro o aislamiento.
+- [x] Migraciones del reproductor aplicadas en ese proyecto, incluidos los límites (S6) y `20261110120000_revoke_profile_trigger_execute.sql`
+- [ ] Renombrar el proyecto en Dashboard → Settings → General para distinguirlo (la API de MCP no permite renombrar)
+- [ ] Activar protección de contraseñas filtradas (requiere plan Pro) — advisor `auth_leaked_password_protection`
 - [ ] `npm audit fix` + Dependabot/Renovate (S8)
 - [ ] Lista blanca de MIME en portadas (S5)
 
