@@ -1,19 +1,23 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode, RefObject } from "react";
-import { ArrowLeft, Check, ChevronRight, Menu, Moon, SlidersHorizontal, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Menu, Moon, Palette, SlidersHorizontal, X } from "lucide-react";
 import { EQ_BANDS, EQ_LIMIT_DB, EQ_PRESETS, MAX_CROSSFADE, presetNameOf, SPEED_RANGE } from "../core/audio";
 import type { ReplayGainMode } from "../core/audio";
+import { isAnimated, SPEED_LIMITS } from "../core/background";
+import type { BackgroundMode, PaletteSource } from "../core/background";
 import type { RepeatMode } from "../core/queue";
+import { background, useBackground } from "../state/background";
 import { player, usePlayer } from "../state/player";
+import { Backdrop, useReducedMotion } from "./Backdrop";
 import { icon, IconButton, iconSmall } from "./parts";
 
 // Menú del reproductor (≡). Móvil: hoja inferior con arrastre. Escritorio: popover anclado al icono.
 // Los submenús se navegan en profundidad dentro del mismo panel (flecha de volver), nunca con menús anidados.
 // Es un <dialog> modal: el foco queda atrapado y Escape cierra. No guarda estado propio de audio: lee y escribe el store.
 
-type PageId = "root" | "sound" | "eq" | "timer";
+type PageId = "root" | "sound" | "eq" | "timer" | "background";
 
-const titles: Record<PageId, string> = { root: "Menú", sound: "Sonido", eq: "Ecualizador", timer: "Temporizador" };
+const titles: Record<PageId, string> = { root: "Menú", sound: "Sonido", eq: "Ecualizador", timer: "Temporizador", background: "Fondo" };
 
 // --- Controles reutilizados por las páginas ---
 
@@ -33,7 +37,9 @@ function Slider({
   onChange,
   origin = min,
   disabled = false,
+  className = "",
 }: {
+  className?: string;
   label: string;
   value: number;
   min: number;
@@ -46,7 +52,7 @@ function Slider({
   disabled?: boolean;
 }) {
   return (
-    <label className="menu-slider">
+    <label className={`menu-slider ${className}`}>
       <span className="menu-slider-head">
         <span>{label}</span>
         <span className="time">{format(value)}</span>
@@ -153,6 +159,7 @@ function RootPage({ go }: { go: (page: PageId) => void }) {
   const shuffle = usePlayer((state) => state.queue.shuffle);
   const audio = usePlayer((state) => state.audio);
   const sleep = usePlayer((state) => state.sleep);
+  const backgroundMode = useBackground((state) => state.mode);
   return (
     <>
       <section aria-labelledby="menu-play" className="menu-group">
@@ -179,6 +186,9 @@ function RootPage({ go }: { go: (page: PageId) => void }) {
         </NavRow>
         <NavRow go={go} id="timer" label="Temporizador" value={sleepSummary(sleep)}>
           <Moon {...icon} />
+        </NavRow>
+        <NavRow go={go} id="background" label="Fondo" value={modes.find((mode) => mode.value === backgroundMode)?.label ?? ""}>
+          <Palette {...icon} />
         </NavRow>
       </section>
     </>
@@ -316,6 +326,100 @@ function EqPage() {
       >
         Restablecer
       </button>
+    </>
+  );
+}
+
+const modes: { value: BackgroundMode; label: string; hint: string }[] = [
+  { value: "cover", label: "Portada", hint: "Degradado animado con los colores de la portada." },
+  { value: "rhythm", label: "Ritmo", hint: "Los graves hinchan las manchas, los golpes las hacen latir y los agudos aceleran el giro." },
+  { value: "static", label: "Estático", hint: "Degradado fijo de dos colores de la portada." },
+  { value: "amoled", label: "AMOLED", hint: "Negro puro en toda la app: ahorra batería en pantallas OLED." },
+];
+
+const sources: { value: PaletteSource; label: string }[] = [
+  { value: "cover", label: "Portada" },
+  { value: "accent", label: "Acento" },
+  { value: "custom", label: "Elegida" },
+];
+
+const fpsOptions: { value: "30" | "60" | "auto"; label: string }[] = [
+  { value: "30", label: "30" },
+  { value: "60", label: "60" },
+  { value: "auto", label: "Auto" },
+];
+
+const percent = (value: number) => `${Math.round(value * 100)} %`;
+
+function BackgroundPage() {
+  const settings = useBackground();
+  const reduced = useReducedMotion();
+  const mode = modes.find((option) => option.value === settings.mode)!;
+  const moves = isAnimated(settings.mode);
+  const colorful = settings.mode !== "amoled";
+  return (
+    <>
+      <div aria-hidden="true" className="backdrop-preview">
+        <Backdrop />
+      </div>
+      <section aria-labelledby="menu-mode" className="menu-group">
+        <h3 id="menu-mode">Modo</h3>
+        <div aria-labelledby="menu-mode" className="chips cols-2" role="radiogroup">
+          {modes.map((option) => (
+            <button
+              aria-checked={settings.mode === option.value}
+              className="chip"
+              key={option.value}
+              onClick={() => background.set({ mode: option.value })}
+              role="radio"
+              type="button"
+            >
+              {settings.mode === option.value && <Check {...iconSmall} />}
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <p className="hint" role="status">
+          {mode.hint}
+          {reduced && moves && " Tu sistema pide menos movimiento: el fondo se muestra sin animar."}
+        </p>
+      </section>
+      {colorful && (
+        <section className="menu-group">
+          <Slider format={percent} label="Intensidad" max={1} min={0} onChange={(intensity) => background.set({ intensity })} step={0.05} value={settings.intensity} />
+          {moves && (
+            <Slider
+              format={(value) => `${value.toFixed(2).replace(/0$/, "")}×`}
+              label="Velocidad"
+              max={SPEED_LIMITS.max}
+              min={SPEED_LIMITS.min}
+              onChange={(speed) => background.set({ speed })}
+              step={0.05}
+              value={settings.speed}
+            />
+          )}
+        </section>
+      )}
+      {colorful && (
+        <section className="menu-group">
+          <Segmented label="Colores de" onChange={(palette) => background.set({ palette })} options={sources} value={settings.palette} />
+          {settings.palette === "custom" && (
+            <Slider className="hue" format={(value) => `${Math.round(value)}°`} label="Tono elegido" max={359} min={0} onChange={(hue) => background.set({ hue })} step={1} value={settings.hue} />
+          )}
+        </section>
+      )}
+      {moves && (
+        <section className="menu-group">
+          <Segmented
+            label="Cuadros por segundo"
+            onChange={(fps) => background.set({ fps: fps === "auto" ? "auto" : (Number(fps) as 30 | 60) })}
+            options={fpsOptions}
+            value={String(settings.fps) as "30" | "60" | "auto"}
+          />
+          <SwitchRow checked={settings.batterySaver} label="Ahorro de batería automático" onChange={(batterySaver) => background.set({ batterySaver })} />
+          <p className="hint">Con batería baja o ahorro de datos, el fondo usa menos manchas y menos cuadros. También baja solo si el dispositivo no lo aguanta.</p>
+        </section>
+      )}
     </>
   );
 }
@@ -523,6 +627,7 @@ function MenuPanel({ anchor, onClose }: { anchor: RefObject<HTMLButtonElement | 
           {page === "sound" && <SoundPage go={go} />}
           {page === "eq" && <EqPage />}
           {page === "timer" && <TimerPage />}
+          {page === "background" && <BackgroundPage />}
         </div>
       </div>
     </dialog>

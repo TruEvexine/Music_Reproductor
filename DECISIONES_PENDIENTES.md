@@ -19,6 +19,21 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Opciones:** (a) conserva ecualizador y analizador de Web Audio, fiabilidad por comprobar; (b) fiable, pero el EQ habría que rehacerlo en nativo.
 - **Recomendación:** probar (a) primero en un dispositivo real. Requiere Android Studio instalado.
 
+### D13 — Modo «Visualizador» (butterchurn) no incluido
+- **Qué:** butterchurn (MIT) compila las ecuaciones de cada preset con `new Function`, lo que exige `'unsafe-eval'` en `script-src`. La CSP actual es `script-src 'self'` y relajarla para toda la app debilita la defensa contra XSS. Además `butterchurn-presets` pesa ≈ 11,9 MB y la atribución de cada preset (obras de la comunidad Milkdrop) no está verificada preset a preset.
+- **Bloquea:** nada. El selector de fondo ofrece Portada, Ritmo, Estático y AMOLED.
+- **Opciones:** (a) permitir `'unsafe-eval'` (no recomendado); (b) página aislada en un `<iframe sandbox>` con su propia CSP (el `AnalyserNode` no cruza iframes: habría que enviar el espectro por `postMessage`); (c) un visualizador propio (barras o forma de onda) en WebGL leyendo el mismo analizador, sin dependencias ni eval.
+- **Recomendación:** (c) si se quiere un modo «Visualizador»; y revisar la licencia de cada preset antes de curar ~30 para (b).
+
+### D14 — Cosas que solo se comprueban en un dispositivo real
+- Escuchar el ecualizador, el balance, la velocidad y el fundido al pausar (se midieron en el grafo de audio, no a oído).
+- Arrastrar la hoja del menú con un dedo y ver el fondo animado en un móvil de gama media (las pruebas usaron ratón y Chromium sin GPU real).
+- Con batería baja y con ahorro de datos (solo Chromium expone esas APIs).
+
+### D15 — Menú sin pista cargada
+- **Qué:** el menú ≡ vive en el mini reproductor y en el expandido, que no existen sin pista. Sin música cargada no se pueden tocar los ajustes de sonido ni de fondo.
+- **Opción:** añadir una entrada desde la navegación o los ajustes de la app cuando la biblioteca persista (Fase 3). No se hizo porque lo pedido era sacar esas opciones del flujo principal.
+
 ## Manual del usuario (paneles y cuentas)
 
 ### D4 — Borrar los dos deployments antiguos de Vercel que llevaban música

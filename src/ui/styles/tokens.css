@@ -48,6 +48,11 @@
   --safe-right: env(safe-area-inset-right, 0px);
 }
 
+/* Fondo AMOLED: negro puro en toda la app (lo pone state/background.ts en <html data-bg>). */
+:root[data-bg="amoled"] {
+  --bg: oklch(0 0 0);
+}
+
 @media (prefers-contrast: more) {
   :root {
     --ink-2: oklch(0.9 0.006 85);

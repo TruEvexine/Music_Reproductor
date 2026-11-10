@@ -250,6 +250,12 @@
   background: var(--surface-2);
 }
 
+/* Pocas opciones largas (modos de fondo): dos columnas iguales en vez de una fila que se rompe. */
+.chips.cols-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .segment[aria-checked="true"],
 .chip[aria-checked="true"] {
   background: var(--surface-3);
@@ -370,4 +376,13 @@
 
 .menu-reset {
   justify-self: start;
+}
+
+/* Tono elegido: la pista muestra el arco de tonos (en OKLCH, con la luminosidad de las manchas). */
+.menu-slider.hue input::-webkit-slider-runnable-track {
+  background: linear-gradient(to right, oklch(0.46 0.12 0), oklch(0.46 0.12 60), oklch(0.46 0.12 120), oklch(0.46 0.12 180), oklch(0.46 0.12 240), oklch(0.46 0.12 300), oklch(0.46 0.12 360));
+}
+
+.menu-slider.hue input::-moz-range-track {
+  background: linear-gradient(to right, oklch(0.46 0.12 0), oklch(0.46 0.12 60), oklch(0.46 0.12 120), oklch(0.46 0.12 180), oklch(0.46 0.12 240), oklch(0.46 0.12 300), oklch(0.46 0.12 360));
 }

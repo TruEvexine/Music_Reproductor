@@ -34,6 +34,17 @@ try {
   // El motor crea su <audio> fuera del DOM: se comprueba por la interfaz (el tiempo avanza y el botón ofrece pausar).
   const playing = (await page.getByRole("button", { name: "Pausar" }).count()) > 0 && (await page.locator(".bar-progress").getAttribute("style")) !== "--progress: 0%;";
 
+  // Reproductor expandido: el lienzo WebGL del fondo y el menú ≡ funcionan bajo la CSP (sin eval, sin recursos externos).
+  await page.locator(".bar-track").click();
+  await page.waitForTimeout(800);
+  const backdrop = await page.locator(".now-playing canvas.backdrop-canvas").count();
+  await page.locator('.now-header button[aria-label="Menú del reproductor"]').click();
+  await page.waitForTimeout(300);
+  const menu = await page.locator("dialog.menu[open]").count();
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+
   const account = page.getByRole("button", { name: /Entrar|Cuenta/ }).first();
   if (await account.isVisible().catch(() => false)) {
     await account.click();
@@ -51,11 +62,13 @@ try {
     nosniff: headers.get("x-content-type-options"),
     portadasBlob: covers,
     audioSonando: playing,
+    lienzoDeFondo: backdrop,
+    menuAbre: menu,
     respuestasSupabase: supabase,
     violaciones: violations,
   };
   console.log(JSON.stringify(result, null, 2));
-  exitCode = result.csp && covers > 0 && playing && violations.length === 0 ? 0 : 1;
+  exitCode = result.csp && covers > 0 && playing && backdrop === 1 && menu === 1 && violations.length === 0 ? 0 : 1;
 } finally {
   await browser.close();
   // En Windows `shell: true` deja vite como proceso hijo del shell: se mata el árbol completo.

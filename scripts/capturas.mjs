@@ -75,6 +75,13 @@ for (const name of matrix) {
   await menu.getByRole("button", { name: /^Ecualizador/ }).click();
   await check("03c-menu-ecualizador");
   await page.keyboard.press("Escape");
+  await page.locator('.player-bar button[aria-label="Menú del reproductor"]:visible').click();
+  await menu.getByRole("button", { name: /^Fondo/ }).click();
+  await page.waitForTimeout(400);
+  await check("03d-menu-fondo");
+  await menu.getByRole("radio", { name: "Elegida" }).click(); // la página de Fondo más larga
+  await check("03e-menu-fondo-elegida");
+  await page.keyboard.press("Escape");
 
   await page.locator(".bar-track").click();
   await check("04-reproductor");

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatTime, isHiRes, matchesSearch, qualityLabel, searchKey } from "./format";
-import { APP_BACKGROUND_L, contrastOfLightness, fallbackPalette, paletteFromPixels, rgbToOklch } from "./palette";
+import { APP_BACKGROUND_L, colorsFromHue, contrastOfLightness, fallbackPalette, oklchToRgb, paletteColors, paletteFromPixels, rgbToOklch } from "./palette";
 import { fileTrackId, titleFromFileName, trackV1Id } from "./track";
 
 describe("identidad de pista", () => {
@@ -85,5 +85,45 @@ describe("paleta", () => {
     const hue = Number(paletteFromPixels(solid(30, 60, 220)).accent.match(/([\d.]+)\)$/)?.[1]);
     expect(hue).toBeGreaterThan(240);
     expect(hue).toBeLessThan(290);
+  });
+});
+
+describe("colores del fondo animado", () => {
+  const quadrants = (...colors: [number, number, number][]) =>
+    colors.flatMap(([r, g, b]) => Array.from({ length: 64 }, () => [r, g, b, 255]).flat());
+  const hueOf = ([r, g, b]: [number, number, number]) => rgbToOklch(r * 255, g * 255, b * 255).h;
+  const apart = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+
+  it("oklchToRgb es la inversa de rgbToOklch dentro de gama y siempre devuelve canales de 0 a 1", () => {
+    const [r, g, b] = oklchToRgb(0.5, 0.1, 145);
+    const back = rgbToOklch(r * 255, g * 255, b * 255);
+    expect(back.l).toBeCloseTo(0.5, 1);
+    expect(apart(back.h, 145)).toBeLessThan(3);
+    for (const value of oklchToRgb(0.9, 0.4, 30)) {
+      expect(value).toBeGreaterThanOrEqual(0);
+      expect(value).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("una portada con tres colores da tonos distintos entre sí y cuatro colores oscuros", () => {
+    const colors = paletteColors(quadrants([220, 40, 40], [40, 200, 70], [50, 80, 230]));
+    expect(colors).toHaveLength(4);
+    const hues = colors!.map(hueOf);
+    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) expect(apart(hues[i], hues[j])).toBeGreaterThan(45);
+    for (const color of colors!) expect(rgbToOklch(color[0] * 255, color[1] * 255, color[2] * 255).l).toBeLessThan(0.5);
+  });
+
+  it("una portada de un solo color se completa con tonos vecinos; una gris no da colores propios", () => {
+    const colors = paletteColors(quadrants([30, 60, 220]))!;
+    expect(colors).toHaveLength(4);
+    expect(new Set(colors.map((c) => c.map((v) => v.toFixed(3)).join())).size).toBe(4);
+    expect(paletteColors(quadrants([128, 128, 128]))).toBeNull();
+    expect(paletteFromPixels(quadrants([128, 128, 128])).colors).toEqual(fallbackPalette.colors);
+  });
+
+  it("la paleta analógica gira alrededor del tono pedido", () => {
+    const hues = colorsFromHue(200).map(hueOf);
+    expect(apart(hues[0], 200)).toBeLessThan(6);
+    expect(apart(hues[1], 238)).toBeLessThan(6);
   });
 });

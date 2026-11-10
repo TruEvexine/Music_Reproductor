@@ -1,5 +1,7 @@
 /* Estructura: móvil = contenido / mini reproductor / pestañas. Escritorio = navegación | contenido | cola, y barra abajo. */
 .shell {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template: "main" minmax(0, 1fr) "bar" auto "nav" auto / minmax(0, 1fr);
   height: 100dvh;

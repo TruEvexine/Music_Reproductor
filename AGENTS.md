@@ -27,7 +27,7 @@ UI (src/ui)  →  estado (src/state)  →  core (src/core) + motor (src/engine) 
 
 | Carpeta | Qué contiene | Regla |
 |---|---|---|
-| `src/core/` | Cola, shuffle, identidad de pista, formato, búsqueda, paleta, mensajes de Auth | **TypeScript puro**: sin `window`, `document` ni Capacitor. Todo con test en Vitest |
+| `src/core/` | Cola, shuffle, identidad de pista, formato, búsqueda, paleta, mensajes de Auth, ajustes de audio y de fondo, ritmo (bandas y golpes), calidad adaptativa | **TypeScript puro**: sin `window`, `document` ni Capacitor. Todo con test en Vitest |
 | `src/engine/` | `PlayerEngine`: único dueño del `<audio>` (y del grafo Web Audio) | No conoce React, la cola ni la biblioteca |
 | `src/state/` | Stores Zustand: `player` (fuente única de verdad de la reproducción) y `library` | La UI solo lee el store y llama a `player.*` / `library.*` |
 | `src/platform/` | Fronteras (`types.ts`) y su implementación web (`web/`) | Una interfaz por frontera, nada más |

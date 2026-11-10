@@ -40,6 +40,8 @@ No es copia de ninguna, ni de Spotify. **Elemento firma:** el reproductor expand
 
 **Color dinámico.** Portada → 32×32 px → media ponderada por croma → se fuerza a rangos seguros: `--accent` L 0.82 y C 0.07–0.14 (contraste ≥ 4.5:1 sobre `--bg`, comprobado por test), `--glow` L 0.32 (ambiente del reproductor), `--on-accent` L 0.2. Portada gris o ausente → paleta neutra cálida. El acento aparece solo en: pista actual, botón primario/play, estados activos, progreso.
 
+**Fondo del reproductor.** Es el ambiente (`ui/Backdrop.tsx`): hasta 4 manchas de tonos distintos de la portada con L 0.28–0.46 en OKLCH, intensidad 60 % por defecto, banda inferior más oscura donde están los controles. Solo vive con el reproductor expandido; colapsado, un tinte CSS al 18 %. Modos Portada, Ritmo, Estático y AMOLED (negro puro); con movimiento reducido o sin WebGL, el mismo gradiente en CSS sin animar.
+
 Prohibido: degradados decorativos (el único degradado es el ambiente del reproductor y el respaldo de portada), vidrio/blur, sombras en reposo, texto sobre color saturado sin pasar por `--on-accent`.
 
 ### Tipografía
@@ -128,4 +130,4 @@ Ninguna tarea de UI está terminada sin `node scripts/capturas.mjs docs/capturas
 
 ## 8. Pendiente de diseñar (Fase 4)
 
-Vistas de álbum y artista, rejilla de álbumes, fondo dinámico (Portada/Ritmo/Estático/AMOLED) con selector, gestos en la portada, arrastrar para reordenar, skeletons, toasts con deshacer, ecualizador, letras.
+Vistas de álbum y artista, rejilla de álbumes, gestos en la portada, arrastrar para reordenar, skeletons, toasts con deshacer, curva del ecualizador, letras. (Hecho: menú ≡, ecualizador con sliders y fondo dinámico con selector.)

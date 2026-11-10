@@ -1,6 +1,9 @@
-import { useEffect, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import { fallbackPalette, paletteFromPixels } from "../core/palette";
 import type { Palette } from "../core/palette";
+
+/** La paleta vigente, para quien dibuja el fondo sin recibirla por props (Shell la publica). */
+export const PaletteContext = createContext<Palette>(fallbackPalette);
 
 /** Paleta de la portada actual. La matemática vive en core/palette; aquí solo se leen los píxeles. */
 export function usePalette(coverUrl?: string): Palette {

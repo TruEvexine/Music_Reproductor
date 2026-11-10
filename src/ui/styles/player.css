@@ -206,9 +206,7 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   padding: var(--safe-top) calc(var(--gutter) + var(--safe-right)) calc(var(--s5) + var(--safe-bottom))
     calc(var(--gutter) + var(--safe-left));
-  background:
-    radial-gradient(120% 70% at 50% 0%, var(--glow), transparent 75%),
-    var(--bg);
+  background: var(--bg); /* el fondo animado (Backdrop) va detrás del contenido, ver backdrop.css */
   animation: rise var(--slow) var(--ease);
 }
 

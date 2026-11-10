@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -163,11 +163,12 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
 }
 
 /** Reproductor expandido a pantalla completa: portada protagonista y controles en la mitad inferior. */
-export function NowPlaying() {
+export function NowPlaying({ backdrop }: { backdrop: ReactNode }) {
   const track = useCurrentTrack();
   if (!track) return null;
   return (
     <section aria-label="Reproduciendo ahora" className="now-playing">
+      {backdrop}
       <header className="now-header">
         <IconButton label="Cerrar reproductor" onClick={closePanel}>
           <ChevronDown {...icon} />

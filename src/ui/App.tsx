@@ -3,6 +3,7 @@ import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { CircleUser, Library, ListMusic } from "lucide-react";
 import { isNative } from "../platform";
 import { useAuthController } from "../sync/useAuthController";
+import { Backdrop, Tint } from "./Backdrop";
 import { AuthDialog } from "./dialogs";
 import { Landing } from "./Landing";
 import { LibraryView } from "./LibraryView";
@@ -10,7 +11,7 @@ import { icon } from "./parts";
 import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
 import { PlaylistsView } from "./PlaylistsView";
 import { closePanel, navigate, useRoute } from "./router";
-import { usePalette } from "./usePalette";
+import { PaletteContext, usePalette } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
 function NavLink({ to, path, children }: { to: string; path: string; children: ReactNode }) {
@@ -34,10 +35,11 @@ function Shell() {
   const palette = usePalette(track?.coverUrl);
   useShortcuts(panel);
 
-  // Sin pista no hay reproductor ni cola que mostrar: se descarta el panel de la URL.
+  // Sin pista no hay reproductor que mostrar: se quita el panel de la URL. Se reemplaza la entrada del historial
+  // (no se retrocede): al recargar con ?panel=player, "atrás" sacaba al usuario de la app.
   useEffect(() => {
-    if (panel && !track && panel === "player") closePanel();
-  }, [panel, track]);
+    if (panel === "player" && !track) navigate(path, true);
+  }, [panel, track, path]);
 
   // Escape cierra el panel abierto (alternativa de teclado al botón atrás).
   useEffect(() => {
@@ -51,30 +53,33 @@ function Shell() {
   const style = { "--accent": palette.accent, "--on-accent": palette.onAccent, "--glow": palette.glow } as CSSProperties;
 
   return (
-    <div className="shell" data-panel={panel ?? undefined} style={style}>
-      <nav aria-label="Secciones" className="nav">
-        <span className="brand">Reproductor</span>
-        <NavLink path={path} to="/app">
-          <Library {...icon} />
-          <span>Canciones</span>
-        </NavLink>
-        <NavLink path={path} to="/app/playlists">
-          <ListMusic {...icon} />
-          <span>Playlists</span>
-        </NavLink>
-        <button className="nav-link" onClick={() => setAccount(true)} type="button">
-          <CircleUser {...icon} />
-          <span>{auth.session ? "Cuenta" : "Entrar"}</span>
-        </button>
-      </nav>
-      <main className="main" inert={panel === "player"}>
-        {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView />}
-      </main>
-      {panel === "queue" && <QueuePanel />}
-      <PlayerBar queueOpen={panel === "queue"} />
-      {panel === "player" && <NowPlaying />}
-      {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
-    </div>
+    <PaletteContext.Provider value={palette}>
+      <div className="shell" data-panel={panel ?? undefined} style={style}>
+        {panel !== "player" && <Tint />}
+        <nav aria-label="Secciones" className="nav">
+          <span className="brand">Reproductor</span>
+          <NavLink path={path} to="/app">
+            <Library {...icon} />
+            <span>Canciones</span>
+          </NavLink>
+          <NavLink path={path} to="/app/playlists">
+            <ListMusic {...icon} />
+            <span>Playlists</span>
+          </NavLink>
+          <button className="nav-link" onClick={() => setAccount(true)} type="button">
+            <CircleUser {...icon} />
+            <span>{auth.session ? "Cuenta" : "Entrar"}</span>
+          </button>
+        </nav>
+        <main className="main" inert={panel === "player"}>
+          {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView />}
+        </main>
+        {panel === "queue" && <QueuePanel />}
+        <PlayerBar queueOpen={panel === "queue"} />
+        {panel === "player" && <NowPlaying backdrop={<Backdrop />} />}
+        {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
+      </div>
+    </PaletteContext.Provider>
   );
 }
 
