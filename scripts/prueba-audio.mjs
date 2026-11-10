@@ -104,22 +104,27 @@ check("M silencia", Number(await volume()) === 0);
 await page.keyboard.press("m");
 
 // 8. Ajustes: EQ y crossfade de 2 s; persisten al recargar.
-await page.getByRole("button", { name: /Sonido: ecualizador/ }).click();
-await page.getByRole("tab", { name: "Ecualizador" }).click();
-await page.getByLabel("Ecualizador activado").check();
-await page.getByLabel("Preajuste").selectOption("Graves");
-check("preajuste aplica ganancias", (await page.getByLabel("62 Hz").inputValue()) === "5");
-await page.getByRole("tab", { name: "General" }).click();
-await setRange(page.getByLabel(/Fundido entre canciones/), 2);
+// Los ajustes de sonido viven en el menú ≡ (Sonido → Ecualizador). Aquí además se lee el grafo real.
+const menu = page.locator("dialog.menu[open]");
+const openMenu = () => page.locator('.bar-end button[aria-label="Menú del reproductor"]').click();
+const eqNow = () => page.evaluate(() => window.__engine.snapshot().eq);
+await openMenu();
+await menu.getByRole("button", { name: /^Sonido/ }).click();
+await menu.getByRole("button", { name: /^Ecualizador/ }).click();
+await menu.getByRole("switch", { name: "Ecualizador activado" }).click();
+await menu.getByRole("radio", { name: "Graves" }).click();
+check("preajuste aplica ganancias", (await menu.getByLabel("62 Hz").inputValue()) === "5");
+check("el preajuste llega a los filtros del grafo de audio", (await eqNow())[1] === 5, `eq=${await eqNow()}`);
+await menu.getByRole("button", { name: "Volver a Sonido" }).click();
+await setRange(menu.getByLabel(/Fundido entre canciones/), 2);
 await page.waitForTimeout(600);
 await page.keyboard.press("Escape");
 await page.reload();
-await page.waitForTimeout(1200);
-await page.getByRole("button", { name: "Sonido" }).first().click();
-await page.getByRole("tab", { name: "Ecualizador" }).click();
-check("el EQ persiste tras recargar", await page.getByLabel("Ecualizador activado").isChecked());
-await page.getByRole("tab", { name: "General" }).click();
-check("el crossfade persiste tras recargar", (await page.getByLabel(/Fundido entre canciones/).inputValue()) === "2");
+await load(all); // sin pista no hay barra ni menú: se vuelve a importar y la sesión restaura la última pista
+await openMenu();
+await menu.getByRole("button", { name: /^Sonido/ }).click();
+check("el EQ persiste tras recargar", (await menu.getByRole("button", { name: /^Ecualizador/ }).innerText()).includes("Graves"));
+check("el crossfade persiste tras recargar", (await menu.getByLabel(/Fundido entre canciones/).inputValue()) === "2");
 await page.keyboard.press("Escape");
 
 // 9. Crossfade: amanecer dura 8 s; con 2 s de fundido la siguiente ya suena a los 7 s (sin él, seguiría amanecer).
@@ -136,8 +141,9 @@ check("archivo corrupto muestra aviso y la app sigue viva", (await page.locator(
 
 // 11. Temporizador: "al terminar la canción" detiene al final de la pista, sin avanzar.
 await row("Marea").click();
-await page.getByRole("button", { name: "Sonido" }).first().click();
-await page.getByRole("button", { name: "Al terminar la canción" }).click();
+await openMenu();
+await menu.getByRole("button", { name: /^Temporizador/ }).click();
+await menu.getByRole("button", { name: "Al terminar la canción" }).click();
 await page.keyboard.press("Escape");
 await setRange(page.locator(".bar-center .seek input"), 5);
 await page.waitForTimeout(2200);

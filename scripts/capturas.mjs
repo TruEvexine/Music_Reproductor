@@ -67,8 +67,20 @@ for (const name of matrix) {
   await page.waitForTimeout(1200);
   await check("03-reproduciendo");
 
+  // Menú ≡ desde el mini/barra: raíz y la página más ancha (ecualizador).
+  const menu = page.locator("dialog.menu[open]");
+  await page.locator('.player-bar button[aria-label="Menú del reproductor"]:visible').click();
+  await check("03b-menu-mini");
+  await menu.getByRole("button", { name: /^Sonido/ }).click();
+  await menu.getByRole("button", { name: /^Ecualizador/ }).click();
+  await check("03c-menu-ecualizador");
+  await page.keyboard.press("Escape");
+
   await page.locator(".bar-track").click();
   await check("04-reproductor");
+  await page.locator('.now-header button[aria-label="Menú del reproductor"]').click();
+  await check("04b-menu-expandido");
+  await page.keyboard.press("Escape");
 
   await page.getByRole("button", { name: "Cola de reproducción" }).last().click();
   await check("05-cola");

@@ -23,6 +23,17 @@ export interface AudioSettings {
   /** Segundos de fundido entre pistas (0 = sin crossfade). */
   crossfade: number;
   replayGain: ReplayGainMode;
+  /** Preamplificador manual (dB), se suma a la compensación automática del ecualizador. */
+  preamp: number;
+  /** Graves y agudos (dB): estantes de baja y alta frecuencia. */
+  bass: number;
+  treble: number;
+  /** Balance izquierda (-1) / derecha (1). */
+  balance: number;
+  /** Velocidad de reproducción, conserva el tono. */
+  speed: number;
+  /** Fundido corto al pausar y al reanudar. */
+  fadePause: boolean;
 }
 
 export const defaultAudioSettings: AudioSettings = {
@@ -32,9 +43,17 @@ export const defaultAudioSettings: AudioSettings = {
   eqGains: [...EQ_PRESETS.Plano],
   crossfade: 0,
   replayGain: "off",
+  preamp: 0,
+  bass: 0,
+  treble: 0,
+  balance: 0,
+  speed: 1,
+  fadePause: false,
 };
 
 export const MAX_CROSSFADE = 12;
+export const SPEED_RANGE = { min: 0.5, max: 2 } as const;
+export const FADE_PAUSE_SECONDS = 0.35;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
 
@@ -49,6 +68,12 @@ export function sanitizeAudioSettings(saved: Partial<AudioSettings> | undefined)
     eqGains: gains.map((gain) => clamp(gain, -EQ_LIMIT_DB, EQ_LIMIT_DB)),
     crossfade: clamp(s.crossfade, 0, MAX_CROSSFADE),
     replayGain: s.replayGain === "track" || s.replayGain === "album" ? s.replayGain : "off",
+    preamp: clamp(s.preamp, -EQ_LIMIT_DB, EQ_LIMIT_DB),
+    bass: clamp(s.bass, -EQ_LIMIT_DB, EQ_LIMIT_DB),
+    treble: clamp(s.treble, -EQ_LIMIT_DB, EQ_LIMIT_DB),
+    balance: clamp(s.balance, -1, 1),
+    speed: clamp(s.speed, SPEED_RANGE.min, SPEED_RANGE.max),
+    fadePause: Boolean(s.fadePause),
   };
 }
 
@@ -59,6 +84,19 @@ export function dbToGain(db: number): number {
 /** Preamplificador que compensa la banda más alta, para que subir el EQ no sature. */
 export function eqPreampDb(gains: readonly number[]): number {
   return 0 - Math.max(0, ...gains);
+}
+
+/** Lo que el motor aplica en la cadena del ecualizador; `null` = apagado (preamp, graves y agudos incluidos). */
+export interface EqChain {
+  gains: readonly number[];
+  preampDb: number;
+  bass: number;
+  treble: number;
+}
+
+export function eqChainOf(audio: AudioSettings): EqChain | null {
+  if (!audio.eqEnabled) return null;
+  return { gains: audio.eqGains, preampDb: eqPreampDb(audio.eqGains) + audio.preamp, bass: audio.bass, treble: audio.treble };
 }
 
 export function presetNameOf(gains: readonly number[]): string | undefined {

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { replayGainFor, sanitizeAudioSettings, SLEEP_FADE_SECONDS, sleepShouldFade } from "../core/audio";
+import { eqChainOf, FADE_PAUSE_SECONDS, replayGainFor, sanitizeAudioSettings, SLEEP_FADE_SECONDS, sleepShouldFade } from "../core/audio";
 import type { AudioSettings, SleepTimer } from "../core/audio";
 import {
   clearQueue,
@@ -68,6 +68,7 @@ const engine = new PlayerEngine({
 
 const q = () => usePlayer.getState().queue;
 const trackOf = (id: string | null) => useLibrary.getState().tracks.find((track) => track.id === id);
+const pauseFade = () => (usePlayer.getState().audio.fadePause ? FADE_PAUSE_SECONDS : 0);
 const gainOf = (id: string | null) => replayGainFor(trackOf(id), usePlayer.getState().audio.replayGain);
 
 /** Cerca del final: precarga la siguiente, arranca el crossfade o el fundido del temporizador. */
@@ -76,7 +77,7 @@ function nearEnd(position: number) {
   if (!isPlaying || fading) return;
   if (sleepShouldFade(sleep, Date.now())) {
     fading = true;
-    engine.fadeOutAndPause(SLEEP_FADE_SECONDS);
+    engine.pause(SLEEP_FADE_SECONDS);
     setTimeout(() => {
       fading = false;
       usePlayer.setState({ sleep: null });
@@ -91,7 +92,7 @@ function nearEnd(position: number) {
   if (!url) return;
   const endOfTrackSleep = sleep !== null && "endOfTrack" in sleep;
   if (audio.crossfade > 0 && !endOfTrackSleep && remaining <= audio.crossfade && duration > audio.crossfade * 2) {
-    if (engine.crossfadeTo(url, Math.max(remaining, 0.5), gainOf(next.current))) {
+    if (engine.crossfadeTo(url, Math.max(remaining / audio.speed, 0.5), gainOf(next.current))) {
       fading = true;
       setTimeout(() => (fading = false), 1000);
       usePlayer.setState({ queue: next, position: 0, duration: trackOf(next.current)?.duration ?? 0 });
@@ -156,10 +157,14 @@ function setAudio(change: Partial<AudioSettings>) {
   const audio = sanitizeAudioSettings({ ...usePlayer.getState().audio, ...change });
   usePlayer.setState({ audio });
   engine.setVolume(audio.muted ? 0 : audio.volume);
-  engine.setEq(audio.eqEnabled ? audio.eqGains : null);
+  engine.setEq(eqChainOf(audio));
+  engine.setBalance(audio.balance);
+  engine.setSpeed(audio.speed);
   engine.setTrackGain(gainOf(q().current));
   void storage.set("audio", audio);
 }
+
+if (import.meta.env.DEV) (window as unknown as { __engine: PlayerEngine }).__engine = engine; // solo desarrollo: las pruebas de navegador leen el grafo real
 
 export const player = {
   /** Tocar una canción: la cola pasa a ser su contexto (lista visible), empezando por ella. */
@@ -183,14 +188,14 @@ export const player = {
   },
   toggle() {
     if (q().current === null) return;
-    if (engine.paused) void engine.play().catch(() => fail());
-    else engine.pause();
+    if (engine.paused) player.play();
+    else player.pause();
   },
   play() {
-    if (q().current !== null && engine.paused) void engine.play().catch(() => fail());
+    if (q().current !== null && engine.paused) void engine.play(pauseFade()).catch(() => fail());
   },
   pause() {
-    engine.pause();
+    engine.pause(pauseFade());
   },
   next() {
     advance(false);
@@ -257,8 +262,9 @@ function syncSession(state: PlayerState, previous: PlayerState) {
     audioSession.setTrack(track ? { title: track.title, artist: track.artist, album: track.album, artworkUrl: track.coverUrl } : null);
   }
   // La posición se publica al cambiar de estado o de duración, no en cada tic: el sistema la extrapola solo.
-  if (state.isPlaying !== previous.isPlaying || state.duration !== previous.duration || Math.abs(state.position - previous.position) > 2) {
-    audioSession.setState({ playing: state.isPlaying, position: state.position, duration: state.duration });
+  const speed = state.audio.speed;
+  if (state.isPlaying !== previous.isPlaying || state.duration !== previous.duration || speed !== previous.audio.speed || Math.abs(state.position - previous.position) > 2) {
+    audioSession.setState({ playing: state.isPlaying, position: state.position, duration: state.duration, rate: speed });
   }
 }
 let lastSessionTitle: string | undefined;

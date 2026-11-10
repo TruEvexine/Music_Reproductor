@@ -12,6 +12,8 @@ import {
   SkipBack,
   SkipForward,
   Trash2,
+  Volume2,
+  VolumeX,
   X,
 } from "lucide-react";
 import { formatTime, qualityLabel } from "../core/format";
@@ -20,11 +22,34 @@ import { useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
 import { Cover, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
-import { SettingsButton, VolumeControl } from "./Settings";
+import { MenuButton } from "./PlayerMenu";
 
 export function useCurrentTrack(): Track | undefined {
   const current = usePlayer((state) => state.queue.current);
   return useLibrary((state) => state.tracks.find((track) => track.id === current));
+}
+
+function VolumeControl() {
+  const volume = usePlayer((state) => state.audio.volume);
+  const muted = usePlayer((state) => state.audio.muted);
+  return (
+    <div className="volume">
+      <IconButton label={muted ? "Activar sonido" : "Silenciar"} onClick={player.toggleMute}>
+        {muted || volume === 0 ? <VolumeX {...icon} /> : <Volume2 {...icon} />}
+      </IconButton>
+      <input
+        aria-label="Volumen"
+        aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)} %`}
+        max={1}
+        min={0}
+        onChange={(event) => player.setVolume(Number(event.currentTarget.value))}
+        step={0.01}
+        style={{ "--progress": `${(muted ? 0 : volume) * 100}%` } as CSSProperties}
+        type="range"
+        value={muted ? 0 : volume}
+      />
+    </div>
+  );
 }
 
 const repeatLabel = { off: "Repetición desactivada", queue: "Repitiendo la cola", track: "Repitiendo la canción" };
@@ -92,7 +117,7 @@ function Seek() {
 }
 
 /** Barra persistente: mini reproductor en móvil, barra completa en escritorio. */
-export function PlayerBar({ onSettings, queueOpen }: { onSettings: () => void; queueOpen: boolean }) {
+export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
   const track = useCurrentTrack();
   const isPlaying = usePlayer((state) => state.isPlaying);
   const progress = usePlayer((state) => (state.duration > 0 ? (state.position / state.duration) * 100 : 0));
@@ -118,11 +143,12 @@ export function PlayerBar({ onSettings, queueOpen }: { onSettings: () => void; q
         <IconButton label="Siguiente canción" onClick={player.next}>
           <SkipForward {...icon} fill="currentColor" />
         </IconButton>
+        <MenuButton />
       </div>
       <div className="bar-end">
         <span className="quality">{qualityLabel(track)}</span>
         <VolumeControl />
-        <SettingsButton onOpen={onSettings} />
+        <MenuButton />
         <IconButton
           aria-expanded={queueOpen}
           className={queueOpen ? "is-on" : ""}
@@ -146,9 +172,12 @@ export function NowPlaying() {
         <IconButton label="Cerrar reproductor" onClick={closePanel}>
           <ChevronDown {...icon} />
         </IconButton>
-        <IconButton label="Cola de reproducción" onClick={() => openPanel("queue")}>
-          <ListMusic {...icon} />
-        </IconButton>
+        <div className="now-actions">
+          <IconButton label="Cola de reproducción" onClick={() => openPanel("queue")}>
+            <ListMusic {...icon} />
+          </IconButton>
+          <MenuButton />
+        </div>
       </header>
       <div className="now-art">
         <Cover className="now-cover" seed={track.album} src={track.coverUrl} />

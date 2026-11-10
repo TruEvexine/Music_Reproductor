@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
-import { CircleUser, Library, ListMusic, SlidersHorizontal } from "lucide-react";
+import { CircleUser, Library, ListMusic } from "lucide-react";
 import { isNative } from "../platform";
 import { useAuthController } from "../sync/useAuthController";
 import { AuthDialog } from "./dialogs";
@@ -10,7 +10,6 @@ import { icon } from "./parts";
 import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
 import { PlaylistsView } from "./PlaylistsView";
 import { closePanel, navigate, useRoute } from "./router";
-import { SettingsDialog } from "./Settings";
 import { usePalette } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
@@ -31,7 +30,6 @@ function Shell() {
   const { path, panel } = useRoute();
   const auth = useAuthController();
   const [account, setAccount] = useState(false);
-  const [settings, setSettings] = useState(false);
   const track = useCurrentTrack();
   const palette = usePalette(track?.coverUrl);
   useShortcuts(panel);
@@ -44,7 +42,8 @@ function Shell() {
   // Escape cierra el panel abierto (alternativa de teclado al botón atrás).
   useEffect(() => {
     if (!panel) return;
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && closePanel();
+    // Con un diálogo o menú abierto, Escape es suyo: no debe cerrar también el panel de detrás.
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && !document.querySelector("dialog[open]") && closePanel();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [panel]);
@@ -63,10 +62,6 @@ function Shell() {
           <ListMusic {...icon} />
           <span>Playlists</span>
         </NavLink>
-        <button className="nav-link" onClick={() => setSettings(true)} type="button">
-          <SlidersHorizontal {...icon} />
-          <span>Sonido</span>
-        </button>
         <button className="nav-link" onClick={() => setAccount(true)} type="button">
           <CircleUser {...icon} />
           <span>{auth.session ? "Cuenta" : "Entrar"}</span>
@@ -76,10 +71,9 @@ function Shell() {
         {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView />}
       </main>
       {panel === "queue" && <QueuePanel />}
-      <PlayerBar onSettings={() => setSettings(true)} queueOpen={panel === "queue"} />
+      <PlayerBar queueOpen={panel === "queue"} />
       {panel === "player" && <NowPlaying />}
       {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
-      {settings && <SettingsDialog onClose={() => setSettings(false)} />}
     </div>
   );
 }

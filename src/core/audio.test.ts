@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dbToGain,
+  eqChainOf,
   defaultAudioSettings,
   EQ_BANDS,
   EQ_PRESETS,
@@ -79,5 +80,20 @@ describe("temporizador de apagado", () => {
   it("'al terminar la pista' no corta el final", () => {
     expect(sleepShouldFade({ endOfTrack: true }, 0)).toBe(false);
     expect(sleepShouldFade(null, 0)).toBe(false);
+  });
+});
+
+describe("controles de sonido del menú", () => {
+  it("el ecualizador apagado no aplica nada; encendido suma el preamp manual a la compensación", () => {
+    expect(eqChainOf({ ...defaultAudioSettings, bass: 6 })).toBeNull();
+    const on = { ...defaultAudioSettings, eqEnabled: true, eqGains: [...EQ_PRESETS.Graves], preamp: 2, bass: 3, treble: -2 };
+    expect(eqChainOf(on)).toEqual({ gains: EQ_PRESETS.Graves, preampDb: -4, bass: 3, treble: -2 });
+  });
+
+  it("acota preamp, graves, agudos, balance y velocidad; datos antiguos reciben los valores neutros", () => {
+    const fixed = sanitizeAudioSettings({ preamp: 40, bass: -40, treble: 99, balance: 5, speed: 9, fadePause: 1 as unknown as boolean });
+    expect(fixed).toMatchObject({ preamp: 12, bass: -12, treble: 12, balance: 1, speed: 2, fadePause: true });
+    expect(sanitizeAudioSettings({ speed: 0 }).speed).toBe(0.5);
+    expect(sanitizeAudioSettings({ volume: 0.5 })).toMatchObject({ preamp: 0, bass: 0, treble: 0, balance: 0, speed: 1, fadePause: false });
   });
 });

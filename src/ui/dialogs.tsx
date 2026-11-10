@@ -103,6 +103,42 @@ export function AuthDialog({ auth, onClose }: { auth: AuthController; onClose: (
   );
 }
 
+/** Confirmación propia (sustituye a window.confirm). La acción destructiva no recibe el foco inicial: es "Cancelar". */
+export function ConfirmDialog({
+  title,
+  message,
+  confirmLabel,
+  onConfirm,
+  onClose,
+}: {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog onClose={onClose} title={title}>
+      <p>{message}</p>
+      <div className="dialog-actions">
+        <button autoFocus className="button" onClick={onClose} type="button">
+          Cancelar
+        </button>
+        <button
+          className="button danger"
+          onClick={() => {
+            onConfirm();
+            onClose();
+          }}
+          type="button"
+        >
+          {confirmLabel}
+        </button>
+      </div>
+    </Dialog>
+  );
+}
+
 export function PlaylistNameDialog({
   initialName = "",
   isSaving,

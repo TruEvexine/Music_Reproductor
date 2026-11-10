@@ -9,6 +9,7 @@ import "./ui/styles/base.css";
 import "./ui/styles/shell.css";
 import "./ui/styles/library.css";
 import "./ui/styles/player.css";
+import "./ui/styles/menu.css";
 
 // Las variantes por plataforma se resuelven en CSS con [data-platform], no con componentes distintos.
 document.documentElement.dataset.platform = target;

@@ -385,7 +385,7 @@ Límites conocidos de la Fase 1 (se resuelven en la fase indicada):
 - La biblioteca todavía no persiste: los archivos importados se pierden al recargar; la sesión guardada se restaura cuando vuelven a estar las mismas pistas (Fase 3: carpetas + IndexedDB).
 - Playlists siguen siendo solo en línea (Fase 3: locales primero + outbox).
 - Metadatos en el hilo principal, sin timeout (Fase 3: worker).
-- Borrar playlist usa `window.confirm` (Fase 4: toast con deshacer).
+- ~~Borrar playlist usa `window.confirm`~~ → resuelto 2026-11-10 con `ConfirmDialog` (`ui/dialogs.tsx`); el toast con deshacer sigue en la Fase 4.
 - Landing sin prerender ni SEO (Fase 7).
 
 ### Fase 2 — Motor de audio
@@ -427,7 +427,18 @@ Límites conocidos de la Fase 2:
 - [ ] Fondo dinámico: Portada (mesh gradient OKLCH), Ritmo (analizador), Estático, AMOLED + selector + intensidad (§4.2)
 - [ ] Gestos (§4.5) y drag & drop en cola y playlists
 - [ ] Skeletons, estados vacíos, errores y toasts con deshacer (§4.4)
-- [ ] Ecualizador con UI (curva + sliders verticales), pantalla de letra sincronizada
+- [x] Ecualizador con UI (sliders verticales) dentro del menú ≡ — 2026-11-10
+- [ ] Curva del ecualizador y pantalla de letra sincronizada
+
+#### Adelanto de la Fase 4 — Menú del reproductor ≡ (2026-11-10)
+- [x] Icono ≡ en el mini reproductor, la barra de escritorio y el reproductor expandido (`ui/PlayerMenu.tsx`): hoja inferior con arrastre en móvil (<600 px), popover anclado al icono en ancho. Es un `<dialog>` modal (foco atrapado, Esc cierra, el foco vuelve al icono); los submenús se navegan en profundidad con flecha de volver.
+- [x] Contenido: Repetir (apagado/cola/canción) y Aleatorio; Sonido (Ecualizador con presets, 10 bandas, preamp, graves, agudos y balance; ReplayGain; fundido 0–12 s; fundido al pausar/reanudar; velocidad 0,5–2× conservando el tono); Temporizador (5–90 min o al terminar la canción, con fundido final). Todo lee y escribe el store `player`; los ajustes nuevos se guardan con el resto de `audio` en IndexedDB (`sanitizeAudioSettings` rellena los valores neutros en ajustes antiguos).
+- [x] Decisión: el expandido **conserva** Aleatorio y Repetir a un toque (son de uso constante); el menú los refleja porque ambos leen el mismo estado.
+- [x] `Settings.tsx` eliminado: no quedaba nada que fuera de la app y no del reproductor; `VolumeControl` pasó a `Player.tsx` y la pestaña «Sonido» de la navegación desapareció. Límite: sin pista no hay mini reproductor ni menú, así que los ajustes de sonido solo se tocan con música cargada.
+- [x] `window.confirm` de borrar playlist → `ConfirmDialog` propio.
+- [x] Motor: graves/agudos (estantes a 120 Hz / 6 kHz), balance (`StereoPannerNode`), velocidad (`playbackRate` con `defaultPlaybackRate`), `pause(fade)`/`play(fade)` (sustituye a `fadeOutAndPause`) y `snapshot()` para que las pruebas lean el grafo real. En desarrollo el motor cuelga de `window.__engine`.
+- [x] Verificado: `scripts/prueba-menu.mjs` (46 comprobaciones: móvil con toque y escritorio con teclado, arrastre para cerrar, sin scroll horizontal, áreas ≥ 44 px, y cada ajuste leído en el grafo real), `scripts/prueba-audio.mjs` actualizado al menú (20) y la matriz de 9 viewports con el menú abierto desde mini y expandido (`scripts/capturas.mjs`). Capturas: `docs/capturas/menu-*.png`.
+- Límites: el sonido real (EQ, balance, velocidad, fundido al pausar) no se ha escuchado, solo medido en el grafo; el arrastre de la hoja se probó con ratón, no con un dedo en un móvil.
 
 ### Fase 5 — Calidad de vida
 - [ ] Favoritos, historial y estadísticas locales

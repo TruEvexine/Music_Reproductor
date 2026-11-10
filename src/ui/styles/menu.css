@@ -1,0 +1,373 @@
+/* Menú del reproductor (≡): hoja inferior en móvil, popover anclado desde 600 px. Ver PlayerMenu.tsx. */
+.menu {
+  width: 100%;
+  max-width: 100%;
+  max-height: 88dvh;
+  margin: auto 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+  overflow: hidden;
+  background: var(--surface-1);
+  color: var(--ink);
+}
+
+.menu[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: min(26rem, 60dvh);
+  animation: sheet-in var(--base) var(--ease);
+}
+
+.menu[data-presentation="sheet"]::backdrop {
+  background: oklch(0 0 0 / 0.6);
+}
+
+/* Lo único que flota en la app: lleva sombra. La posición la calcula el componente desde el icono. */
+.menu[data-presentation="popover"] {
+  inset: auto;
+  margin: 0;
+  min-height: 0;
+  border-radius: var(--radius-m);
+  box-shadow: 0 16px 48px oklch(0 0 0 / 0.55);
+  animation: pop-in var(--fast) var(--ease);
+}
+
+.menu[data-presentation="popover"]::backdrop {
+  background: transparent;
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+.menu-head {
+  padding: var(--s2) var(--s2) 0 var(--s4);
+  touch-action: none; /* arrastrar la cabecera cierra la hoja: el navegador no debe desplazar */
+}
+
+.menu-grabber {
+  display: block;
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--s1);
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.menu-head-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  min-height: var(--tap);
+}
+
+.menu-head-row h2 {
+  flex: 1;
+  min-width: 0;
+}
+
+.menu-head-row .icon-button {
+  color: var(--ink);
+}
+
+.menu-head-row .icon-button:first-child:not(:last-child) {
+  margin-left: calc(var(--s2) * -1);
+}
+
+.menu-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--s2) var(--s4) calc(var(--s4) + var(--safe-bottom));
+}
+
+.menu-page {
+  display: grid;
+  gap: var(--s4);
+  animation: page-in var(--base) var(--ease) both;
+}
+
+.menu-page[data-direction="back"] {
+  --shift: -16px;
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--shift, 16px));
+  }
+}
+
+.menu-group {
+  display: grid;
+  gap: var(--s1);
+}
+
+.menu-group h3 {
+  margin: 0 0 var(--s1);
+  padding: 0 var(--s1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+/* Fila: pulsable entera, 52 px de alto. */
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--s3);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  text-align: left;
+  transition: transform var(--fast) var(--ease);
+}
+
+.menu-row:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.menu-label {
+  flex: 1;
+  min-width: 0;
+  font-weight: 550;
+}
+
+.menu-value {
+  max-width: 50%;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  color: var(--ink-2);
+}
+
+.menu-row > svg:last-child {
+  flex: none;
+  color: var(--ink-3);
+}
+
+.menu-row[aria-pressed="true"] > svg:last-child {
+  color: var(--accent);
+}
+
+/* Interruptor: la posición de la perilla comunica el estado, no solo el color. */
+.switch-track {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--surface-3);
+  box-shadow: inset 0 0 0 1px var(--ink-3);
+}
+
+.switch-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--ink-2);
+  transition: transform var(--fast) var(--ease);
+}
+
+[aria-checked="true"] > .switch-track {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+[aria-checked="true"] > .switch-track .switch-thumb {
+  background: var(--on-accent);
+  transform: translateX(18px);
+}
+
+/* Opciones excluyentes: segmentos (pocas) y chips (muchas). El elegido lleva marca, no solo color. */
+.menu-field {
+  display: grid;
+  gap: var(--s2);
+}
+
+.menu-field-label {
+  padding: 0 var(--s1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.segmented {
+  display: flex;
+  gap: var(--s1);
+  padding: var(--s1);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.segment,
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s1);
+  min-height: var(--tap);
+  border-radius: 999px;
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.segment {
+  flex: 1;
+  color: var(--ink-2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.chip {
+  padding: 0 var(--s4);
+  background: var(--surface-2);
+}
+
+.segment[aria-checked="true"],
+.chip[aria-checked="true"] {
+  background: var(--surface-3);
+  color: var(--accent);
+}
+
+/* Deslizadores: relleno desde el origen (el centro en los controles con signo). */
+.menu-slider {
+  display: grid;
+  padding: 0 var(--s1);
+}
+
+.menu-slider-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.menu-slider input,
+.eq-band input {
+  appearance: none;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.menu-slider input {
+  width: 100%;
+  height: var(--tap);
+}
+
+.menu-slider input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
+}
+
+.menu-slider input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
+}
+
+.menu-slider input::-webkit-slider-thumb,
+.eq-band input::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.menu-slider input::-moz-range-thumb,
+.eq-band input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.menu-slider input:disabled,
+.eq-band input:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Ecualizador: 10 bandas en dos filas de 5 para que cada columna sea tocable (≥ 44 px) desde 320 px de ancho. */
+.eq {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--s4) var(--s1);
+}
+
+.eq-band {
+  display: grid;
+  justify-items: center;
+  gap: 0;
+}
+
+.eq-band input {
+  width: var(--tap);
+  height: 120px;
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
+.eq-band input::-webkit-slider-runnable-track {
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to top, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
+}
+
+.eq-band input::-moz-range-track {
+  width: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to top, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
+}
+
+.eq-band input::-webkit-slider-thumb {
+  margin-top: 0;
+  margin-left: -6px;
+}
+
+.menu .hint,
+.menu-status {
+  padding: 0 var(--s1);
+}
+
+.menu-status {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.menu-reset {
+  justify-self: start;
+}

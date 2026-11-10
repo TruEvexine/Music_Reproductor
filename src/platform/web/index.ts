@@ -76,11 +76,11 @@ export const audioSession: AudioSession = {
         })
       : null;
   },
-  setState({ playing, position, duration }) {
+  setState({ playing, position, duration, rate = 1 }) {
     if (!media) return;
     media.playbackState = playing ? "playing" : "paused";
     try {
-      if (duration > 0) media.setPositionState({ duration, position: Math.min(position, duration), playbackRate: 1 });
+      if (duration > 0) media.setPositionState({ duration, position: Math.min(position, duration), playbackRate: rate });
     } catch {
       // Estado de posición no soportado o valores aún incoherentes durante un cambio de pista.
     }

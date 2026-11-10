@@ -366,129 +366,14 @@ a {
   }
 }
 
-/* Ajustes de sonido */
-.tabs {
-  display: flex;
-  gap: var(--s1);
-  padding: var(--s1);
-  border-radius: 999px;
-  background: var(--surface-2);
-}
-
-.tab {
-  flex: 1;
-  min-height: 40px;
-  border-radius: 999px;
-  color: var(--ink-2);
-  font-weight: 600;
-}
-
-.tab[aria-selected="true"] {
-  background: var(--surface-3);
-  color: var(--ink);
-}
-
-.form select {
-  min-height: 48px;
-  padding: 0 var(--s3);
-  border: 0;
-  border-radius: var(--radius-s);
-  background: var(--surface-2);
-  font-size: 1rem;
-  font-weight: 400;
-}
-
-.form input[type="range"] {
-  padding: 0;
-  accent-color: var(--accent);
-  background: none;
-}
-
-.switch {
-  display: flex !important;
-  grid-template-columns: none;
-  align-items: center;
-  min-height: var(--tap);
-  gap: var(--s3);
-}
-
-.switch input {
-  width: 24px;
-  min-height: 24px;
-  accent-color: var(--accent);
-}
-
-.settings-group {
-  display: grid;
-  gap: var(--s2);
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.settings-group legend {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  padding: 0;
-  margin-bottom: var(--s2);
-  font-size: var(--text-s);
-  font-weight: 600;
-}
-
-.chips {
+.dialog-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--s2);
 }
 
-.chip {
-  min-height: var(--tap);
-  padding: 0 var(--s4);
-  border-radius: 999px;
-  background: var(--surface-2);
-  font-size: var(--text-s);
-  font-weight: 600;
-}
-
-.eq {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--s1);
-}
-
-.eq-band {
-  display: grid !important;
-  justify-items: center;
-  gap: var(--s1) !important;
-  flex: 1;
-}
-
-.eq-band input {
-  width: var(--tap);
-  height: 160px;
-  margin: 0;
-  writing-mode: vertical-lr;
-  direction: rtl;
-}
-
-.eq-band input::-webkit-slider-runnable-track {
-  width: 4px;
-  border-radius: 2px;
-  background: var(--surface-3);
-}
-
-.eq-band input::-moz-range-track {
-  width: 4px;
-  border-radius: 2px;
-  background: var(--surface-3);
-}
-
-.eq-band input::-webkit-slider-thumb {
-  margin-top: 0;
-  margin-left: -6px;
-}
-
-.eq-band input:disabled {
-  opacity: 0.4;
+.button.danger {
+  background: var(--danger);
+  color: oklch(0.2 0.03 25);
 }

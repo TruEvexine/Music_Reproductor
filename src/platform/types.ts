@@ -42,7 +42,7 @@ export interface AudioSession {
     seekBy(seconds: number): void;
   }): void;
   setTrack(track: { title: string; artist: string; album: string; artworkUrl?: string } | null): void;
-  setState(state: { playing: boolean; position: number; duration: number }): void;
+  setState(state: { playing: boolean; position: number; duration: number; rate?: number }): void;
 }
 
 export type Target = "web" | "android" | "ios";

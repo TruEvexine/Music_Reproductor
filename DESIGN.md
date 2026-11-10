@@ -103,6 +103,7 @@ Unidades: `dvh` (nunca `100vh`), `env(safe-area-inset-*)` en barra, pestañas, r
 | Fila de pista | Tocar la fila reproduce (la cola pasa a ser la lista visible). 64 px de alto, portada 48 px. Desde 700 px añade álbum, calidad y duración en columnas. Pista actual: título en acento **y** barra a la izquierda |
 | Portada | Siempre 1:1. Sin imagen: degradado derivado del nombre del álbum, nunca gris plano ni un glifo |
 | Botón | Uno primario por pantalla (relleno de acento). El resto, tono `--surface-2` o enlace |
+| Menú del reproductor (≡) | Una sola entrada para lo avanzado (repetir, sonido, temporizador, fondo). Móvil: hoja inferior con grabber y arrastre (<600 px); ancho: popover anclado al icono. Los submenús se abren dentro del mismo panel con flecha de volver, nunca menús flotantes anidados. Filas de 52 px, opciones con marca ✓ además del color, interruptores cuya posición comunica el estado. Los controles de uso constante (aleatorio, repetir) siguen a un toque en el reproductor |
 | Insignia de calidad | Texto, sin caja: `FLAC 24/96`, `MP3 320` (`core/format.ts`) |
 | Estado activo (shuffle, repetir) | Color de acento **y** punto bajo el icono; `aria-pressed` |
 | Estado vacío | Un título, una frase y una acción. Sin ilustraciones ni cajas punteadas |

@@ -229,6 +229,10 @@
   color: var(--ink);
 }
 
+.now-actions {
+  display: flex;
+}
+
 .now-art {
   display: grid;
   place-items: center;
@@ -336,8 +340,7 @@
   align-items: center;
 }
 
-.volume input,
-.eq-band input {
+.volume input {
   appearance: none;
   background: none;
   cursor: pointer;
@@ -367,8 +370,7 @@
   background: var(--ink-2);
 }
 
-.volume input::-webkit-slider-thumb,
-.eq-band input::-webkit-slider-thumb {
+.volume input::-webkit-slider-thumb {
   appearance: none;
   width: 16px;
   height: 16px;
@@ -377,8 +379,7 @@
   background: var(--ink);
 }
 
-.volume input::-moz-range-thumb,
-.eq-band input::-moz-range-thumb {
+.volume input::-moz-range-thumb {
   width: 16px;
   height: 16px;
   border: 0;

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { ComponentPropsWithRef, ReactNode } from "react";
 import { X } from "lucide-react";
 
 /** Tamaño y trazo únicos para todos los iconos (Lucide). */
@@ -11,7 +11,7 @@ export function IconButton({
   children,
   className = "",
   ...rest
-}: { label: string; children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
+}: { label: string; children: ReactNode } & ComponentPropsWithRef<"button">) {
   return (
     <button aria-label={label} className={`icon-button ${className}`} title={label} type="button" {...rest}>
       {children}

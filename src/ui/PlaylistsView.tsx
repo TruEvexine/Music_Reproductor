@@ -6,7 +6,7 @@ import { useLibrary } from "../state/library";
 import { player } from "../state/player";
 import type { AuthController } from "../sync/useAuthController";
 import { usePlaylistController } from "../sync/usePlaylistController";
-import { AddTracksDialog, PlaylistNameDialog } from "./dialogs";
+import { AddTracksDialog, ConfirmDialog, PlaylistNameDialog } from "./dialogs";
 import { Cover, icon, IconButton, iconSmall } from "./parts";
 
 export function PlaylistsView({ auth, onAccount }: { auth: AuthController; onAccount: () => void }) {
@@ -14,6 +14,7 @@ export function PlaylistsView({ auth, onAccount }: { auth: AuthController; onAcc
   const tracks = useLibrary((state) => state.tracks);
   const [naming, setNaming] = useState<"create" | "rename" | null>(null);
   const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const selected = playlists.selectedPlaylist;
 
   if (!auth.session) {
@@ -102,10 +103,7 @@ export function PlaylistsView({ auth, onAccount }: { auth: AuthController; onAcc
               <IconButton
                 disabled={playlists.isSaving}
                 label="Eliminar playlist"
-                onClick={() => {
-                  // ponytail: confirmación nativa; pasa a toast con deshacer en la Fase 4.
-                  if (window.confirm(`¿Eliminar la playlist «${selected.name}»?`)) safely(playlists.deletePlaylist(selected.id));
-                }}
+                onClick={() => setDeleting(true)}
               >
                 <Trash2 {...iconSmall} />
               </IconButton>
@@ -168,6 +166,15 @@ export function PlaylistsView({ auth, onAccount }: { auth: AuthController; onAcc
             naming === "create" ? playlists.createPlaylist(name) : playlists.renamePlaylist(selected?.id ?? "", name)
           }
           title={naming === "create" ? "Nueva playlist" : "Cambiar nombre"}
+        />
+      )}
+      {deleting && selected && (
+        <ConfirmDialog
+          confirmLabel="Eliminar"
+          message={`Se eliminará «${selected.name}» de tu cuenta. Tu música local no se toca.`}
+          onClose={() => setDeleting(false)}
+          onConfirm={() => safely(playlists.deletePlaylist(selected.id))}
+          title="¿Eliminar la playlist?"
         />
       )}
       {adding && selected && (

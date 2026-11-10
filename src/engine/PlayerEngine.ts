@@ -1,9 +1,10 @@
-import { dbToGain, EQ_BANDS, eqPreampDb } from "../core/audio";
+import { dbToGain, EQ_BANDS } from "../core/audio";
+import type { EqChain } from "../core/audio";
 
 // Motor de audio: único dueño de los <audio> y del grafo Web Audio. No conoce React, la cola ni la biblioteca.
 //
 //   deck A ─ ganancia(ReplayGain) ─ fundido ─┐
-//                                            ├─ preamp ─ EQ ×10 ─ volumen ─ limitador ─ analizador ─ salida
+//                                            ├─ preamp ─ EQ ×10 ─ graves ─ agudos ─ balance ─ volumen ─ limitador ─ analizador ─ salida
 //   deck B ─ ganancia(ReplayGain) ─ fundido ─┘
 //
 // Dos decks: uno suena y el otro precarga la siguiente pista (salto casi sin hueco) o entra en crossfade.
@@ -31,10 +32,16 @@ export class PlayerEngine {
   private context?: AudioContext;
   private preamp?: GainNode;
   private filters: BiquadFilterNode[] = [];
+  private bass?: BiquadFilterNode;
+  private treble?: BiquadFilterNode;
+  private panner?: StereoPannerNode;
   private master?: GainNode;
   private volume = 1;
-  private eq: readonly number[] | null = null;
+  private eq: EqChain | null = null;
+  private balance = 0;
+  private speed = 1;
   private fadeTimer?: ReturnType<typeof setTimeout>;
+  private pauseTimer?: ReturnType<typeof setTimeout>;
   /** Para el fondo "Ritmo" y visualizadores. Existe tras la primera reproducción. */
   analyser?: AnalyserNode;
 
@@ -45,6 +52,7 @@ export class PlayerEngine {
   private createDeck(): Deck {
     const audio = new Audio();
     audio.preload = "auto";
+    audio.defaultPlaybackRate = audio.playbackRate = this.speed;
     const deck: Deck = { audio, pendingSeek: 0 };
     // Solo el deck activo informa: el que precarga o se está apagando en un crossfade no cuenta.
     const whenActive = (handler: () => void) => () => {
@@ -87,6 +95,13 @@ export class PlayerEngine {
       filter.Q.value = 1.41;
       return filter;
     });
+    this.bass = context.createBiquadFilter();
+    this.bass.type = "lowshelf";
+    this.bass.frequency.value = 120;
+    this.treble = context.createBiquadFilter();
+    this.treble.type = "highshelf";
+    this.treble.frequency.value = 6000;
+    this.panner = context.createStereoPanner();
     this.master = context.createGain();
     const limiter = context.createDynamicsCompressor();
     limiter.threshold.value = -1;
@@ -96,7 +111,8 @@ export class PlayerEngine {
     limiter.release.value = 0.1;
     this.analyser = context.createAnalyser();
     this.analyser.fftSize = 2048;
-    const chain: AudioNode[] = [this.preamp, ...this.filters, this.master, limiter, this.analyser, context.destination];
+    this.analyser.smoothingTimeConstant = 0.4; // poco suavizado: los golpes del fondo "Ritmo" necesitan flancos nítidos
+    const chain: AudioNode[] = [this.preamp, ...this.filters, this.bass, this.treble, this.panner, this.master, limiter, this.analyser, context.destination];
     chain.reduce((from, to) => (from.connect(to), to));
     for (const deck of this.decks) {
       deck.gain = context.createGain();
@@ -105,19 +121,24 @@ export class PlayerEngine {
     }
     this.applyVolume();
     this.applyEq();
+    this.panner.pan.value = this.balance;
     return context;
   }
 
   private applyVolume() {
-    if (this.master) this.master.gain.value = this.volume;
-    else for (const deck of this.decks) deck.audio.volume = this.volume;
+    if (this.master) {
+      this.master.gain.cancelScheduledValues(0);
+      this.master.gain.value = this.volume;
+    } else for (const deck of this.decks) deck.audio.volume = this.volume;
   }
 
   private applyEq() {
-    if (!this.preamp) return;
-    const gains = this.eq ?? EQ_BANDS.map(() => 0);
-    this.preamp.gain.value = dbToGain(eqPreampDb(gains));
+    if (!this.preamp || !this.bass || !this.treble) return;
+    const gains = this.eq?.gains ?? EQ_BANDS.map(() => 0);
+    this.preamp.gain.value = dbToGain(this.eq?.preampDb ?? 0);
     this.filters.forEach((filter, index) => (filter.gain.value = gains[index] ?? 0));
+    this.bass.gain.value = this.eq?.bass ?? 0;
+    this.treble.gain.value = this.eq?.treble ?? 0;
   }
 
   private cancelFade() {
@@ -142,9 +163,24 @@ export class PlayerEngine {
   }
 
   /** `null` = ecualizador apagado. */
-  setEq(gains: readonly number[] | null) {
-    this.eq = gains;
+  setEq(chain: EqChain | null) {
+    this.eq = chain;
     this.applyEq();
+  }
+
+  /** -1 (izquierda) … 1 (derecha). */
+  setBalance(balance: number) {
+    this.balance = balance;
+    if (this.panner) this.panner.pan.value = balance;
+  }
+
+  /** Velocidad conservando el tono. `defaultPlaybackRate` evita que se pierda al cambiar de pista. */
+  setSpeed(rate: number) {
+    this.speed = rate;
+    for (const deck of this.decks) {
+      deck.audio.defaultPlaybackRate = rate;
+      deck.audio.playbackRate = rate;
+    }
   }
 
   /** Ganancia de ReplayGain de la pista que suena. */
@@ -202,26 +238,23 @@ export class PlayerEngine {
     return true;
   }
 
-  /** Baja el volumen general a cero en `seconds` y pausa (temporizador de apagado). */
-  fadeOutAndPause(seconds: number) {
-    const done = () => {
-      this.pause();
-      this.applyVolume();
-    };
-    if (!this.master || !this.context) return done();
+  /** Rampa del volumen general (no toca los fundidos de cada deck). */
+  private rampMaster(target: number, seconds: number, from = this.master?.gain.value ?? 0) {
+    if (!this.master || !this.context) return;
     const now = this.context.currentTime;
-    this.master.gain.setValueAtTime(this.master.gain.value, now);
-    this.master.gain.linearRampToValueAtTime(0, now + seconds);
-    setTimeout(() => {
-      this.master?.gain.cancelScheduledValues(0);
-      done();
-    }, seconds * 1000);
+    this.master.gain.cancelScheduledValues(0);
+    this.master.gain.setValueAtTime(from, now);
+    this.master.gain.linearRampToValueAtTime(target, now + seconds);
   }
 
-  /** Rechaza con el error del navegador (salvo AbortError: otra carga interrumpió esta). */
-  async play(): Promise<void> {
+  /** Rechaza con el error del navegador (salvo AbortError: otra carga interrumpió esta). `fade`: segundos de entrada. */
+  async play(fade = 0): Promise<void> {
     try {
+      clearTimeout(this.pauseTimer);
+      this.pauseTimer = undefined;
       await this.graph()?.resume();
+      if (fade > 0 && this.master) this.rampMaster(this.volume, fade, this.current.audio.paused ? 0 : undefined);
+      else this.applyVolume();
       await this.current.audio.play();
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
@@ -229,10 +262,21 @@ export class PlayerEngine {
     }
   }
 
-  pause() {
-    this.cancelFade();
-    this.idle.audio.pause();
-    this.current.audio.pause();
+  /** `fade` > 0: baja el volumen y pausa al terminar (pausa suave y temporizador de apagado). Sin Web Audio, pausa al instante. */
+  pause(fade = 0) {
+    clearTimeout(this.pauseTimer);
+    this.pauseTimer = undefined;
+    const hardPause = () => {
+      this.pauseTimer = undefined;
+      this.cancelFade();
+      this.idle.audio.pause();
+      this.current.audio.pause();
+      this.applyVolume();
+    };
+    if (fade > 0 && this.master && !this.current.audio.paused) {
+      this.rampMaster(0, fade);
+      this.pauseTimer = setTimeout(hardPause, fade * 1000);
+    } else hardPause();
   }
 
   stop() {
@@ -248,7 +292,20 @@ export class PlayerEngine {
     return this.current.audio.currentTime;
   }
 
+  /** Pausada o a punto de estarlo (en pleno fundido de pausa). */
   get paused(): boolean {
-    return this.current.audio.paused;
+    return this.current.audio.paused || this.pauseTimer !== undefined;
+  }
+
+  /** Valores reales del grafo, para verificar que un ajuste llega al motor (pruebas en navegador). */
+  snapshot() {
+    return {
+      eq: this.filters.map((filter) => filter.gain.value),
+      preamp: this.preamp?.gain.value,
+      bass: this.bass?.gain.value,
+      treble: this.treble?.gain.value,
+      pan: this.panner?.pan.value,
+      rate: this.current.audio.playbackRate,
+    };
   }
 }
