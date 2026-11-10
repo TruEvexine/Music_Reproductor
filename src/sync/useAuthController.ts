@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { createAttemptLimiter, SIGN_UP_SENT, signInMessage, signUpMessage } from "../../core/authMessages";
+import { createAttemptLimiter, SIGN_UP_SENT, signInMessage, signUpMessage } from "../core/authMessages";
 import { supabase, supabaseConfigured } from "./supabaseClient";
 
 const signInLimiter = createAttemptLimiter();

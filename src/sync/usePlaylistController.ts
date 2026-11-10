@@ -6,9 +6,9 @@ import {
   renameUserPlaylist,
   replacePlaylistTracks,
 } from "./playlistService";
-import { getPlaylistTrackIdentifier } from "./playlistService";
+import { trackV1Id } from "../core/track";
 import type { Playlist } from "./playlistService";
-import type { Track } from "../library/model/Track";
+import type { Track } from "../core/track";
 
 export function usePlaylistController(userId: string | undefined) {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -209,7 +209,7 @@ export function usePlaylistController(userId: string | undefined) {
       );
       if (!playlist) throw new Error("Selecciona una playlist.");
 
-      const identifier = getPlaylistTrackIdentifier(track);
+      const identifier = trackV1Id(track);
       if (playlist.trackIdentifiers.includes(identifier)) {
         throw new Error("La canción ya está en esta playlist.");
       }

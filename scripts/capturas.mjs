@@ -1,97 +1,93 @@
-// Capturas de las vistas principales. Uso: node scripts/capturas.mjs <carpeta-salida> [url]
-// Requiere `npm run dev` corriendo y `node scripts/gen-test-audio.mjs` ejecutado antes.
-// Nunca usa la música local: sustituye el catálogo demo por uno vacío e importa audio sintético.
+// Capturas y comprobación responsive. Uso: node scripts/capturas.mjs <carpeta-salida> [url-base]
+// Requiere `npm run dev` corriendo y `npm run test:audio` ejecutado antes.
+// Recorre TODA la matriz de viewports midiendo scroll horizontal y áreas táctiles < 44 px;
+// guarda capturas de 390x844 y 1440x900 (con --todas, de toda la matriz). Sale con código 1 si algo falla.
+// Nunca usa la música local: sustituye el catálogo de desarrollo por uno vacío e importa audio sintético.
 import { chromium } from "@playwright/test";
 import { mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-const outDir = process.argv[2] ?? "docs/capturas";
-const url = process.argv[3] ?? "http://localhost:5173/";
+const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const all = process.argv.includes("--todas");
+const outDir = args[0] ?? "docs/capturas";
+const base = (args[1] ?? "http://localhost:5173").replace(/\/$/, "");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
 const files = readdirSync(fixtures)
   .filter((f) => /\.(flac|mp3|m4a|wav|ogg|opus)$/.test(f))
   .map((f) => join(fixtures, f));
 mkdirSync(outDir, { recursive: true });
 
-const viewports = [
-  ["390x844", { width: 390, height: 844 }, true],
-  ["1440x900", { width: 1440, height: 900 }, false],
-];
+const matrix = ["320x568", "360x800", "390x844", "412x915", "844x390", "768x1024", "1024x768", "1440x900", "1920x1080"];
+const saved = new Set(["390x844", "1440x900"]);
+
+const measure = () => {
+  const small = new Set();
+  for (const el of document.querySelectorAll("button, a, input:not(.visually-hidden), [role=button]")) {
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0 || el.closest("[inert]")) continue;
+    if (r.width < 44 || r.height < 44) small.add(`${el.className || el.tagName} ${Math.round(r.width)}x${Math.round(r.height)}`);
+  }
+  let minFont = 99;
+  for (const el of document.querySelectorAll("body *")) {
+    if ([...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) {
+      minFont = Math.min(minFont, parseFloat(getComputedStyle(el).fontSize));
+    }
+  }
+  return { overflow: document.documentElement.scrollWidth > innerWidth, small: [...small], minFont };
+};
 
 const browser = await chromium.launch();
-const report = {};
-for (const [name, viewport, mobile] of viewports) {
-  const context = await browser.newContext({ viewport, hasTouch: mobile, isMobile: mobile, deviceScaleFactor: mobile ? 2 : 1 });
+const problems = [];
+for (const name of matrix) {
+  const [width, height] = name.split("x").map(Number);
+  const mobile = Math.min(width, height) < 600;
+  const context = await browser.newContext({ viewport: { width, height }, hasTouch: mobile, deviceScaleFactor: mobile ? 2 : 1 });
   const page = await context.newPage();
-  await page.route("**/demoCatalog.ts*", (route) =>
-    route.fulfill({ contentType: "text/javascript", body: "export const demoTracks = [];" }),
+  await page.route("**/demoCatalog.dev.ts*", (route) =>
+    route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }),
   );
-  const shot = (view) => page.screenshot({ path: join(outDir, `${view}-${name}.png`) });
-  await page.goto(url);
+  const check = async (view) => {
+    await page.waitForTimeout(350);
+    if (all || saved.has(name)) await page.screenshot({ path: join(outDir, `${view}-${name}.png`) });
+    const m = await page.evaluate(measure);
+    if (m.overflow) problems.push(`${name} ${view}: scroll horizontal`);
+    if (m.small.length) problems.push(`${name} ${view}: táctil < 44 px → ${m.small.join(" | ")}`);
+    if (m.minFont < 12) problems.push(`${name} ${view}: texto de ${m.minFont}px`);
+  };
+
+  await page.goto(`${base}/app`);
   await page.waitForLoadState("networkidle");
-  await shot("01-vacio");
+  await check("01-vacio");
 
-  await page.locator('input[type="file"]').first().setInputFiles(files);
+  await page.locator('input[type="file"]').setInputFiles(files);
   await page.waitForTimeout(2500);
-  await shot("02-biblioteca");
+  await check("02-biblioteca");
 
-  // Métricas objetivas para la auditoría: áreas táctiles, tamaños de texto y scroll horizontal.
-  report[name] = await page.evaluate(() => {
-    const small = [];
-    for (const el of document.querySelectorAll("button, a, input, label.import-button")) {
-      const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) continue;
-      if (r.width < 44 || r.height < 44) {
-        small.push(`${el.className || el.tagName} ${Math.round(r.width)}x${Math.round(r.height)}`);
-      }
-    }
-    const fonts = {};
-    for (const el of document.querySelectorAll("body *")) {
-      if (!el.childNodes.length || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
-      const size = getComputedStyle(el).fontSize;
-      fonts[size] = (fonts[size] ?? 0) + 1;
-    }
-    return {
-      horizontalScroll: document.documentElement.scrollWidth > innerWidth,
-      smallTargets: [...new Set(small)],
-      fontSizes: fonts,
-    };
-  });
+  await page.locator(".track-row .row-main").first().click();
+  await page.waitForTimeout(1200);
+  await check("03-reproduciendo");
 
-  const firstTrack = page.locator("button.track-select, [data-testid=track-row]").first();
-  if (await firstTrack.count()) {
-    await firstTrack.click();
-    await page.waitForTimeout(1500);
-    await shot("03-reproduciendo");
-  }
-  const queueButton = page.getByRole("button", { name: /cola/i }).last();
-  if (await queueButton.count()) {
-    await queueButton.click();
-    await page.waitForTimeout(400);
-    await shot("04-cola");
-    await page.keyboard.press("Escape");
-    const close = page.getByRole("button", { name: "Cerrar cola" }).last();
-    if (await close.isVisible().catch(() => false)) await close.click();
-  }
-  const search = page.getByRole("searchbox").first();
-  if (await search.count()) {
-    await search.fill("zzzz sin resultados");
-    await shot("05-busqueda-vacia");
-    await search.fill("");
-  }
-  const playlists = page.getByRole("button", { name: /^Playlists/ }).first();
-  if (await playlists.isVisible().catch(() => false)) {
-    await playlists.click();
-    await page.waitForTimeout(400);
-    await shot("06-playlists");
-  }
-  const account = page.getByRole("button", { name: /cuenta/i }).first();
-  if (await account.isVisible().catch(() => false)) {
-    await account.click();
-    await page.waitForTimeout(400);
-    await shot("07-cuenta");
-  }
+  await page.locator(".bar-track").click();
+  await check("04-reproductor");
+
+  await page.getByRole("button", { name: "Cola de reproducción" }).last().click();
+  await check("05-cola");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
+
+  await page.getByRole("searchbox").fill("zzzz");
+  await check("06-busqueda-vacia");
+
+  await page.goto(`${base}/app/playlists`);
+  await check("07-playlists");
+
+  await page.getByRole("button", { name: /Entrar|Cuenta/ }).first().click();
+  await check("08-cuenta");
+
+  await page.goto(`${base}/`);
+  await check("09-landing");
   await context.close();
 }
 await browser.close();
-console.log(JSON.stringify(report, null, 2));
+console.log(problems.length ? problems.join("\n") : `Matriz correcta: ${matrix.length} viewports sin scroll horizontal ni áreas táctiles pequeñas.`);
+process.exit(problems.length ? 1 : 0);

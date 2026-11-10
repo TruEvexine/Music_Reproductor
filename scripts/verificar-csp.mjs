@@ -8,7 +8,7 @@ import { join } from "node:path";
 
 const port = 4179;
 const server = spawn("npx", ["vite", "preview", "--port", String(port), "--strictPort"], { shell: true, stdio: "ignore" });
-const url = `http://localhost:${port}/`;
+const url = `http://localhost:${port}/app`;
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
 const files = readdirSync(fixtures).filter((f) => /\.(flac|mp3|m4a)$/.test(f)).map((f) => join(fixtures, f));
 
@@ -26,14 +26,15 @@ try {
   page.on("console", (m) => /Content Security Policy|Refused to/i.test(m.text()) && violations.push(m.text()));
   page.on("response", (r) => r.url().includes("supabase.co") && supabase.push(`${r.status()} ${new URL(r.url()).pathname}`));
   await page.goto(url);
-  await page.locator('input[type="file"]').first().setInputFiles(files);
+  await page.locator('input[type="file"]').setInputFiles(files);
   await page.waitForTimeout(2000);
   const covers = await page.locator('img[src^="blob:"]').count();
-  await page.getByRole("button", { name: /^Reproducir /i }).first().click();
+  await page.locator(".track-row .row-main").first().click();
   await page.waitForTimeout(1500);
-  const playing = await page.evaluate(() => [...document.querySelectorAll("audio")].some((a) => !a.paused && a.currentTime > 0));
+  // El motor crea su <audio> fuera del DOM: se comprueba por la interfaz (el tiempo avanza y el botón ofrece pausar).
+  const playing = (await page.getByRole("button", { name: "Pausar" }).count()) > 0 && (await page.locator(".bar-progress").getAttribute("style")) !== "--progress: 0%;";
 
-  const account = page.getByRole("button", { name: /cuenta/i }).first();
+  const account = page.getByRole("button", { name: /Entrar|Cuenta/ }).first();
   if (await account.isVisible().catch(() => false)) {
     await account.click();
     const email = page.locator('input[type="email"]');

@@ -1,0 +1,83 @@
+import { useEffect, useState } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
+import { CircleUser, Library, ListMusic } from "lucide-react";
+import { isNative } from "../platform";
+import { useAuthController } from "../sync/useAuthController";
+import { AuthDialog } from "./dialogs";
+import { Landing } from "./Landing";
+import { LibraryView } from "./LibraryView";
+import { icon } from "./parts";
+import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
+import { PlaylistsView } from "./PlaylistsView";
+import { closePanel, navigate, useRoute } from "./router";
+import { usePalette } from "./usePalette";
+
+function NavLink({ to, path, children }: { to: string; path: string; children: ReactNode }) {
+  const follow = (event: MouseEvent) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+    event.preventDefault();
+    navigate(to);
+  };
+  return (
+    <a aria-current={path === to ? "page" : undefined} className="nav-link" href={isNative ? `#${to}` : to} onClick={follow}>
+      {children}
+    </a>
+  );
+}
+
+function Shell() {
+  const { path, panel } = useRoute();
+  const auth = useAuthController();
+  const [account, setAccount] = useState(false);
+  const track = useCurrentTrack();
+  const palette = usePalette(track?.coverUrl);
+
+  // Sin pista no hay reproductor ni cola que mostrar: se descarta el panel de la URL.
+  useEffect(() => {
+    if (panel && !track && panel === "player") closePanel();
+  }, [panel, track]);
+
+  // Escape cierra el panel abierto (alternativa de teclado al botón atrás).
+  useEffect(() => {
+    if (!panel) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && closePanel();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [panel]);
+
+  const style = { "--accent": palette.accent, "--on-accent": palette.onAccent, "--glow": palette.glow } as CSSProperties;
+
+  return (
+    <div className="shell" data-panel={panel ?? undefined} style={style}>
+      <nav aria-label="Secciones" className="nav">
+        <span className="brand">Reproductor</span>
+        <NavLink path={path} to="/app">
+          <Library {...icon} />
+          <span>Canciones</span>
+        </NavLink>
+        <NavLink path={path} to="/app/playlists">
+          <ListMusic {...icon} />
+          <span>Playlists</span>
+        </NavLink>
+        <button className="nav-link" onClick={() => setAccount(true)} type="button">
+          <CircleUser {...icon} />
+          <span>{auth.session ? "Cuenta" : "Entrar"}</span>
+        </button>
+      </nav>
+      <main className="main" inert={panel === "player"}>
+        {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView />}
+      </main>
+      {panel === "queue" && <QueuePanel />}
+      <PlayerBar queueOpen={panel === "queue"} />
+      {panel === "player" && <NowPlaying />}
+      {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
+    </div>
+  );
+}
+
+export default function App() {
+  const { path } = useRoute();
+  // La app nativa no tiene landing: siempre abre el reproductor.
+  if (path === "/" && !isNative) return <Landing />;
+  return <Shell />;
+}

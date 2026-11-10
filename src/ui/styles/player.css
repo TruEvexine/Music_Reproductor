@@ -1,0 +1,331 @@
+/* Transporte y barra de progreso: compartidos por la barra y el reproductor expandido. */
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s1);
+}
+
+.transport .icon-button {
+  position: relative;
+}
+
+.play-button {
+  min-width: 48px;
+  min-height: 48px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.transport-large {
+  justify-content: space-between;
+}
+
+.transport-large .icon-button {
+  min-width: var(--tap-l);
+  min-height: var(--tap-l);
+  color: var(--ink);
+}
+
+.transport-large .play-button {
+  min-width: 72px;
+  min-height: 72px;
+  color: var(--on-accent);
+}
+
+@media (hover: hover) {
+  .play-button:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--on-accent);
+    opacity: 0.9;
+  }
+}
+
+.seek {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 0;
+}
+
+.seek .time:last-child {
+  text-align: right;
+}
+
+/* El trazo es fino, pero la zona de toque mide 44 px de alto. */
+.seek input {
+  grid-column: 1 / -1;
+  width: 100%;
+  height: var(--tap);
+  margin: 0;
+  appearance: none;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.seek input::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--progress, 0%), var(--surface-3) var(--progress, 0%));
+}
+
+.seek input::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.seek input::-moz-range-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.seek input::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.seek input::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.seek input:disabled {
+  opacity: 0.4;
+}
+
+/* Barra persistente. Móvil: mini reproductor (portada, título, play, siguiente). */
+.player-bar {
+  grid-area: bar;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) calc(var(--s2) + var(--safe-right)) var(--s2) calc(var(--s3) + var(--safe-left));
+  background: var(--surface-2);
+}
+
+.bar-progress {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(calc(var(--progress, 0%) / 100%));
+  transform-origin: left;
+}
+
+.bar-track {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+  min-height: var(--tap);
+  border-radius: var(--radius-s);
+  text-align: left;
+}
+
+.bar-cover {
+  width: 44px;
+}
+
+.bar-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.bar-mini {
+  display: flex;
+}
+
+.bar-mini .icon-button {
+  color: var(--ink);
+}
+
+.bar-center,
+.bar-end {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .player-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 34rem) minmax(0, 1fr);
+    gap: var(--s5);
+    padding: var(--s2) var(--s5);
+    background: var(--surface-1);
+  }
+  .bar-progress,
+  .bar-mini {
+    display: none;
+  }
+  .bar-cover {
+    width: 56px;
+  }
+  .bar-center {
+    display: grid;
+    margin-bottom: -8px;
+  }
+  .bar-center .seek {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    column-gap: var(--s3);
+  }
+  .bar-center .seek input {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .bar-center .seek .time:last-child {
+    grid-column: 3;
+  }
+  .bar-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--s3);
+  }
+  .bar-end .icon-button {
+    position: relative;
+  }
+}
+
+/* Reproductor expandido: la portada enciende la sala. */
+.now-playing {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: var(--safe-top) calc(var(--gutter) + var(--safe-right)) calc(var(--s5) + var(--safe-bottom))
+    calc(var(--gutter) + var(--safe-left));
+  background:
+    radial-gradient(120% 70% at 50% 0%, var(--glow), transparent 75%),
+    var(--bg);
+  animation: rise var(--slow) var(--ease);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+.now-header {
+  display: flex;
+  justify-content: space-between;
+  margin: var(--s2) calc(var(--s2) * -1);
+}
+
+.now-header .icon-button {
+  color: var(--ink);
+}
+
+.now-art {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: var(--s3) 0;
+  container-type: size;
+}
+
+.now-cover {
+  width: min(100cqw, 100cqh, 34rem);
+  border-radius: var(--radius-m);
+}
+
+.now-controls {
+  display: grid;
+  gap: var(--s3);
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.now-copy {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+}
+
+.now-title {
+  font-size: clamp(1.375rem, 1.1rem + 1.6vw, 2rem);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.now-artist {
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Horizontal (móvil girado, tablet, escritorio): portada | controles. */
+@media (min-aspect-ratio: 1/1) and (min-width: 600px) {
+  .now-playing {
+    grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--gutter);
+    padding-bottom: calc(var(--s3) + var(--safe-bottom));
+  }
+  .now-header {
+    grid-column: 1 / -1;
+  }
+  .now-controls {
+    align-self: center;
+  }
+}
+
+/* Cola. Móvil: pantalla completa sobre todo. Escritorio: columna fija a la derecha. */
+.queue-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: var(--safe-top) calc(var(--s3) + var(--safe-right)) var(--safe-bottom) calc(var(--s3) + var(--safe-left));
+  background: var(--surface-1);
+  animation: rise var(--base) var(--ease);
+}
+
+.queue-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0 var(--s2) var(--s2);
+}
+
+.queue-header .subtitle {
+  flex: 1;
+}
+
+.queue-list {
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.queue-empty {
+  padding: var(--s4) var(--s2);
+  color: var(--ink-2);
+}
+
+@media (min-width: 1000px) {
+  .queue-panel {
+    position: static;
+    grid-area: queue;
+    width: 22rem;
+    min-height: 0;
+    animation: none;
+  }
+}

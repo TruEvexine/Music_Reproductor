@@ -1,0 +1,123 @@
+/* Estructura: móvil = contenido / mini reproductor / pestañas. Escritorio = navegación | contenido | cola, y barra abajo. */
+.shell {
+  display: grid;
+  grid-template: "main" minmax(0, 1fr) "bar" auto "nav" auto / minmax(0, 1fr);
+  height: 100dvh;
+}
+
+.main {
+  grid-area: main;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: var(--safe-top);
+}
+
+.nav {
+  grid-area: nav;
+  display: flex;
+  padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+  background: var(--surface-1);
+}
+
+.brand {
+  display: none;
+}
+
+.nav-link {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tap-l);
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.nav-link[aria-current="page"] {
+  color: var(--accent);
+}
+
+/* La pestaña activa no depende solo del color: el icono gana trazo. */
+.nav-link[aria-current="page"] svg {
+  stroke-width: 2.4;
+}
+
+.view {
+  display: grid;
+  align-content: start;
+  gap: var(--s4);
+  padding: var(--s5) var(--gutter) var(--s6);
+}
+
+.view-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.view.empty {
+  align-content: center;
+  justify-items: start;
+  gap: var(--s4);
+  min-height: 100%;
+  max-width: 34rem;
+}
+
+.view.empty p:not(.hint) {
+  color: var(--ink-2);
+  font-size: var(--text-l);
+}
+
+@media (min-width: 1000px) {
+  .shell {
+    grid-template:
+      "nav main queue" minmax(0, 1fr)
+      "bar bar bar" auto / 220px minmax(0, 1fr) auto;
+  }
+
+  .nav {
+    flex-direction: column;
+    gap: var(--s1);
+    padding: var(--s5) var(--s3);
+  }
+
+  .brand {
+    display: block;
+    padding: 0 var(--s3) var(--s5);
+    font-size: var(--text-l);
+    font-stretch: 80%;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .nav-link {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--s3);
+    min-height: var(--tap);
+    padding: 0 var(--s3);
+    border-radius: var(--radius-s);
+    font-size: var(--text-m);
+  }
+
+  .nav-link[aria-current="page"] {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .view {
+    padding-top: var(--s7);
+  }
+}
+
+@media (hover: hover) {
+  .nav-link:hover {
+    color: var(--ink);
+  }
+}

@@ -1,0 +1,57 @@
+/* Tokens de diseño. Ver DESIGN.md. Todo color, tamaño y duración de la interfaz sale de aquí. */
+:root {
+  /* Color: tres tonos de superficie (se separan por tono, no por bordes) y tres de tinta. */
+  --bg: oklch(0.145 0.004 70);
+  --surface-1: oklch(0.19 0.005 70);
+  --surface-2: oklch(0.235 0.006 70);
+  --surface-3: oklch(0.29 0.007 70);
+  --ink: oklch(0.96 0.006 85);
+  --ink-2: oklch(0.78 0.008 85);
+  --ink-3: oklch(0.66 0.008 85);
+  --danger: oklch(0.76 0.14 25);
+  /* El acento y el ambiente los sobrescribe la portada de la pista actual (core/palette.ts). */
+  --accent: oklch(0.84 0.09 85);
+  --on-accent: oklch(0.2 0.03 85);
+  --glow: oklch(0.3 0.03 85);
+
+  /* Tipografía: una familia variable; los títulos usan el eje de anchura condensado. */
+  --font: "Instrument Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-xs: 0.75rem;
+  --text-s: 0.8125rem;
+  --text-m: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
+  --text-l: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  --text-xl: clamp(1.875rem, 1.3rem + 2.6vw, 3rem);
+
+  /* Espacio (base 4), radios y tamaños táctiles. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --radius-s: 6px;
+  --radius-m: 12px;
+  --tap: 44px;
+  --tap-l: 56px;
+
+  /* Movimiento: solo transform y opacity. */
+  --fast: 120ms;
+  --base: 220ms;
+  --slow: 280ms;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ink-2: oklch(0.9 0.006 85);
+    --ink-3: oklch(0.82 0.008 85);
+    --surface-2: oklch(0.27 0.006 70);
+  }
+}

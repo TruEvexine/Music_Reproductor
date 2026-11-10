@@ -32,7 +32,11 @@ const globalHeaders = Object.fromEntries(
   (vercel.headers.find((rule) => rule.source === "/(.*)")?.headers ?? []).map(({ key, value }) => [key, value]),
 );
 
+// VITE_TARGET=android|ios: la app se sirve desde archivos, así que las rutas de los assets son relativas.
+const native = process.env.VITE_TARGET === "android" || process.env.VITE_TARGET === "ios";
+
 export default defineConfig(({ mode }) => ({
+  base: native ? "./" : "/",
   plugins: [react(), buildGuard(mode)],
   preview: { headers: globalHeaders },
   test: { include: ["src/**/*.test.ts", "scripts/**/*.test.ts"] },

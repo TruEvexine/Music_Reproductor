@@ -1,29 +1,10 @@
-import { supabase } from "../auth/supabaseClient";
+import { supabase } from "./supabaseClient";
 
 export interface Playlist {
   id: string;
   name: string;
   createdAt: string;
   trackIdentifiers: string[];
-}
-
-export function getPlaylistTrackIdentifier(track: {
-  title: string;
-  artist: string;
-  album: string;
-  duration?: number;
-}): string {
-  const normalized = [
-    track.title,
-    track.artist,
-    track.album,
-    track.duration ? Math.round(track.duration) : "",
-  ]
-    .map((value) =>
-      String(value).trim().normalize("NFKC").toLocaleLowerCase(),
-    )
-    .join("|");
-  return `track:v1:${encodeURIComponent(normalized)}`;
 }
 
 interface PlaylistRow {

@@ -1,6 +1,6 @@
 # PLAN.md — Plan maestro del reproductor
 
-> **Última actualización:** 2026-11-10 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase compartido, hosting en Vercel). **Fase 0 completa; siguiente: Fase 1.**
+> **Última actualización:** 2026-11-10 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase compartido, hosting en Vercel). **Fases 0 y 1 completas; siguiente: Fase 2 (motor de audio).**
 > **Rama de trabajo:** `desarrollo` (nunca `main`). Pendientes del usuario: `DECISIONES_PENDIENTES.md`. Auditoría de diseño: `docs/AUDITORIA_DISENO.md`. Arquitectura de apps: `docs/ARQUITECTURA_APP.md`.
 > **Este documento manda.** Si contradice a `DESIGN.md`, `AGENTS.md`, `SUPABASE.md` o al README, gana este archivo hasta que esos documentos se actualicen (tarea de la Fase 1).
 > **Antes de escribir código:** leer `SECURITY_AUDIT.md` y completar la **Fase 0**. Es bloqueante.
@@ -52,7 +52,7 @@ No es copia literal de ninguna: tomamos principios, no assets ni layouts pixel a
 | Biblioteca | Abrir **carpetas**, re-escaneo, caché persistente (IndexedDB), vistas por álbum/artista/carpeta/género, ordenamiento, virtualización para miles de pistas, OGG/Opus |
 | Diseño | Gradientes multicolor animados, modo ritmo, selector de fondo, reproductor expandido estilo Poweramp, gestos táctiles, drag & drop en cola, skeletons |
 | Producto | Landing/SEO, PWA, perfiles (avatar, ajustes sincronizados), nube de música, monetización, términos/privacidad |
-| Código | `App.tsx` tiene 1011 líneas y `global.css` 1701: hay que dividirlos antes de crecer. Sin pruebas automatizadas |
+| Código | Reestructurado en la Fase 1 (ver abajo). Falta virtualización y workers |
 | Infra | Proyecto de Supabase compartido (aceptado); acciones manuales en paneles de Vercel/Supabase (`DECISIONES_PENDIENTES.md`) |
 
 ### Hecho en la Fase 0 (2026-11-10)
@@ -73,7 +73,7 @@ No es copia literal de ninguna: tomamos principios, no assets ni layouts pixel a
 - **Motor de audio fuera de React:** una clase `PlayerEngine` (TS puro) dueña de los `<audio>` y del grafo Web Audio. React lo observa a través de un store pequeño (**Zustand**) — la UI nunca toca `HTMLAudioElement` directamente.
 - **Workers:** pool de 2–4 Web Workers para leer metadatos, calcular hashes y generar miniaturas/paletas (`OffscreenCanvas`). El hilo principal solo pinta.
 - **Persistencia local:** IndexedDB (librería `idb`, ~1 KB) para biblioteca, portadas, handles de carpetas y estado de sesión; `localStorage` solo para ajustes de UI triviales.
-- **Router:** `react-router` (o rutas manuales si alcanza) para separar landing (`/`) de la app (`/app`).
+- **Router:** propio (`src/ui/router.ts`, ~50 líneas, sin dependencia). Decisión 2026-11-10: con tres rutas y paneles en `?panel=` no compensa `react-router`; revisar si las vistas de álbum/artista de la Fase 3 lo complican.
 - **Listas largas:** `@tanstack/react-virtual`.
 
 ### 3.2 Música local y FLAC (núcleo del producto)
@@ -246,7 +246,7 @@ Ajuste **Fondo**: `Portada` (predeterminado) · `Ritmo` · `Estático` · `Negro
 
 - Tema oscuro por defecto (claro opcional después). Tokens en `:root` (color, espacio 4/8, radios, sombras, duraciones, curvas).
 - Tipografía: una sans con números tabulares para controles y tiempos (p. ej. Inter / Manrope) y, al estilo Qobuz, una serif o display elegante opcional para títulos de álbum/artista en vistas editoriales.
-- Iconos: un solo set (Lucide o Phosphor) en vez de iconos a mano.
+- Iconos: Lucide (`lucide-react`).
 - Áreas táctiles ≥ 44×44 px. Estados hover/pressed/focus visibles y que no dependan solo del color.
 - **`DESIGN.md` se reescribe en la Fase 1** con esta dirección (Poweramp para reproductor, controles y gestos; Qobuz para biblioteca, vistas de álbum/artista y presentación editorial).
 
@@ -370,12 +370,23 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 **Fase 0 cerrada el 2026-11-10.** Lo que queda sin marcar depende de paneles a los que solo accede el usuario.
 
 ### Fase 1 — Base para crecer
-- [ ] Dividir `App.tsx` en vistas/componentes (`LibraryView`, `PlaylistsView`, `QueueDrawer`, `MiniPlayer`, `ExpandedPlayer`, `TrackRow`, `Cover`) y `global.css` en archivos por componente (CSS Modules o archivos planos importados)
-- [ ] `PlayerEngine` + store Zustand; los hooks actuales pasan a ser selectores
-- [ ] Router: `/` (landing provisional) y `/app`
-- [ ] Persistencia de sesión y ajustes (IndexedDB)
-- [ ] Vitest para cola, repetición, shuffle e identidad de pista
-- [ ] Reescribir `DESIGN.md` y `AGENTS.md` según este plan (Poweramp + Qobuz, fondos, gestos)
+- [x] `App.tsx` y `global.css` sustituidos por `src/ui/` (`App`, `LibraryView`, `PlaylistsView`, `Player` con barra/mini, expandido y cola, `dialogs`, `parts`) y estilos por área con tokens (`src/ui/styles/`) — 2026-11-10
+- [x] `PlayerEngine` (`src/engine/`) + stores Zustand (`src/state/player.ts`, `library.ts`) — 2026-11-10
+- [x] Router propio sin dependencia (`src/ui/router.ts`): `/` landing provisional, `/app`, `/app/playlists`; paneles en `?panel=` para que el botón atrás los cierre; hash en nativo. `rewrites` en `vercel.json` — 2026-11-10
+- [x] Persistencia de sesión en IndexedDB con esquema versionado por migraciones (`src/platform/web/db.ts`, test con `fake-indexeddb`): cola, pista, posición, repetición y shuffle — 2026-11-10
+- [x] Vitest para cola, repetición, shuffle, identidad de pista, formato, búsqueda y paleta (38 tests) — 2026-11-10
+- [x] Separación `core` / `platform` / `ui` / `state` / `engine` / `sync` (§3.7) y `VITE_TARGET` (`base: './'` en nativo, `data-platform` en `<html>`) — 2026-11-10
+- [x] `DESIGN.md` y `AGENTS.md` reescritos (tokens, dirección de la auditoría, regla de reutilización por pantalla) — 2026-11-10
+- [x] Críticos de la auditoría resueltos: C1 scroll horizontal, C2 texto < 12 px, C3 áreas táctiles, C4 reproductor expandido; además A2, A4, A5, A6, A8, A10 — verificado con `node scripts/capturas.mjs` en los 9 viewports
+
+Skills aplicadas: ponytail (router y diálogos sin dependencias, sin capas extra), impeccable (modo Operate, auditoría previa), apple-design (áreas táctiles, pestañas inferiores, hojas), design-taste-frontend (reglas de app-screens: sin eyebrows, sin bordes, sin degradados decorativos), ui-ux-pro-max (prioridades de accesibilidad y táctil), design-motion-principles (puerta de frecuencia), anti-slop (copia sin jerga).
+
+Límites conocidos de la Fase 1 (se resuelven en la fase indicada):
+- La biblioteca todavía no persiste: los archivos importados se pierden al recargar; la sesión guardada se restaura cuando vuelven a estar las mismas pistas (Fase 3: carpetas + IndexedDB).
+- Playlists siguen siendo solo en línea (Fase 3: locales primero + outbox).
+- Metadatos en el hilo principal, sin timeout (Fase 3: worker).
+- Borrar playlist usa `window.confirm` (Fase 4: toast con deshacer).
+- Landing sin prerender ni SEO (Fase 7).
 
 ### Fase 2 — Motor de audio
 - [ ] Volumen + mute, shuffle (sin repetir hasta agotar), anterior reinicia si > 3 s
