@@ -1,99 +1,72 @@
-# Auditoría de seguridad — recursos versionados en git
+# Auditoría de seguridad
 
-**Fecha:** 2026-10-14 · **Commit auditado:** `5065a8b` (rama principal, 3 commits en total)
-**Alcance:** todo lo que está en el árbol de git y en su historial, dependencias (`package-lock.json`), migraciones SQL y el código del cliente que toca archivos, metadatos y autenticación. No se auditó la configuración viva de Railway ni del panel de Supabase (no hay acceso desde el repo).
+**Última revisión:** 2026-11-10 (Fase 0 completa) · **Primera auditoría:** 2026-10-14 sobre `5065a8b`
+**Alcance:** árbol e historial de git, dependencias, migraciones SQL, código del cliente (archivos, metadatos, autenticación) y configuración de hosting versionada. Los paneles de Vercel y Supabase se revisan a mano (ver `DECISIONES_PENDIENTES.md`).
 
 ## Resumen
 
 | # | Severidad | Hallazgo | Estado |
 |---|-----------|----------|--------|
-| S1 | **Crítica (legal)** | 9 pistas de prueba con copyright (~353 MB) versionadas y servidas públicamente desde el deploy | **Resuelto** (historial reescrito) — falta verificar 404 tras redeploy |
-| S2 | Media | `supabase/.temp/` versionado: project ref, org id, host y usuario del pooler | **Resuelto** (historial reescrito + ignorado) |
-| S3 | Media | El reproductor comparte el proyecto de Supabase `Undefeated_Star_Web_Page` con otro sitio | En curso (guía en `SUPABASE.md` §16) |
-| S4 | Media | Sin cabeceras de seguridad (CSP, HSTS, etc.): no hay config de hosting en el repo | Abierto |
-| S5 | Baja | El MIME de la portada se toma del tag del archivo sin lista blanca | Abierto |
-| S6 | Baja | Columnas de texto y RPC sin límites de tamaño (`display_name`, `avatar_url`, `track_identifier`, array del RPC) | **Resuelto** en migración `20261014120000_hardening_limits.sql` |
-| S7 | Baja | Endurecimiento de Auth pendiente (CAPTCHA, protección de contraseñas filtradas, SMTP propio) | Abierto |
-| S8 | Baja | 1 vulnerabilidad *high* en dependencia de desarrollo (`source-map-js`); producción: 0 | Abierto |
-| S9 | Info | Documentación duplicada y desactualizada (`README (1).md`, `SUPABASE (1).md`, `CLAUDE.md` = `AGENTS.md`) | Parcial (duplicados `(1)` borrados) |
-| S10 | Info | Correo institucional expuesto como autor de commits | Opcional |
+| S1 | **Crítica (legal)** | Pistas con copyright versionadas y servidas desde el deploy | **Resuelto.** Historial reescrito; el build ya no puede incluir audio. Falta borrar a mano dos deployments antiguos (D4) |
+| S2 | Media | `supabase/.temp/` versionado | **Resuelto** (historial reescrito + ignorado + bloqueado por hook) |
+| S3 | Media | Proyecto de Supabase compartido con otras apps (`math_*`) | **Aceptado** (decisión 2026-11-10). Mitigado con reglas de alcance en `AGENTS.md` §28 |
+| S4 | Media | Sin cabeceras de seguridad | **Resuelto** en `vercel.json`, verificado con `scripts/verificar-csp.mjs` |
+| S5 | Baja | MIME de portada sin lista blanca | **Resuelto** (`src/core/coverMime.ts` + test) |
+| S6 | Baja | Columnas y RPC sin límites de tamaño | **Resuelto** (`20261014120000_hardening_limits.sql`, aplicada) |
+| S7 | Baja | Endurecimiento de Auth en el panel (CAPTCHA, contraseñas filtradas, SMTP) | **Abierto — manual** (D9). Los mensajes de error ya no revelan si un correo existe |
+| S8 | Baja | Vulnerabilidades en dependencias de desarrollo | **Resuelto** (`npm audit`: 0). Dependabot semanal + `npm audit` en CI |
+| S9 | Info | Documentación duplicada | **Resuelto** (`CLAUDE.md` apunta a `AGENTS.md`) |
+| S10 | Info | Correo institucional como autor de commits | Opcional (D10) |
+| S11 | **Alta** | `npm run build` en local empaquetaba la música de `src/assets/music/` en `dist/` (así llegó a producción) | **Resuelto** (2026-11-10): catálogo demo solo en desarrollo + el build falla si la salida contiene audio |
 
-**Lo que está bien:** `.env` ignorado y nunca commiteado; no hay claves (`service_role`, `sb_secret_`, JWT, contraseñas de Postgres) en ningún commit; RLS habilitado en las 3 tablas con políticas por dueño; `revoke` a `anon`; la función `security definer` fija `search_path = ''`; el RPC es `security invoker` y valida la propiedad de la playlist; no hay `dangerouslySetInnerHTML`, `eval` ni `innerHTML`; los blobs de audio y portada se revocan.
+**Hallazgos abiertos de severidad media o mayor: 0** (S3 aceptado; S1 solo tiene pendiente una limpieza manual).
 
----
+## Defensa en profundidad (qué impide que vuelva a pasar)
 
-## S1 — Música con copyright en el repositorio (Crítica)
+| Capa | Qué hace | Dónde |
+|------|----------|-------|
+| `.gitignore` | Ignora `.env*`, audio en todo el repo, claves, keystores, `supabase/.temp`, builds | `.gitignore` |
+| Hook `pre-commit` | Bloquea `.env`, audio, keystores, `supabase/.temp`, archivos > 2 MB y patrones de secretos (asignaciones de service role, claves `sb_secret`, JWT largos, URI de PostgreSQL con usuario y contraseña, bloques de clave privada PEM) | `.githooks/pre-commit` |
+| Hook `commit-msg` | Quita atribuciones a asistentes de IA; rechaza mensajes vacíos | `.githooks/commit-msg` |
+| Guardia de build | Falla si una `VITE_*` es un secreto (por nombre, por valor o por JWT con rol `service_role`) o si el bundle contiene audio | `scripts/envGuard.ts`, `vite.config.ts` |
+| CI | typecheck, tests, build, `npm audit --omit=dev --audit-level=high`, gitleaks sobre todo el historial; permisos `contents: read`; acciones fijadas por SHA | `.github/workflows/ci.yml` |
+| Dependabot | npm y GitHub Actions, semanal | `.github/dependabot.yml` |
+| Cabeceras | CSP, HSTS, `nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, COOP; caché inmutable en `/assets/` | `vercel.json` |
 
-`src/assets/music/` contenía 9 pistas comerciales usadas solo para pruebas (Travis Scott, Post Malone, 100 gecs, David Bowie, Tainy, Mac Miller, Kanye West, The Notorious B.I.G.) en FLAC/M4A. `demoCatalog.ts` las importa con `import.meta.glob`, así que Vite las copia a `dist/` y **el deploy de Railway las distribuye a cualquiera**. El repo es público en GitHub.
+Los hooks se activan por clon con `npm run setup` (ya activados en esta copia). Probados el 2026-11-10 con un `.env`, un `.flac` y una clave `sb_secret_` falsos: los tres bloqueados.
 
-**Riesgo:** reclamos DMCA contra GitHub y Railway (suspensión del repo o del servicio), responsabilidad legal, y bloqueo futuro en tiendas de apps. Además el `.git` pesa 353 MB por esto.
+## Lo que está bien
 
-**Remediación:**
-1. Quitar las pistas del árbol y del build ya (`git rm -r --cached src/assets/music/*.flac *.m4a`, ignorar `src/assets/music/*` salvo `README.md`).
-2. Reescribir el historial para eliminarlas (`git filter-repo --path src/assets/music --invert-paths` conservando el README) y hacer `push --force`. Avisar a cualquier colaborador para que vuelva a clonar.
-3. Si se quiere demo: usar 2–3 pistas con licencia libre (CC0/CC-BY con atribución) servidas desde almacenamiento de objetos, no desde el bundle. O sin demo: estado vacío con CTA "Agrega tu música".
-4. Redeploy en Railway y comprobar que las URLs viejas de `/assets/*.flac` devuelven 404.
+`.env` nunca commiteado; ninguna clave en ningún commit; RLS en las 3 tablas con políticas por dueño; `revoke` a `anon`; funciones `security definer` con `search_path = ''` y sin `EXECUTE` público; el RPC es `security invoker` y valida la propiedad; sin `innerHTML`, `eval` ni `dangerouslySetInnerHTML`; sin `console.*` en el cliente; blobs de audio y portada revocados.
 
-## S2 — `supabase/.temp/` versionado (Media)
+## CSP vigente
 
-Archivos generados por la CLI de Supabase. Exponen `project-ref` (`rifwgetomheljrgjfeoy`), `organization_id`, nombre del proyecto y `pooler-url` (`postgresql://postgres.<ref>@aws-0-us-east-1.pooler.supabase.com:5432/postgres`). **No incluye contraseña.** El ref ya es público vía la URL del cliente, pero el host del pooler y el org id facilitan reconocimiento (ataques de fuerza bruta a la contraseña de Postgres).
+```text
+default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+img-src 'self' blob: data:; media-src 'self' blob:; font-src 'self';
+connect-src 'self' https://rifwgetomheljrgjfeoy.supabase.co wss://rifwgetomheljrgjfeoy.supabase.co;
+worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self';
+form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests
+```
 
-**Remediación:** `git rm -r --cached supabase/.temp`, agregar `supabase/.temp/` y `supabase/.branches/` a `.gitignore`. Confirmar que la contraseña de la base es larga y aleatoria; activar *Network Restrictions* en Supabase si no se necesita conexión directa desde fuera.
+- `style-src 'unsafe-inline'` es necesario: React escribe estilos en línea (variables CSS de progreso y paleta). No hay `unsafe-inline` ni `unsafe-eval` en scripts.
+- Si cambia el proyecto de Supabase o se añade un origen (bucket de audio, analítica), hay que actualizar `connect-src`/`media-src` y volver a correr `node scripts/verificar-csp.mjs`.
+- Verificado el 2026-11-10: importar audio, portadas `blob:`, reproducción y petición a Supabase Auth funcionan con 0 violaciones.
 
-## S3 — Proyecto de Supabase compartido (Media)
+## Detalle de hallazgos
 
-`linked-project.json` muestra que el reproductor usa el proyecto **`Undefeated_Star_Web_Page`**. Usuarios, tablas y cuotas de dos productos distintos viven juntos: un error de RLS o una migración en uno afecta al otro, y no se puede pasar uno a plan de pago sin el otro.
+### S1 / S11 — Música con copyright
+Nueve pistas comerciales estuvieron versionadas y desplegadas. El historial se reescribió, pero la causa seguía viva: `demoCatalog.ts` usaba `import.meta.glob` sobre `src/assets/music/`, así que cualquier `npm run build` hecho en una máquina con música la copiaba a `dist/`, y un deploy desde esa carpeta la publicaba. Ahora el catálogo se carga con un `import()` que solo existe en desarrollo y el build aborta si la salida contiene un archivo de audio. **Pendiente manual:** borrar los dos deployments antiguos que aún la sirven (D4).
 
-**Remediación:** proyecto dedicado para el reproductor (ver Fase 8 de `PLAN.md`).
+### S3 — Supabase compartido
+El proyecto `rifwgetomheljrgjfeoy` aloja también tablas `math_*` de otra app. Riesgo: una migración o un fallo de RLS de un producto afecta al otro, y comparten cuotas y usuarios de Auth. Se acepta; el reproductor solo toca sus objetos y lo nuevo lleva prefijo `mp_`.
 
-## S4 — Sin cabeceras de seguridad (Media)
+### S7 — Auth en el panel
+Pendiente en Dashboard: confirmación de correo, longitud mínima ≥ 10, protección de contraseñas filtradas (plan Pro), CAPTCHA, SMTP propio, *Redirect URLs* sin comodines. En el cliente: mensajes genéricos y bloqueo de 30 s tras 5 intentos fallidos (solo frena al usuario honesto; el límite real es el del servidor).
 
-No hay `Dockerfile`, `railway.json`, `Caddyfile` ni `nginx.conf`: Railway sirve el build con su configuración por defecto. Faltan `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` y `frame-ancestors`.
+## Pendiente para fases posteriores
 
-**Remediación:** servir `dist/` con un servidor estático propio (Caddy o nginx) y definir cabeceras. CSP base:
-`default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob: https://<bucket>; connect-src 'self' https://<proyecto>.supabase.co wss://<proyecto>.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`.
-Cachear `assets/*` con `immutable` y `index.html` con `no-cache`.
-
-## S5 — MIME de portada sin lista blanca (Baja)
-
-`metadataReader.ts` crea el `Blob` de la portada con `picture.format` tal cual viene en el tag. Un archivo manipulado puede declarar `image/svg+xml` o `text/html`. Dentro de `<img>` no ejecuta scripts, pero si algún día la URL `blob:` se abre en una pestaña (p. ej. "ver portada"), corre con el origen de la app.
-
-**Remediación:** aceptar solo `image/jpeg`, `image/png`, `image/webp`, `image/gif`; cualquier otro valor → `image/jpeg` o descartar. Opcional: verificar *magic bytes*.
-
-## S6 — Límites de tamaño en BD (Baja)
-
-`profiles.display_name`, `profiles.avatar_url` y `playlist_tracks.track_identifier` no tienen `check` de longitud; `replace_playlist_tracks` acepta arrays de cualquier tamaño. Un usuario autenticado puede inflar su fila o mandar arrays enormes (abuso de cuota y CPU).
-
-**Remediación (migración nueva):** `check (char_length(display_name) <= 60)`, `check (avatar_url ~ '^https://' and char_length(avatar_url) <= 500)`, `check (char_length(track_identifier) <= 512)`, y en el RPC `if cardinality(p_track_identifiers) > 5000 then raise ...`. Límite de playlists por usuario según plan (Fase 12).
-
-## S7 — Endurecimiento de Auth (Baja)
-
-Revisar en el panel: confirmación de correo activada, CAPTCHA (Cloudflare Turnstile) en registro/login, protección de contraseñas filtradas (plan Pro), longitud mínima ≥ 10, SMTP propio (el SMTP integrado tiene límite muy bajo de envíos), *Site URL* y *Redirect URLs* solo con dominios propios (quitar comodines y los de Vercel si ya no se usan). Los mensajes de error de Supabase se muestran crudos en `AuthDialog`; mapearlos a mensajes propios para no filtrar si un correo existe.
-
-## S8 — Dependencias (Baja)
-
-`npm audit`: **0** en producción; **1 high** en desarrollo (`source-map-js`, GHSA-68fv-2mgg-jv7q, DoS en tooling local). Ejecutar `npm audit fix`. Agregar Dependabot o Renovate.
-
-## S9 — Documentación duplicada (Info)
-
-`README (1).md` y `SUPABASE (1).md` son versiones viejas que hablan de Vercel; `CLAUDE.md` es idéntico a `AGENTS.md`. Generan instrucciones contradictorias para personas y agentes. Borrar los `(1)` y dejar `CLAUDE.md` como una línea que apunte a `AGENTS.md`.
-
-## S10 — Correo del autor (Info)
-
-Los commits usan `rceja711@uvaq.edu.mx`. Es normal, pero si se prefiere no exponerlo, configurar el correo `noreply` de GitHub para commits futuros (los pasados ya son públicos).
-
----
-
-## Checklist de remediación (ejecutar en orden — Fase 0 de PLAN.md)
-
-- [x] S1: sacar música del árbol, `.gitignore`, `git filter-repo`, `push --force`
-- [ ] S1: redeploy en Railway y verificar 404 de los `.flac` viejos
-- [x] S2: `supabase/.temp` fuera del historial e ignorado
-- [ ] S2: revisar/rotar la contraseña de Postgres del proyecto viejo
-- [x] S9: borrar documentos `(1)` duplicados
-- [ ] S8: `npm audit fix` + Dependabot
-- [ ] S5: lista blanca de MIME de portada
-- [ ] S4: servidor estático con cabeceras (al migrar el hosting, Fase 8)
-- [x] S6: migración con límites (aplicar en el proyecto nuevo)
-- [ ] S7: ajustes de Auth en el proyecto nuevo
-- [ ] S3: proyecto dedicado (Fase 8)
+- Pruebas automáticas de aislamiento RLS con dos usuarios contra un Postgres local (Fase 8/12).
+- Parseo de metadatos en worker con timeout (Fase 3): hoy un archivo patológico se procesa en el hilo principal.
+- CSP por `<meta>` y configuración de seguridad de Capacitor (Fase 6).
+- Diseño del borrado de cuenta (Edge Function con `service_role`) exigido por las tiendas (Fase 8).

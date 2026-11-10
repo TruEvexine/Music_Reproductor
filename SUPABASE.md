@@ -420,8 +420,8 @@ npx supabase migration repair --status applied 20260928180000 20260928181500 202
 
 ## 16.3 Configurar Auth
 
-- **Authentication → URL Configuration:** `Site URL` = dominio de Railway
-  (`https://<servicio>.up.railway.app` o el dominio propio). **Redirect URLs:** ese
+- **Authentication → URL Configuration:** `Site URL` = dominio de Vercel
+  (`https://<proyecto>.vercel.app` o el dominio propio). **Redirect URLs:** ese
   dominio con `/**` y `http://localhost:5173/**` para desarrollo.
 - **Authentication → Sign In / Providers → Email:** confirmación de correo activada,
   longitud mínima de contraseña ≥ 10.
@@ -435,17 +435,17 @@ npx supabase migration repair --status applied 20260928180000 20260928181500 202
 |-------|----------|-------|
 | `.env` local | `VITE_SUPABASE_URL` | `https://<NUEVO_REF>.supabase.co` |
 | `.env` local | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (Dashboard → Settings → API Keys) |
-| Railway → servicio → Variables | las mismas dos | mismos valores; Railway redespliega solo |
+| Vercel → Settings → Environment Variables (Production y Preview) | las mismas dos | mismos valores; requiere un nuevo deploy |
 
 Nada más cambia: no hay otras variables. La `secret key`/`service_role` y la
-contraseña de la BD **nunca** van a `.env` del frontend ni a Railway.
+contraseña de la BD **nunca** van a `.env` del frontend ni a Vercel.
 
 ## 16.5 Comprobación
 
 1. `npm run dev`, registrarse con un correo nuevo, confirmar, iniciar sesión.
 2. En el SQL Editor: `select * from public.profiles;` → debe aparecer el perfil.
 3. Crear una playlist, recargar la página, sigue ahí.
-4. Repetir en el dominio de Railway.
+4. Repetir en el dominio de Vercel.
 
 ## 16.6 Usuarios del proyecto viejo
 

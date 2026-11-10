@@ -1,5 +1,7 @@
 # AGENTS.md — Guía de agentes para el proyecto
 
+> Las secciones 26–30 (skills, git, seguridad, responsive, multiplataforma) son obligatorias y prevalecen sobre las anteriores si se contradicen. `PLAN.md` manda sobre todo.
+
 ## 1. Propósito
 
 Este archivo define cómo debe trabajar cualquier agente de IA que modifique, implemente, revise o amplíe el reproductor de música.
@@ -588,3 +590,64 @@ Cada decisión debe mantener esas tres áreas separadas y coordinadas:
    │Audio│ │  / Auth  │
    └─────┘ └──────────┘
 ```
+
+---
+
+# 26. Antes de empezar: skills (obligatorio)
+
+1. Averiguar qué skills hay disponibles (usuario, proyecto, plugins).
+2. Leer completo el `SKILL.md` de **ponytail** y de las de diseño que existan: taste-skill / design-taste-frontend, ui-ux-pro-max, design-motion-principles, impeccable, apple-design, frontend-design, anti-slop.
+3. Si falta alguna, anotarlo en `DECISIONES_PENDIENTES.md` y aplicar su principio con criterio propio.
+4. **ponytail en todo el código:** el cambio más pequeño que resuelve la tarea completa, sin abstracciones ni dependencias que nadie pidió. Excepción: las fronteras de plataforma de la §30, que tienen un segundo uso real (Android e iPhone).
+5. Al cerrar una fase con UI, añadir a `PLAN.md` la línea `Skills aplicadas: ...` con las usadas de verdad.
+
+`PLAN.md` manda sobre este archivo y sobre `DESIGN.md`.
+
+# 27. Git y commits
+
+- Rama de trabajo: `desarrollo`. **Nunca** push a `main`, force push, rebase de historial público ni merge a `main`: lo decide el usuario.
+- Commits a nombre del usuario. **Prohibido** `Co-Authored-By`, `Claude-Session`, "Generated with Claude Code" o cualquier atribución a un asistente de IA, en commits y en PRs. Comprobar después con `git log -1 --format=%B`.
+- Un commit por tarea, en español, imperativo. Antes de cada commit: `npm run typecheck`, `npm test`, `npm run build` en verde.
+- Cada clon nuevo activa los hooks con `npm run setup` (`.githooks/pre-commit` bloquea `.env`, audio, keystores, archivos > 2 MB y patrones de secretos; `.githooks/commit-msg` quita atribuciones).
+- Si algo requiere una decisión o acción del usuario, no detenerse: anotarlo en `DECISIONES_PENDIENTES.md` y seguir con lo siguiente.
+
+# 28. Seguridad
+
+- En el cliente y en la app solo existen `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. Nada de `service_role`, secret keys ni URIs de PostgreSQL: el build falla si las detecta (`scripts/envGuard.ts`). Lo secreto vive en Edge Functions.
+- **Nunca se versiona ni se despliega audio.** `src/assets/music/` es local e ignorada: no borrarla ni moverla. Para pruebas, audio sintético (`npm run test:audio`).
+- Metadatos, nombres de archivo y de playlists se pintan como texto: sin `innerHTML`, `dangerouslySetInnerHTML` ni `eval`.
+- Al importar: portada ≤ 12 MB y MIME en lista blanca (`src/core/coverMime.ts`); el parseo no debe colgar la app con archivos corruptos o enormes.
+- URLs `blob:` siempre revocadas al dejar de usarse.
+- Errores de Auth sin revelar si un correo existe (`src/core/authMessages.ts`); sin datos sensibles en `console`.
+- Cabeceras y CSP en `vercel.json`; verificar cualquier cambio con `node scripts/verificar-csp.mjs`. En la app nativa la CSP va por `<meta>`.
+- **Supabase es un proyecto COMPARTIDO** con otras apps (tablas `math_*`). Solo se toca: `profiles`, `playlists`, `playlist_tracks`, `create_profile_for_new_user`, `replace_playlist_tracks`, el trigger `on_auth_user_created` y lo nuevo con prefijo `mp_`. Cada cambio es una migración nueva, idempotente y aditiva, con RLS por `auth.uid()`, probada en un Postgres local descartable. No desactivar RLS jamás.
+- App nativa: sin cleartext, navegación restringida, depuración de WebView apagada en release, `allowBackup=false`, tokens en Keystore/Keychain, keystore y contraseñas fuera del repo.
+
+# 29. Responsive (requisito transversal)
+
+Mobile-first. Nada está terminado si falla en móvil.
+
+- Matriz obligatoria en Playwright: 320×568, 360×800, 390×844, 412×915, 844×390 (móvil horizontal), 768×1024, 1024×768, 1440×900, 1920×1080.
+- Cero scroll horizontal. `dvh`/`svh` (no `100vh`), `env(safe-area-inset-*)`, correcto con el teclado virtual abierto.
+- Controles principales en la mitad inferior; áreas táctiles ≥ 44×44 px; nada depende solo de hover.
+- Gestos con Pointer Events, siempre con alternativa por botón y por teclado.
+- Tipografía y espaciado fluidos (`clamp()`), zoom de texto al 200 % sin romper. Respetar `prefers-reduced-motion`, `prefers-color-scheme` y `prefers-contrast`.
+- Rendimiento en gama media: listas virtualizadas, imágenes al tamaño justo, animar solo `transform`/`opacity`, fondo dinámico pausado con la pestaña oculta.
+- **Diseño verificado, no supuesto:** ninguna tarea de UI termina sin capturas de la matriz revisadas con criterio de diseño. Al cerrar cada fase de UI, capturas de cada vista en 390×844 y 1440×900 en `docs/capturas/` (`node scripts/capturas.mjs`).
+
+# 30. Arquitectura multiplataforma (web + Android + iPhone)
+
+Una base de código, tres destinos. Ver `docs/ARQUITECTURA_APP.md` y `PLAN.md` §3.7.
+
+```text
+src/core/             lógica pura: sin window, document ni Capacitor. Se prueba en Node (Vitest).
+src/platform/web/     implementación web de las fronteras
+src/platform/native/  implementación nativa (se escribe cuando exista Android Studio)
+src/ui/               componentes compartidos
+```
+
+- Fronteras, una interfaz cada una: `LocalLibrary`, `AudioSession`, `SecureStore`, `Storage`, `Connectivity`.
+- Variantes por plataforma con `data-platform="web|android|ios"` en `<html>` y CSS/props; nunca forks de componentes enteros.
+- `VITE_TARGET=web|android|ios`. En nativo: `base: './'`, router con hash, sin dominios absolutos.
+- **Offline-first:** todo el estado del usuario se escribe primero en IndexedDB (esquema versionado con migraciones). Supabase es sincronización opcional mediante outbox. La UI nunca espera a la red.
+- No ejecutar `npx cap add android|ios` ni versionar `android/` o `ios/` hasta que el usuario confirme Android Studio / Xcode.

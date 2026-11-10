@@ -1,6 +1,7 @@
 # PLAN.md — Plan maestro del reproductor
 
-> **Última actualización:** 2026-10-14 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase, deploy en Railway).
+> **Última actualización:** 2026-11-10 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase compartido, hosting en Vercel). **Fase 0 completa; siguiente: Fase 1.**
+> **Rama de trabajo:** `desarrollo` (nunca `main`). Pendientes del usuario: `DECISIONES_PENDIENTES.md`. Auditoría de diseño: `docs/AUDITORIA_DISENO.md`. Arquitectura de apps: `docs/ARQUITECTURA_APP.md`.
 > **Este documento manda.** Si contradice a `DESIGN.md`, `AGENTS.md`, `SUPABASE.md` o al README, gana este archivo hasta que esos documentos se actualicen (tarea de la Fase 1).
 > **Antes de escribir código:** leer `SECURITY_AUDIT.md` y completar la **Fase 0**. Es bloqueante.
 
@@ -52,7 +53,15 @@ No es copia literal de ninguna: tomamos principios, no assets ni layouts pixel a
 | Diseño | Gradientes multicolor animados, modo ritmo, selector de fondo, reproductor expandido estilo Poweramp, gestos táctiles, drag & drop en cola, skeletons |
 | Producto | Landing/SEO, PWA, perfiles (avatar, ajustes sincronizados), nube de música, monetización, términos/privacidad |
 | Código | `App.tsx` tiene 1011 líneas y `global.css` 1701: hay que dividirlos antes de crecer. Sin pruebas automatizadas |
-| Infra | Proyecto de Supabase compartido con otro sitio; sin cabeceras de seguridad; sin config de hosting en el repo |
+| Infra | Proyecto de Supabase compartido (aceptado); acciones manuales en paneles de Vercel/Supabase (`DECISIONES_PENDIENTES.md`) |
+
+### Hecho en la Fase 0 (2026-11-10)
+
+- Seguridad del repo en capas: `.gitignore` completo, hooks en `.githooks/` (`npm run setup`), CI con gitleaks y `npm audit`, Dependabot, guardia de build (`scripts/envGuard.ts`) que falla con secretos en `VITE_*` o con audio en el bundle.
+- `vercel.json` con CSP y cabeceras, verificadas con `node scripts/verificar-csp.mjs`.
+- El catálogo demo de `src/assets/music/` solo existe en desarrollo: producción arranca vacía.
+- Primer código en `src/core/` (`coverMime`, `authMessages`) con Vitest (`npm test`). Errores de Auth genéricos y límite de intentos.
+- Herramientas de prueba: `npm run test:audio` (audio sintético con ffmpeg opcional), `node scripts/capturas.mjs <carpeta>` (capturas Playwright).
 
 ---
 
@@ -119,7 +128,7 @@ Hoy el reproductor vive dentro del proyecto `Undefeated_Star_Web_Page` (plan gra
 3. Usuarios: si son pocos, pedir re-registro. Si importan, migrar el esquema `auth` con `pg_dump`/`pg_restore` (conserva hashes bcrypt) siguiendo la guía oficial de migración entre proyectos.
 4. Exportar/importar `profiles`, `playlists`, `playlist_tracks`.
 5. Configurar Auth: Site URL y Redirect URLs del dominio final, SMTP propio (Resend/Postmark), Turnstile, contraseñas filtradas, plantillas de correo en español.
-6. Cambiar `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en Railway y redeploy.
+6. Cambiar `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en Vercel (Production y Preview) y redeploy.
 7. Verificar, y luego quitar las tablas del reproductor del proyecto viejo (sin tocar lo del otro sitio).
 
 **Esquema nuevo (además de lo actual):**
@@ -150,8 +159,31 @@ RLS por dueño en todas. `entitlements` y `storage_usage` solo lectura para el u
 
 ### 3.6 Hosting
 
-- Corto plazo: seguir en **Railway**, pero sirviendo `dist/` con **Caddy** (Dockerfile o `Caddyfile` en el repo) para tener cabeceras de seguridad, compresión y caché correctas.
-- Evaluar mover el frontend a **Cloudflare Pages** (CDN global, `_headers`, mismo proveedor que R2) y dejar Railway solo si aparece un servicio que lo necesite. Las Edge Functions de Supabase cubren el backend previsto, así que probablemente no haga falta un API propio.
+- **Vercel** (decisión 2026-11-10; sustituye a Railway). Proyecto `music-reproductor` (equipo evexine), framework Vite, build `npm run build`, salida `dist`. `main` = producción; las demás ramas generan previews.
+- Cabeceras de seguridad y caché en `vercel.json`. Sin Dockerfile ni Caddy. Los `rewrites` para el fallback SPA se añaden cuando exista el router (Fase 1).
+- Las Edge Functions de Supabase cubren el backend previsto: no hace falta un API propio.
+
+### 3.7 Arquitectura multiplataforma y offline-first
+
+Una base de código, tres destinos: la web responsive es la base y **Capacitor** la empaqueta para Android (primero) y iPhone. Registro de decisión completo en `docs/ARQUITECTURA_APP.md`.
+
+```text
+src/core/             lógica sin DOM ni APIs de plataforma: motor de cola, shuffle, identidad de pista,
+                      escaneo por diferencias, outbox de sincronización, paleta, ecualizador como datos.
+                      TypeScript puro, testeable en Node. Nada de window, document ni Capacitor.
+src/platform/web/     implementación web de las fronteras (la única que existe hoy)
+src/platform/native/  implementación nativa: se documenta en docs/ y se escribe cuando exista Android Studio
+src/ui/               componentes compartidos
+```
+
+- **Fronteras de plataforma** (una interfaz cada una, nada más): `LocalLibrary` (elegir carpeta, escanear, leer archivo, persistir permisos), `AudioSession` (audio en segundo plano, controles de notificación y pantalla de bloqueo), `SecureStore` (tokens), `Storage`, `Connectivity`.
+- **Variantes por plataforma:** atributo `data-platform="web|android|ios"` en `<html>` y CSS/props. No se bifurcan componentes enteros.
+- **Build:** `VITE_TARGET=web|android|ios`. En nativo: `base: './'`, router con hash, CSP por `<meta>` (no hay cabeceras de Vercel), sin dominios absolutos.
+- **Regla de reutilización por pantalla** (se documenta en `DESIGN.md` y se aplica en la Fase 4): una pantalla web se reutiliza en la app si tiene áreas táctiles ≥ 44 px, safe areas y borde a borde correctos, respeta el botón/gesto atrás del sistema, no depende de hover, mantiene 60 fps en gama media y se ve nativa a 360×800. Si falla y no se arregla con ajustes menores, se diseña una variante para Android en `docs/DISENO_ANDROID.md`; lo que difiera en iPhone va en `docs/DISENO_IOS.md`.
+- **Offline-first real:** todo el estado del usuario (biblioteca, playlists, ajustes, cola, sesión) se escribe primero en **IndexedDB** y funciona sin red. Supabase es sincronización opcional mediante un **outbox** de operaciones pendientes en IndexedDB que se reintenta al volver la conexión (última escritura gana, con timestamp). La UI nunca espera a la red y muestra el estado de conexión y de sincronización.
+- **Esquema local versionado con migraciones:** la app instalada se actualiza sobre datos existentes del usuario.
+- **Exportar/importar** playlists y ajustes a un archivo JSON.
+- **Proyectos nativos:** no se ejecuta `npx cap add android|ios` ni se versiona `android/` o `ios/` hasta que el usuario confirme Android Studio / Xcode.
 
 ---
 
@@ -286,7 +318,7 @@ La app (`/app`) no necesita posicionarse; la **landing** sí.
 - **Archivos:** `robots.txt`, `sitemap.xml` generado en build.
 - **Rendimiento (Core Web Vitals):** LCP < 2.5 s, INP < 200 ms, CLS < 0.1. Cargar Supabase solo en `/app` o cuando haga falta (hoy entra en el bundle principal), fuentes con `font-display: swap` y *preload*, imágenes WebP/AVIF.
 - **Contenido:** páginas que respondan búsquedas reales — "reproductor FLAC online", "escuchar música local en el navegador", "ecualizador de música web", comparativas honestas. Blog opcional después.
-- **Medición:** Google Search Console + analítica respetuosa de la privacidad (Plausible o Umami autoalojado en Railway). Sin cookies de terceros en `/app`.
+- **Medición:** Google Search Console + analítica respetuosa de la privacidad (Plausible o Umami). Sin cookies de terceros en `/app`.
 
 ---
 
@@ -316,18 +348,26 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 
 ### Fase 0 — Seguridad e higiene del repo (BLOQUEANTE)
 - [x] Quitar las pistas de prueba del árbol y del historial (`git filter-repo`) y `push --force` (S1) — 2026-10-14
-- [ ] Verificar tras el redeploy de Railway que las URLs viejas de `/assets/*.flac` devuelven 404
-- [ ] Decidir demo pública: pistas CC0/CC-BY desde almacenamiento externo, o sin demo con estado vacío
+- [ ] **Manual del usuario:** borrar los dos deployments antiguos de Vercel con música y verificar 404 (`DECISIONES_PENDIENTES.md` D4)
+- [x] Demo pública: **sin demo**, producción arranca con estado vacío; el catálogo de `src/assets/music/` solo se carga en desarrollo — 2026-11-10
+- [x] El build falla si la salida contiene audio o si una `VITE_*` es un secreto (S11) — 2026-11-10
 - [x] `supabase/.temp` fuera del historial + `.gitignore` (S2) — 2026-10-14
 - [x] Borrar `README (1).md` y `SUPABASE (1).md` (S9) — 2026-10-14
-- [ ] `CLAUDE.md` → una línea que apunte a `AGENTS.md` (S9)
+- [x] `CLAUDE.md` → una línea que apunta a `AGENTS.md` (S9); `AGENTS.md` §26–§30 con skills, commits, seguridad, responsive y multiplataforma — 2026-11-10
 - [x] Migración de límites en BD (S6) — `20261014120000_hardening_limits.sql`
 - [x] Decisión 2026-11-10: **el proyecto de Supabase se queda compartido** (`Undefeated_Star_Web_Page`, también lo usa la app de matemáticas `math_*`). Se descarta la limpieza y el proyecto dedicado por ahora (S3 aceptado); reabrir en Fase 8 si se necesita plan Pro o aislamiento.
 - [x] Migraciones del reproductor aplicadas en ese proyecto, incluidos los límites (S6) y `20261110120000_revoke_profile_trigger_execute.sql`
-- [ ] Renombrar el proyecto en Dashboard → Settings → General para distinguirlo (la API de MCP no permite renombrar)
-- [ ] Activar protección de contraseñas filtradas (requiere plan Pro) — advisor `auth_leaked_password_protection`
-- [ ] `npm audit fix` + Dependabot/Renovate (S8)
-- [ ] Lista blanca de MIME en portadas (S5)
+- [ ] **Manual del usuario:** renombrar el proyecto de Supabase (D8)
+- [ ] **Manual del usuario:** protección de contraseñas filtradas (requiere plan Pro) y resto de Auth (D9)
+- [ ] **Manual del usuario:** Vercel Authentication en previews (D5), conectar Git (D6), variables en Preview (D7)
+- [x] `npm audit fix` (0 vulnerabilidades) + Dependabot (S8) — 2026-11-10
+- [x] Lista blanca de MIME en portadas con test (S5) — 2026-11-10
+- [x] `.gitignore` completo, hooks `pre-commit` y `commit-msg` versionados y probados, `npm run setup` — 2026-11-10
+- [x] CI: typecheck, tests, build, `npm audit`, gitleaks; permisos mínimos — 2026-11-10
+- [x] `vercel.json` con CSP y cabeceras, verificado con la app corriendo (S4) — 2026-11-10
+- [x] Revisión de código: errores de Auth genéricos, límite de intentos, sin `innerHTML`/`eval`/`console` — 2026-11-10
+
+**Fase 0 cerrada el 2026-11-10.** Lo que queda sin marcar depende de paneles a los que solo accede el usuario.
 
 ### Fase 1 — Base para crecer
 - [ ] Dividir `App.tsx` en vistas/componentes (`LibraryView`, `PlaylistsView`, `QueueDrawer`, `MiniPlayer`, `ExpandedPlayer`, `TrackRow`, `Cover`) y `global.css` en archivos por componente (CSS Modules o archivos planos importados)
@@ -401,9 +441,14 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 - [ ] Política de retiro de contenido y monitoreo de uso
 
 ### Fase 11 — App
-- [ ] Android: empezar con **TWA** (rápido, usa la PWA) para validar Play Store; pasar a **Capacitor** si se necesita acceso nativo a archivos y audio en segundo plano confiable (servicio en primer plano + notificación de medios)
+Arquitectura: **Capacitor** sobre la misma base web (§3.7 y `docs/ARQUITECTURA_APP.md`). TWA descartada: no da servicio de reproducción propio ni acceso persistente a la música, y no existe en iPhone.
+
+- [ ] Preparación sin Android Studio (Fase 6): `capacitor.config.ts`, scripts `build:native` y `cap:sync`, `docs/ANDROID.md`, `docs/IOS.md`
+- [ ] Android: `npx cap add android` (cuando el usuario confirme Android Studio), implementación nativa de `LocalLibrary` (selector de carpeta con permisos persistentes) y `AudioSession` (servicio en primer plano `mediaPlayback` + sesión de medios en notificación y pantalla de bloqueo)
+- [ ] Android: tokens en Keystore (`SecureStore`), botón/gesto atrás, borde a borde, variante de diseño si alguna pantalla no pasa la regla de reutilización (`docs/DISENO_ANDROID.md`)
+- [ ] Android: firma con Play App Signing, formulario de seguridad de datos, política de privacidad, borrado de cuenta dentro de la app y por enlace web
 - [ ] Google Play Billing para Pro/Nube
-- [ ] iOS (Capacitor) cuando Android esté estable; revisar reglas de pago de App Store
+- [ ] iPhone cuando Android esté estable (requiere Mac y cuenta de Apple Developer): audio en segundo plano, selector de documentos, compras dentro de la app (`docs/DISENO_IOS.md`)
 
 ### Fase 12 — QA continuo
 - [ ] Playwright: humo en viewport móvil y escritorio (importar, reproducir, cola, repetición)
@@ -422,12 +467,14 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 - Todo se usa con una mano en móvil y con teclado en escritorio.
 - Sin cuenta funciona todo lo local; con cuenta se sincronizan playlists y ajustes.
 - Cero hallazgos abiertos de severidad media o mayor en `SECURITY_AUDIT.md`.
+- Responsive verificado en la matriz de viewports (320×568, 360×800, 390×844, 412×915, 844×390, 768×1024, 1024×768, 1440×900, 1920×1080) sin scroll horizontal.
+- La app Android reproduce la biblioteca local y las playlists sin internet.
 
 ---
 
 ## 10. Reglas para la siguiente sesión de desarrollo
 
-1. Leer en este orden: `SECURITY_AUDIT.md` → `PLAN.md` → `AGENTS.md` → `DESIGN.md` → `SUPABASE.md`.
+1. Leer las skills (`AGENTS.md` §26) y después, en este orden: `SECURITY_AUDIT.md` → `PLAN.md` → `AGENTS.md` → `DESIGN.md` → `SUPABASE.md` → `DECISIONES_PENDIENTES.md`.
 2. Trabajar **una fase a la vez**, empezando por la Fase 0. No saltar fases sin decirlo.
 3. Cambios mínimos y completos; nada de abstracciones sin un segundo uso real.
 4. Nunca commitear audio, `.env`, `supabase/.temp` ni claves; `service_role` solo en Edge Functions.

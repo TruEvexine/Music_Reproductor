@@ -2,7 +2,7 @@
 
 # Music Reproductor
 
-Reproductor web local construido con Vite, React y TypeScript. La biblioteca combina las canciones de demo incluidas al compilar el proyecto con archivos que se importan desde el navegador.
+Reproductor web local construido con Vite, React y TypeScript. La musica se importa desde el navegador y nunca sale del dispositivo.
 
 ## Requisitos
 
@@ -24,7 +24,7 @@ npm run build
 
 ## Canciones de prueba
 
-Para probar en local, coloca archivos en `src/assets/music/`. Esa carpeta esta ignorada por git: la musica **nunca** se sube al repositorio ni al deploy.
+Para probar en local, coloca archivos en `src/assets/music/`. Esa carpeta esta ignorada por git y solo se carga con `npm run dev`: la musica **nunca** se sube al repositorio ni entra en un build.
 
 Tambien se pueden agregar canciones desde la interfaz. Sus metadatos se leen localmente y los archivos no se suben a un servidor. La reproduccion depende del navegador y del sistema operativo; el soporte de FLAC/M4A puede variar.
 
@@ -44,11 +44,22 @@ public/                Archivos estaticos publicos
 
 La cola es independiente de las playlists: utiliza el boton **+** en cada cancion para agregarla sin iniciar su reproduccion. Desde el reproductor se puede abrir, reordenar y limpiar.
 
-## Publicar en Railway
+## Publicar en Vercel
 
-El servicio de Railway compila con `npm run build` y sirve la carpeta `dist`.
+El proyecto de Vercel compila con `npm run build` y sirve `dist`. `main` es produccion; las demas ramas generan previews. Las cabeceras de seguridad estan en `vercel.json`.
 
-1. En el servicio: **Variables** → `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. Vite las incrusta al compilar, asi que cualquier cambio requiere un nuevo deploy.
-2. En Supabase, **Authentication → URL Configuration**: el dominio de Railway como `Site URL` y en las URLs de redireccion permitidas.
+1. **Settings → Environment Variables**: `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` (Production y Preview). Vite las incrusta al compilar: cualquier cambio requiere un nuevo deploy.
+2. En Supabase, **Authentication → URL Configuration**: el dominio de Vercel como `Site URL` y en las URLs de redireccion permitidas.
 
-La clave publishable puede estar en el frontend; nunca agregues una `service_role` o `secret key`. Consulta `SUPABASE.md` para crear el proyecto, aplicar las migraciones y probar registro e inicio de sesion. El plan de desarrollo esta en `PLAN.md` y la auditoria en `SECURITY_AUDIT.md`.
+La clave publishable puede estar en el frontend; nunca agregues una `service_role` o `secret key` (el build falla si la detecta). El plan esta en `PLAN.md`, la auditoria en `SECURITY_AUDIT.md` y lo que depende de ti en `DECISIONES_PENDIENTES.md`.
+
+## Desarrollo
+
+```bash
+npm run setup        # una vez por clon: activa los hooks de git (.githooks/)
+npm run typecheck
+npm test             # Vitest
+npm run test:audio   # genera audio sintetico de prueba (ffmpeg opcional)
+```
+
+Los hooks bloquean commits con `.env`, audio, keystores, archivos de mas de 2 MB o patrones de secretos.
