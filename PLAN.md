@@ -1,6 +1,6 @@
 # PLAN.md — Plan maestro del reproductor
 
-> **Última actualización:** 2026-10-14 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase, deploy en Railway).
+> **Última actualización:** 2026-10-14 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase, deploy en Vercel).
 > **Este documento manda.** Si contradice a `DESIGN.md`, `AGENTS.md`, `SUPABASE.md` o al README, gana este archivo hasta que esos documentos se actualicen (tarea de la Fase 1).
 > **Antes de escribir código:** leer `SECURITY_AUDIT.md` y completar la **Fase 0**. Es bloqueante.
 
@@ -109,7 +109,7 @@ Hoy el reproductor vive dentro del proyecto `Undefeated_Star_Web_Page` (plan gra
 |--------|---------|-----------|
 | **A. Supabase Pro dedicado + R2 (recomendada)** | Reusa Auth, RLS y migraciones ya escritas; Edge Functions para firmar URLs y webhooks de pago; R2 no cobra egress (clave para streaming de FLAC) | Dos proveedores; ~US$25/mes de base |
 | B. Supabase Pro con Storage de Supabase | Un solo proveedor | El egress se cobra por GB: transmitir FLAC (30–60 MB por pista) se vuelve caro rápido |
-| C. Self-host en Railway (Postgres + auth propia o PocketBase) | Costo bajo al inicio, control total | Hay que mantener auth, backups, seguridad y escalado; reescribir lo que hoy da Supabase |
+| C. Self-host (Postgres + auth propia o PocketBase en un VPS/Railway) | Costo bajo al inicio, control total | Hay que mantener auth, backups, seguridad y escalado; reescribir lo que hoy da Supabase |
 
 > **Precios a verificar antes de contratar** (referencia de mediados de 2026): Supabase Pro ≈ US$25/mes por organización con 8 GB de BD, 100 GB de storage, 250 GB de egress y 100 k MAU incluidos; R2 ≈ US$0.015/GB-mes, egress gratis, 10 GB gratis. Confirmar en supabase.com/pricing y developers.cloudflare.com/r2/pricing.
 
@@ -119,7 +119,7 @@ Hoy el reproductor vive dentro del proyecto `Undefeated_Star_Web_Page` (plan gra
 3. Usuarios: si son pocos, pedir re-registro. Si importan, migrar el esquema `auth` con `pg_dump`/`pg_restore` (conserva hashes bcrypt) siguiendo la guía oficial de migración entre proyectos.
 4. Exportar/importar `profiles`, `playlists`, `playlist_tracks`.
 5. Configurar Auth: Site URL y Redirect URLs del dominio final, SMTP propio (Resend/Postmark), Turnstile, contraseñas filtradas, plantillas de correo en español.
-6. Cambiar `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en Railway y redeploy.
+6. Cambiar `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en Vercel (Settings → Environment Variables, Production y Preview) y redeploy.
 7. Verificar, y luego quitar las tablas del reproductor del proyecto viejo (sin tocar lo del otro sitio).
 
 **Esquema nuevo (además de lo actual):**
@@ -150,8 +150,8 @@ RLS por dueño en todas. `entitlements` y `storage_usage` solo lectura para el u
 
 ### 3.6 Hosting
 
-- Corto plazo: seguir en **Railway**, pero sirviendo `dist/` con **Caddy** (Dockerfile o `Caddyfile` en el repo) para tener cabeceras de seguridad, compresión y caché correctas.
-- Evaluar mover el frontend a **Cloudflare Pages** (CDN global, `_headers`, mismo proveedor que R2) y dejar Railway solo si aparece un servicio que lo necesite. Las Edge Functions de Supabase cubren el backend previsto, así que probablemente no haga falta un API propio.
+- Corto plazo: seguir en **Vercel** (framework Vite, build `npm run build`, salida `dist`). Cabeceras de seguridad, caché y fallback SPA se definen en un `vercel.json` versionado (`headers` y `rewrites`). Vercel despliega `main` a producción y crea un preview por cada otra rama.
+- Evaluar mover el frontend a **Cloudflare Pages** (CDN global, `_headers`, mismo proveedor que R2) y dejar Vercel solo si aparece un servicio que lo necesite. Las Edge Functions de Supabase cubren el backend previsto, así que probablemente no haga falta un API propio.
 
 ---
 
@@ -286,7 +286,7 @@ La app (`/app`) no necesita posicionarse; la **landing** sí.
 - **Archivos:** `robots.txt`, `sitemap.xml` generado en build.
 - **Rendimiento (Core Web Vitals):** LCP < 2.5 s, INP < 200 ms, CLS < 0.1. Cargar Supabase solo en `/app` o cuando haga falta (hoy entra en el bundle principal), fuentes con `font-display: swap` y *preload*, imágenes WebP/AVIF.
 - **Contenido:** páginas que respondan búsquedas reales — "reproductor FLAC online", "escuchar música local en el navegador", "ecualizador de música web", comparativas honestas. Blog opcional después.
-- **Medición:** Google Search Console + analítica respetuosa de la privacidad (Plausible o Umami autoalojado en Railway). Sin cookies de terceros en `/app`.
+- **Medición:** Google Search Console + analítica respetuosa de la privacidad (Plausible o Umami autoalojado). Sin cookies de terceros en `/app`.
 
 ---
 
@@ -316,7 +316,7 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 
 ### Fase 0 — Seguridad e higiene del repo (BLOQUEANTE)
 - [x] Quitar las pistas de prueba del árbol y del historial (`git filter-repo`) y `push --force` (S1) — 2026-10-14
-- [ ] Verificar tras el redeploy de Railway que las URLs viejas de `/assets/*.flac` devuelven 404
+- [ ] En Vercel: redeploy de producción y **borrar los deployments antiguos** que incluían la música (cada deployment conserva su URL propia y sigue sirviendo los `.flac` hasta que se elimina)
 - [ ] Decidir demo pública: pistas CC0/CC-BY desde almacenamiento externo, o sin demo con estado vacío
 - [x] `supabase/.temp` fuera del historial + `.gitignore` (S2) — 2026-10-14
 - [x] Borrar `README (1).md` y `SUPABASE (1).md` (S9) — 2026-10-14
@@ -386,7 +386,7 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 - [ ] Migración de límites (S6) + endurecimiento de Auth (S7)
 - [ ] Perfiles: username, avatar (bucket de Supabase pequeño, imágenes ≤ 2 MB, recortadas), ajustes sincronizados
 - [ ] Tablas `tracks`, `favorites`, `play_history` con RLS
-- [ ] Hosting con Caddy y cabeceras de seguridad (S4); dominio propio
+- [ ] Cabeceras de seguridad en `vercel.json` (S4); dominio propio
 - [ ] Actualizar `SUPABASE.md`
 
 ### Fase 9 — Monetización

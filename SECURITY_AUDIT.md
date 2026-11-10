@@ -1,7 +1,7 @@
 # Auditoría de seguridad — recursos versionados en git
 
 **Fecha:** 2026-10-14 · **Commit auditado:** `5065a8b` (rama principal, 3 commits en total)
-**Alcance:** todo lo que está en el árbol de git y en su historial, dependencias (`package-lock.json`), migraciones SQL y el código del cliente que toca archivos, metadatos y autenticación. No se auditó la configuración viva de Railway ni del panel de Supabase (no hay acceso desde el repo).
+**Alcance:** todo lo que está en el árbol de git y en su historial, dependencias (`package-lock.json`), migraciones SQL y el código del cliente que toca archivos, metadatos y autenticación. No se auditó la configuración viva de Vercel ni del panel de Supabase (no hay acceso desde el repo).
 
 ## Resumen
 
@@ -24,15 +24,15 @@
 
 ## S1 — Música con copyright en el repositorio (Crítica)
 
-`src/assets/music/` contenía 9 pistas comerciales usadas solo para pruebas (Travis Scott, Post Malone, 100 gecs, David Bowie, Tainy, Mac Miller, Kanye West, The Notorious B.I.G.) en FLAC/M4A. `demoCatalog.ts` las importa con `import.meta.glob`, así que Vite las copia a `dist/` y **el deploy de Railway las distribuye a cualquiera**. El repo es público en GitHub.
+`src/assets/music/` contenía 9 pistas comerciales usadas solo para pruebas (Travis Scott, Post Malone, 100 gecs, David Bowie, Tainy, Mac Miller, Kanye West, The Notorious B.I.G.) en FLAC/M4A. `demoCatalog.ts` las importa con `import.meta.glob`, así que Vite las copia a `dist/` y **el deploy de Vercel las distribuye a cualquiera**. El repo es público en GitHub.
 
-**Riesgo:** reclamos DMCA contra GitHub y Railway (suspensión del repo o del servicio), responsabilidad legal, y bloqueo futuro en tiendas de apps. Además el `.git` pesa 353 MB por esto.
+**Riesgo:** reclamos DMCA contra GitHub y Vercel (suspensión del repo o del servicio), responsabilidad legal, y bloqueo futuro en tiendas de apps. Además el `.git` pesa 353 MB por esto.
 
 **Remediación:**
 1. Quitar las pistas del árbol y del build ya (`git rm -r --cached src/assets/music/*.flac *.m4a`, ignorar `src/assets/music/*` salvo `README.md`).
 2. Reescribir el historial para eliminarlas (`git filter-repo --path src/assets/music --invert-paths` conservando el README) y hacer `push --force`. Avisar a cualquier colaborador para que vuelva a clonar.
 3. Si se quiere demo: usar 2–3 pistas con licencia libre (CC0/CC-BY con atribución) servidas desde almacenamiento de objetos, no desde el bundle. O sin demo: estado vacío con CTA "Agrega tu música".
-4. Redeploy en Railway y comprobar que las URLs viejas de `/assets/*.flac` devuelven 404.
+4. En Vercel: redeploy de producción y **eliminar los deployments antiguos** (Deployments → ⋯ → Delete) que incluían la música: cada deployment conserva su URL única y sigue sirviendo los `.flac` aunque el dominio ya apunte al nuevo.
 
 ## S2 — `supabase/.temp/` versionado (Media)
 
@@ -48,9 +48,9 @@ Archivos generados por la CLI de Supabase. Exponen `project-ref` (`rifwgetomhelj
 
 ## S4 — Sin cabeceras de seguridad (Media)
 
-No hay `Dockerfile`, `railway.json`, `Caddyfile` ni `nginx.conf`: Railway sirve el build con su configuración por defecto. Faltan `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` y `frame-ancestors`.
+No hay `vercel.json`: Vercel sirve el build con su configuración por defecto. Faltan `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` y `frame-ancestors`.
 
-**Remediación:** servir `dist/` con un servidor estático propio (Caddy o nginx) y definir cabeceras. CSP base:
+**Remediación:** crear un `vercel.json` con `headers` (y `rewrites` para el fallback SPA cuando exista el router). CSP base:
 `default-src 'self'; img-src 'self' blob: data:; media-src 'self' blob: https://<bucket>; connect-src 'self' https://<proyecto>.supabase.co wss://<proyecto>.supabase.co; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`.
 Cachear `assets/*` con `immutable` y `index.html` con `no-cache`.
 
@@ -87,13 +87,13 @@ Los commits usan `rceja711@uvaq.edu.mx`. Es normal, pero si se prefiere no expon
 ## Checklist de remediación (ejecutar en orden — Fase 0 de PLAN.md)
 
 - [x] S1: sacar música del árbol, `.gitignore`, `git filter-repo`, `push --force`
-- [ ] S1: redeploy en Railway y verificar 404 de los `.flac` viejos
+- [ ] S1: redeploy en Vercel y eliminar los deployments antiguos con música
 - [x] S2: `supabase/.temp` fuera del historial e ignorado
 - [ ] S2: revisar/rotar la contraseña de Postgres del proyecto viejo
 - [x] S9: borrar documentos `(1)` duplicados
 - [ ] S8: `npm audit fix` + Dependabot
 - [ ] S5: lista blanca de MIME de portada
-- [ ] S4: servidor estático con cabeceras (al migrar el hosting, Fase 8)
+- [ ] S4: `vercel.json` con cabeceras de seguridad
 - [x] S6: migración con límites (aplicar en el proyecto nuevo)
 - [ ] S7: ajustes de Auth en el proyecto nuevo
 - [ ] S3: proyecto dedicado (Fase 8)

@@ -44,11 +44,11 @@ public/                Archivos estaticos publicos
 
 La cola es independiente de las playlists: utiliza el boton **+** en cada cancion para agregarla sin iniciar su reproduccion. Desde el reproductor se puede abrir, reordenar y limpiar.
 
-## Publicar en Railway
+## Publicar en Vercel
 
-El servicio de Railway compila con `npm run build` y sirve la carpeta `dist`.
+Vercel compila con `npm run build` y sirve la carpeta `dist` (framework Vite). `main` es producción; las demas ramas generan previews.
 
-1. En el servicio: **Variables** → `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. Vite las incrusta al compilar, asi que cualquier cambio requiere un nuevo deploy.
-2. En Supabase, **Authentication → URL Configuration**: el dominio de Railway como `Site URL` y en las URLs de redireccion permitidas.
+1. En el proyecto: **Settings → Environment Variables** (Production y Preview) → `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. Vite las incrusta al compilar, asi que cualquier cambio requiere un nuevo deploy.
+2. En Supabase, **Authentication → URL Configuration**: el dominio de Vercel como `Site URL` y en las URLs de redireccion permitidas.
 
 La clave publishable puede estar en el frontend; nunca agregues una `service_role` o `secret key`. Consulta `SUPABASE.md` para crear el proyecto, aplicar las migraciones y probar registro e inicio de sesion. El plan de desarrollo esta en `PLAN.md` y la auditoria en `SECURITY_AUDIT.md`.
