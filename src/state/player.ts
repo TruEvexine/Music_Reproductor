@@ -8,6 +8,7 @@ import {
   enqueue,
   moveInQueue,
   nextInQueue,
+  playNext,
   playNow,
   previousInQueue,
   removeFromQueue,
@@ -212,6 +213,14 @@ export const player = {
   },
   enqueue(id: string) {
     apply(enqueue(q(), id), { autoplay: false });
+  },
+  /** "Reproducir a continuación": detrás de la actual, sin cortar lo que suena. */
+  playNext(id: string) {
+    apply(playNext(q(), id), { autoplay: false });
+  },
+  /** Deshacer de las acciones de cola: vuelve a una cola guardada antes, sin tocar lo que suena si la actual no cambió. */
+  restoreQueue(queue: QueueState) {
+    apply(queue, { autoplay: usePlayer.getState().isPlaying });
   },
   remove(id: string) {
     apply(removeFromQueue(q(), id), { autoplay: usePlayer.getState().isPlaying });

@@ -7,6 +7,7 @@ import {
   enqueue,
   moveInQueue,
   nextInQueue,
+  playNext,
   playNow,
   previousInQueue,
   removeFromQueue,
@@ -38,6 +39,24 @@ describe("cola", () => {
     const q = enqueue(enqueue(enqueue(emptyQueue, "a"), "b"), "a");
     expect(q.order).toEqual(["a", "b"]);
     expect(q.current).toBe("a");
+  });
+
+  it("playNext deja la pista justo detrás de la actual, la mueva o la añada, sin cambiar la actual", () => {
+    const moved = playNext(abc, "c");
+    expect(moved.order).toEqual(["a", "c", "b"]);
+    expect(moved.original).toEqual(["a", "c", "b"]);
+    expect(moved.current).toBe("a");
+    expect(playNext(abc, "x").order).toEqual(["a", "x", "b", "c"]);
+    expect(playNext({ ...abc, current: "b" }, "a").order).toEqual(["b", "a", "c"]);
+    expect(playNext(abc, "a")).toBe(abc); // la que suena ya está "ahora"
+    expect(playNext(emptyQueue, "x")).toMatchObject({ order: ["x"], current: "x" });
+  });
+
+  it("playNext con aleatorio coloca la pista tras la actual en el orden barajado y en el original", () => {
+    const shuffled = toggleShuffle({ ...abc, order: ["a", "b", "c"] }, seeded(3));
+    const next = playNext(shuffled, "c");
+    expect(next.order[next.order.indexOf("a") + 1]).toBe("c");
+    expect(next.original[next.original.indexOf("a") + 1]).toBe("c");
   });
 
   it("playNow inserta después de la actual", () => {

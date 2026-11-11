@@ -515,3 +515,73 @@
 ol.track-list .row-album {
   visibility: hidden;
 }
+
+/* Filas deslizables (ver gestures.tsx): la fila se desplaza con --dx y deja a la vista la acción en el hueco que abre. */
+.swipe {
+  position: relative;
+  touch-action: pan-y; /* el scroll vertical es del navegador; el horizontal, nuestro */
+  transform: translateX(var(--dx, 0px));
+  transition: transform var(--base) var(--ease);
+}
+
+.swipe[data-dragging] {
+  transition: none;
+}
+
+.swipe-hint {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  overflow: hidden;
+  padding: 0 var(--s3);
+  color: var(--ink-3);
+  font-size: var(--text-s);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.swipe-hint svg {
+  flex: none; /* el texto largo no debe encoger el icono a nada */
+}
+
+.swipe-hint[data-side="right"] {
+  right: 100%;
+  width: max(var(--dx, 0px), 0px);
+}
+
+.swipe-hint[data-side="left"] {
+  left: 100%;
+  width: max(calc(var(--dx, 0px) * -1), 0px);
+  justify-content: flex-end;
+}
+
+/* Al cruzar el umbral la acción se arma: tinta y acento, no solo color (el texto sigue ahí). */
+.swipe[data-armed] .swipe-hint {
+  color: var(--accent);
+}
+
+/* Hoja de acciones de una pista */
+.sheet-actions {
+  display: grid;
+}
+
+.sheet-action {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: var(--tap-l);
+  padding: 0 var(--s2);
+  border-radius: var(--radius-s);
+  font-weight: 600;
+  text-align: left;
+}
+
+@media (hover: hover) {
+  .sheet-action:hover {
+    background: var(--surface-2);
+  }
+}

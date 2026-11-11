@@ -13,6 +13,7 @@ import { icon } from "./parts";
 import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
 import { PlaylistsView } from "./PlaylistsView";
 import { closePanel, navigate, useRoute } from "./router";
+import { Toaster } from "./toast";
 import { PaletteContext, usePalette } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
@@ -60,6 +61,7 @@ function Shell() {
     <PaletteContext.Provider value={palette}>
       <div className="shell" data-panel={panel ?? undefined} data-queue={queue || undefined} style={style}>
         {panel !== "player" && <Tint />}
+        <Toaster /> {/* fijo en pantalla; va antes que las vistas para no ser el último role=status del DOM */}
         <nav aria-label="Secciones" className="nav">
           <span className="brand">Reproductor</span>
           <NavLink active={path !== "/app/playlists"} to="/app">

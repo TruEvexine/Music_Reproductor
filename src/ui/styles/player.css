@@ -405,3 +405,38 @@
   border-radius: 50%;
   background: var(--ink);
 }
+
+/* Móvil: el reproductor grande sube desde abajo como una hoja y se cierra arrastrando hacia abajo (ver gestures.tsx). */
+.now-playing {
+  touch-action: none;
+}
+
+.now-grabber {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--s2));
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--ink) 35%, transparent);
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@media (max-width: 999px) {
+  .now-playing {
+    animation: sheet-up var(--slow) var(--ease);
+    overscroll-behavior: none;
+  }
+}
+
+@media (min-width: 1000px) {
+  .now-grabber {
+    display: none;
+  }
+}

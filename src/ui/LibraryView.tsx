@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
-import { ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { formatTime, isHiRes, qualityLabel, searchKey } from "../core/format";
 import { groupTracks, matchesAll as matches, recentTracks, searchTextOf, sortGroups, sortTracks } from "../core/library";
 import type { GroupBy, GroupSort, TrackGroup, TrackSort } from "../core/library";
@@ -8,7 +8,10 @@ import type { Track } from "../core/track";
 import { isNative } from "../platform";
 import { library, useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
+import { ActionSheet } from "./ActionSheet";
+import { SwipeRow } from "./gestures";
 import { LibrarySheet } from "./LibrarySheet";
+import { queueAction } from "./toast";
 import { Cover, icon, IconButton, iconSmall } from "./parts";
 import { navigate } from "./router";
 import { VirtualList } from "./VirtualList";
@@ -62,8 +65,18 @@ export function TrackRow({ track, queued, number, onPlay }: { track: Track; queu
   const isCurrent = usePlayer((state) => state.queue.current === track.id);
   const isPlaying = usePlayer((state) => isCurrent && state.isPlaying);
   const blocked = track.unplayable || track.unsupported;
+  const [sheet, setSheet] = useState(false);
+  const playNext = { label: "Reproducir a continuación", icon: <ListStart {...iconSmall} />, run: () => queueAction("Sonará a continuación", () => player.playNext(track.id)) };
+  const enqueue = { label: "Añadir a la cola", icon: <ListPlus {...iconSmall} />, run: () => queueAction("Añadida a la cola", () => player.enqueue(track.id)) };
   return (
-    <div aria-current={isCurrent ? "true" : undefined} className="track-row">
+    <>
+    <SwipeRow
+      className="track-row"
+      current={isCurrent}
+      left={queued ? undefined : { ...enqueue, label: "A la cola" }}
+      onMenu={() => setSheet(true)}
+      right={isCurrent ? undefined : { ...playNext, label: "Siguiente" }}
+    >
       <button aria-label={`Reproducir ${track.title}, de ${track.artist}`} className="row-main" onClick={onPlay} type="button">
         {number !== undefined ? (
           <span aria-hidden="true" className="row-number time">
@@ -99,7 +112,20 @@ export function TrackRow({ track, queued, number, onPlay }: { track: Track; queu
           <ListPlus {...iconSmall} />
         </IconButton>
       )}
-    </div>
+    </SwipeRow>
+    {/* Fuera de la fila: los toques dentro de la hoja no deben contar como gestos de la fila. */}
+    {sheet && (
+      <ActionSheet
+        actions={[
+          { label: "Reproducir", icon: <Play {...iconSmall} fill="currentColor" />, run: onPlay },
+          ...(isCurrent ? [] : [playNext]),
+          ...(queued ? [] : [enqueue]),
+        ]}
+        onClose={() => setSheet(false)}
+        track={track}
+      />
+    )}
+    </>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
-import type { CSSProperties, KeyboardEvent, PointerEvent, ReactNode, RefObject } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode, RefObject } from "react";
 import { ArrowLeft, Check, ChevronRight, Menu, Moon, Palette, SlidersHorizontal, X } from "lucide-react";
 import { EQ_BANDS, EQ_LIMIT_DB, EQ_PRESETS, MAX_CROSSFADE, presetNameOf, SPEED_RANGE } from "../core/audio";
 import type { ReplayGainMode } from "../core/audio";
@@ -9,6 +9,7 @@ import type { RepeatMode } from "../core/queue";
 import { background, useBackground } from "../state/background";
 import { player, usePlayer } from "../state/player";
 import { Backdrop, useReducedMotion } from "./Backdrop";
+import { useDragDismiss } from "./gestures";
 import { icon, IconButton, iconSmall } from "./parts";
 
 // Menú del reproductor (≡). Móvil: hoja inferior con arrastre. Escritorio: popover anclado al icono.
@@ -564,29 +565,7 @@ function MenuPanel({ anchor, onClose }: { anchor: RefObject<HTMLButtonElement | 
   }
 
   // Hoja inferior: arrastrar la cabecera hacia abajo la cierra. Quien no puede arrastrar usa Escape o el botón cerrar.
-  const drag = useRef<{ startY: number; startTime: number; dy: number } | null>(null);
-  const onPointerDown = (event: PointerEvent<HTMLElement>) => {
-    if (wide || (event.target as HTMLElement).closest("button")) return;
-    drag.current = { startY: event.clientY, startTime: event.timeStamp, dy: 0 };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    if (dialog.current) dialog.current.style.transition = "none";
-  };
-  const onPointerMove = (event: PointerEvent<HTMLElement>) => {
-    if (!drag.current || !dialog.current) return;
-    drag.current.dy = Math.max(0, event.clientY - drag.current.startY);
-    dialog.current.style.transform = `translateY(${drag.current.dy}px)`;
-  };
-  const onPointerEnd = (event: PointerEvent<HTMLElement>) => {
-    const gesture = drag.current;
-    drag.current = null;
-    if (!gesture || !dialog.current) return;
-    const speed = gesture.dy / Math.max(event.timeStamp - gesture.startTime, 1); // px/ms
-    dialog.current.style.transition = "transform var(--fast) var(--ease)";
-    if (gesture.dy > 96 || (gesture.dy > 24 && speed > 0.5)) {
-      dialog.current.style.transform = "translateY(100%)";
-      window.setTimeout(close, 120);
-    } else dialog.current.style.transform = "";
-  };
+  const drag = useDragDismiss(dialog, close, { enabled: !wide });
 
   return (
     <dialog
@@ -599,13 +578,7 @@ function MenuPanel({ anchor, onClose }: { anchor: RefObject<HTMLButtonElement | 
       ref={dialog}
       style={style}
     >
-      <header
-        className="menu-head"
-        onPointerCancel={onPointerEnd}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerEnd}
-      >
+      <header className="menu-head" {...drag}>
         {!wide && <span aria-hidden="true" className="menu-grabber" />}
         <div className="menu-head-row">
           {stack.length > 0 && (

@@ -76,6 +76,20 @@ export function playNow(state: QueueState, id: string): QueueState {
   return { ...state, order: insert(state.order), original: insert(state.original), current: id };
 }
 
+/** Deja `id` justo después de la actual sin reproducirla; si ya estaba en la cola, la mueve. Sin pista actual, solo la añade. */
+export function playNext(state: QueueState, id: string): QueueState {
+  const current = state.current;
+  if (current === null) return enqueue(state, id);
+  if (id === current) return state;
+  const place = (list: string[]) => {
+    const rest = list.filter((item) => item !== id);
+    const at = rest.indexOf(current);
+    rest.splice(at < 0 ? rest.length : at + 1, 0, id);
+    return rest;
+  };
+  return { ...state, order: place(state.order), original: place(state.original) };
+}
+
 /** Quita una pista. Si era la actual, pasa a la siguiente (o a la anterior si era la última). */
 export function removeFromQueue(state: QueueState, id: string): QueueState {
   const index = state.order.indexOf(id);

@@ -648,6 +648,33 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
   cargaron** en esta sesión: el criterio visual (foco con tinta translúcida + halo del acento; marquee a 30 px/s con pausas
   de 1,5 s) sale de §11.2 y debe pasar por la auditoría nº1.
 
+### 11.1c Resultado del bloque P2 (2026-11-11)
+
+- **Reproductor grande en móvil:** sube desde abajo como hoja (`sheet-up`), ocupa toda la pantalla y se cierra arrastrando hacia
+  abajo desde la cabecera, la portada o el texto (asa visible arriba). No arrastra desde botones, deslizadores ni la letra.
+  Alternativas: botón ⌄ y Escape. El arrastre solo responde al dedo (el ratón no).
+- **Gestos de fila** (`ui/gestures.tsx`, Pointer Events, `touch-action: pan-y`): derecha = «Siguiente» (reproducir a continuación),
+  izquierda = «A la cola» en la biblioteca o «Quitar» en la cola. Umbral de 88 px con vibración corta al armarse (donde exista
+  `navigator.vibrate`), resistencia más allá, y aviso con **Deshacer** (`ui/toast.tsx`, 6 s). La que suena no se quita deslizando.
+- **Pulsación larga (500 ms), clic derecho o tecla de menú** → hoja de acciones (`ActionSheet`): reproducir, a continuación,
+  a la cola / quitar. El arrastre de cabecera cierra cualquier `Dialog` y el menú ≡ con el mismo hook (`useDragDismiss`).
+- **Núcleo:** `playNext` en `core/queue.ts` (mueve si ya estaba; con aleatorio coloca en el orden barajado y en el original), con tests.
+- **Foco tras tocar:** Chromium dibuja el aro al abrir un diálogo aunque se abriera con el dedo; `html[data-input="key"]` (main.tsx)
+  lo limita a cuando la última interacción fue de teclado.
+- **Landing:** `Landing.tsx` + `styles/landing.css`: título en dos líneas, un solo par de márgenes, capturas reales de la app
+  (`scripts/gen-landing.mjs`, audio sintético), entradas escalonadas con `prefers-reduced-motion`. Inspector de la skill taste:
+  0 FAIL; WARN defendidos: paleta (es el tono oscuro cálido de `DESIGN.md`), sin vídeo (no hay clip honesto), 14 elementos con
+  movimiento, y «sección sin título» a 768/390 px (medido mientras el título aún está oculto por la entrada).
+- **Pendiente en dispositivo real (P2):** deslizar/pulsar largo/arrastrar con el dedo en Chrome y Brave Android y Safari iOS
+  (en iOS no hay vibración ni `contextmenu` al pulsar largo: ahí vale el temporizador de 500 ms); que el scroll vertical de
+  listas largas no se corte al empezar el gesto en diagonal; barra del navegador móvil con el reproductor a pantalla completa.
+- **No hecho en P2:** «Añadir a playlist» en la hoja de acciones (pide elegir playlist y pasar por `trackV1Id`); «ir al álbum/artista».
+- **Nota de pruebas:** tras una secuencia táctil cruda por CDP, Chromium pierde el primer toque siguiente; la prueba lo «asienta»
+  con un toque neutro (`settle`). `prueba-biblioteca.mjs` se agotó una vez de 5 con el servidor frío y pasó al repetir.
+- Skills aplicadas: ponytail; design-taste-frontend (reglas de la casa y `inspect.mjs` sobre la landing); design-motion-principles
+  (puerta de frecuencia: gestos y entradas ocasionales, sin animar lo frecuente; todo con reduced-motion); ui-ux-pro-max cargada
+  (áreas ≥ 44 px, gesto con alternativa, foco), sin su buscador (no hay Python en esta máquina).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
@@ -688,8 +715,9 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
 - [x] Marquee en reproductor grande/pequeño/cola (`ui/Marquee.tsx`, probado con desborde y con movimiento reducido).
 - [x] Sin cuadros azules ni selección accidental en móvil; foco de teclado visible y bonito. *Probado en Chromium (clic sin
       aro, Tab con aro); la selección por pulsación larga solo se confirma en un móvil real.*
-- [ ] Reproductor grande a pantalla completa en móvil + gestos de deslizar.
-- [ ] Landing legible en PC y móvil.
+- [x] Reproductor grande a pantalla completa en móvil + gestos de deslizar. *Probado con toques reales de Chromium
+      (`scripts/prueba-movil.mjs`); falta el dedo en un móvil real (ver «Pendiente en dispositivo real (P2)»).*
+- [x] Landing legible en PC y móvil (versión de transición; la definitiva es la Fase 7).
 - [ ] Skeletons en todas las vistas con datos.
 - [ ] Auditoría de diseño nº1 aplicada. (La nº2 puede ser posterior si estadísticas/fondo v2 aún no están.)
 - [ ] `npm run check`, pruebas de scripts, `verificar-csp`, gitleaks y revisión de seguridad en verde.

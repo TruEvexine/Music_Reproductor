@@ -380,22 +380,6 @@ a {
   overflow-wrap: anywhere;
 }
 
-/* Landing provisional */
-.landing {
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: var(--s5);
-  min-height: 100dvh;
-  max-width: 44rem;
-  padding: var(--s6) var(--gutter);
-}
-
-.landing p {
-  color: var(--ink-2);
-  font-size: var(--text-l);
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -415,4 +399,61 @@ a {
 .button.danger {
   background: var(--danger);
   color: oklch(0.2 0.03 25);
+}
+
+/* Aviso breve con «Deshacer»: flota sobre la barra y las pestañas (en móvil) o sobre la barra (escritorio). */
+.toaster {
+  position: fixed;
+  right: calc(var(--gutter) + var(--safe-right));
+  bottom: calc(9rem + var(--safe-bottom));
+  left: calc(var(--gutter) + var(--safe-left));
+  z-index: 40;
+  display: grid;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  max-width: 28rem;
+  padding: var(--s1) var(--s2) var(--s1) var(--s4);
+  border-radius: var(--radius-m);
+  background: var(--surface-3);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
+  font-weight: 550;
+  pointer-events: auto;
+  animation: toast-in var(--base) var(--ease);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (min-width: 1000px) {
+  .toaster {
+    bottom: calc(6.5rem + var(--safe-bottom));
+  }
+}
+
+/* Con el reproductor grande abierto no hay barra ni pestañas debajo: el aviso sube arriba para no tapar los controles. */
+.shell[data-panel="player"] .toaster {
+  top: calc(4.5rem + var(--safe-top));
+  bottom: auto;
+}
+
+/* La cabecera de un diálogo es su asa: arrastrarla hacia abajo lo cierra (táctil). */
+.dialog-header {
+  touch-action: none;
+}
+
+/* Un diálogo enfoca su primer control al abrirse y Chromium dibuja el aro aunque se abriera con el dedo o el ratón:
+   solo se muestra si lo último que hizo el usuario fue pulsar una tecla (main.tsx marca html[data-input="key"]). */
+html:not([data-input="key"]) :is(.dialog, .menu) :focus-visible {
+  outline: none;
+  box-shadow: none;
 }

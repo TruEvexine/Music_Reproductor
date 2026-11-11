@@ -106,7 +106,9 @@ for (const name of matrix) {
 
   await page.getByRole("button", { name: "Cola de reproducción" }).last().click();
   await check("05-cola");
-  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape"); // la cola es una capa sobre el reproductor grande: primero se cierra ella…
+  await page.waitForTimeout(200);
+  await page.keyboard.press("Escape"); // …y luego el reproductor
   await page.waitForTimeout(200);
 
   await page.getByRole("searchbox").fill("zzzz");

@@ -1,0 +1,197 @@
+/* Landing. El resto de la app es una pantalla fija (body sin scroll); la landing es una página normal que se desplaza. */
+body:has(.landing) {
+  overflow: auto;
+}
+
+.landing {
+  --edge: clamp(16px, 5vw, 64px); /* un solo par de márgenes, igual a ambos lados, en todo el ancho */
+  --gap: clamp(5rem, 12vw, 10rem); /* entre secciones, claramente mayor que cualquier hueco interno */
+  padding: 0 var(--edge) calc(var(--gap) / 2);
+}
+
+.landing-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding-top: var(--safe-top);
+}
+
+.landing .brand {
+  display: block;
+  padding: 0;
+  font-size: var(--text-l);
+  font-stretch: 80%;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.landing main {
+  display: grid;
+  gap: var(--gap);
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.landing-bar {
+  max-width: 96rem;
+  margin: 0 auto;
+}
+
+.landing section {
+  display: grid;
+  gap: var(--s6);
+}
+
+.landing-copy {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--s4);
+}
+
+.landing-copy p,
+.landing-close p {
+  max-width: 34rem;
+  color: var(--ink);
+  font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  line-height: 1.5;
+}
+
+.landing h1 {
+  font-size: clamp(2.5rem, 1rem + 4.4vw, 4.25rem);
+  font-stretch: 80%;
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+}
+
+.landing h2 {
+  font-size: clamp(1.875rem, 1.2rem + 2.6vw, 3.25rem);
+  font-stretch: 80%;
+  font-weight: 700;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+.landing .button {
+  min-height: 52px;
+  padding: 0 var(--s5);
+  font-size: var(--text-m);
+}
+
+.landing img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-m);
+  background: var(--surface-1);
+}
+
+/* Hero: texto y una captura grande del producto en uso. */
+.landing-hero {
+  align-items: center;
+}
+
+.landing-hero .landing-copy {
+  gap: var(--s5);
+}
+
+.landing-shot {
+  max-height: 78svh;
+  object-fit: cover;
+  object-position: top;
+}
+
+/* Móviles: dos capturas a la par. */
+.landing-phones {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s4);
+  align-items: start;
+}
+
+.landing-phones img:last-child {
+  margin-top: var(--s7);
+}
+
+.landing-close {
+  justify-items: start;
+}
+
+@media (min-width: 900px) {
+  .landing-hero {
+    grid-template-columns: minmax(0, 9fr) minmax(0, 15fr);
+    gap: var(--s6);
+    min-height: min(46rem, calc(100svh - 72px - var(--s7)));
+  }
+  .landing-shot {
+    max-height: none;
+    aspect-ratio: 16 / 10;
+  }
+  .landing-thumb {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--s7);
+    align-items: center;
+  }
+  .landing-phones {
+    gap: var(--s5);
+    padding-inline: 8%;
+  }
+  .landing-quality {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    gap: var(--s7);
+    align-items: center;
+  }
+  .landing-close {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: end;
+    column-gap: var(--s7);
+  }
+  .landing-close h2 {
+    grid-column: 1;
+    grid-row: 1 / 3;
+    align-self: start;
+  }
+  .landing-close .button {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .landing-close p {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+/* Entrada del hero: título, frase, botón y captura suben uno tras otro. Una sola vez; sin script, el contenido ya está. */
+.landing [data-rise] {
+  animation: landing-rise 560ms var(--ease) both;
+  animation-delay: calc(var(--i, 0) * 80ms);
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+/* Resto de la página: cada parte sube y aparece al entrar en pantalla, escalonada. Solo con script activo (clase js). */
+.landing.js [data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 600ms var(--ease),
+    transform 600ms var(--ease);
+  transition-delay: calc(var(--i, 0) * 80ms);
+}
+
+.landing.js [data-reveal][data-in] {
+  opacity: 1;
+  transform: none;
+}
+
+.landing main {
+  padding-top: var(--s5);
+}

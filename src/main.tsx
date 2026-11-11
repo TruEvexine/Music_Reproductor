@@ -13,9 +13,15 @@ import "./ui/styles/library.css";
 import "./ui/styles/player.css";
 import "./ui/styles/menu.css";
 import "./ui/styles/backdrop.css";
+import "./ui/styles/landing.css";
 
 // Las variantes por plataforma se resuelven en CSS con [data-platform], no con componentes distintos.
 document.documentElement.dataset.platform = target;
+// Última forma de interacción: Chromium dibuja el aro de foco al abrir un diálogo aunque se haya abierto con el dedo.
+// CSS (base.css) lo oculta mientras el último gesto no fuera de teclado.
+const root = document.documentElement;
+addEventListener("keydown", () => (root.dataset.input = "key"), true);
+addEventListener("pointerdown", () => delete root.dataset.input, true);
 void initSession();
 void initBackground();
 void playlists.init();
