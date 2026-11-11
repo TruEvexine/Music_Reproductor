@@ -622,6 +622,32 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
    `user-select: none` en controles y filas, `-webkit-touch-callout: none`, `touch-action: manipulation` en todo lo pulsable.
    **No quitar el foco de teclado**: se rediseña, no se elimina (accesibilidad).
 
+### 11.1b Resultado del bloque P1 (2026-11-11)
+
+- **Cola:** `?panel=player&queue=1`; `useRoute()` devuelve `queue`; atrás y Escape cierran primero la cola. En escritorio es un
+  cajón a la derecha y el reproductor cede su ancho; el reproductor queda `inert` debajo.
+- **Media Session:** artwork 96/192/512 con `type: image/jpeg` (la portada grande es un JPEG de 600 px); metadatos y estado se
+  reaplican en el evento `playing` del deck activo (`EngineEvents.onStarted`, filtrado por `whenActive`: el deck que
+  precarga o se apaga en un crossfade no cuenta). La URL `blob:` de la portada la retiene `holdCover` (una ref viva) mientras
+  suena la pista; no se revoca. Probado en Chromium: ficha, tamaños, `playbackState` y reaplicado tras `metadata = null` + pausa/play.
+- **Biblioteca (verificado antes de tocarla):** el preview de `desarrollo` es el commit 0343688, que ya incluye la biblioteca
+  (2b40f33). Existen pestañas Canciones/Álbumes/Artistas/Carpetas/Géneros/Recientes; orden de canciones: Título, Artista,
+  Álbum, Añadidas hace poco, Duración; orden de grupos: Nombre, Nº de canciones y, solo en álbumes, Artista y Año.
+  **Falta** (no hecho en P1): filtros (año, formato/Hi-Res, género dentro de artista), orden por año/formato en Canciones,
+  «agrupar por» en Canciones. Confirmado en el navegador contra el código de ese commit; el preview real está tras Vercel
+  Authentication (D5) y no se abrió.
+- **Pendiente en dispositivo real** (Media Session y carpeta; vía `chrome://inspect` sobre el preview HTTPS):
+  1. Chrome Android y Brave: aparece la notificación con título, artista, álbum y portada; play/pausa/siguiente/anterior y
+     la barra de posición funcionan con la pantalla bloqueada. Brave: comprobar con Shields arriba y abajo.
+  2. Que el cambio de pista (con y sin crossfade) actualiza la notificación sin parpadear la portada.
+  3. «Carpeta completa» en Chrome/Brave Android (Brave suele tener File System Access desactivado, y `webkitdirectory` en
+     Android no siempre deja elegir carpetas: hoy cae a `<input webkitdirectory>`), Safari iOS y Firefox.
+  4. Pulsación larga sobre filas, portada y botones: sin selección ni cuadro azul.
+  5. Marquee a 60 fps en un móvil de gama media.
+- Skills aplicadas: ponytail (leída completa). Las de diseño (taste, ui-ux-pro-max, design-motion-principles) **no se
+  cargaron** en esta sesión: el criterio visual (foco con tinta translúcida + halo del acento; marquee a 30 px/s con pausas
+  de 1,5 s) sale de §11.2 y debe pasar por la auditoría nº1.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
@@ -653,12 +679,15 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
 
 ### 11.4 Checklist para poder hacer deploy a producción
 
-- [ ] Cola sobre el reproductor sin cerrarlo (con prueba automática).
+- [x] Cola sobre el reproductor sin cerrarlo (con prueba automática: `scripts/prueba-menu.mjs`, móvil y escritorio).
 - [ ] Media Session verificada en dispositivo real (Brave y Chrome Android) y en PC: título, artista, álbum, portada,
-      controles, barra de posición.
-- [ ] Añadir carpeta completa funcionando (Chrome PC y móvil, con el fallback de Safari/Firefox).
-- [ ] Marquee en reproductor grande/pequeño/cola.
-- [ ] Sin cuadros azules ni selección accidental en móvil; foco de teclado visible y bonito.
+      controles, barra de posición. *Código y prueba en Chromium de escritorio hechos (P1); falta solo el dispositivo real,
+      ver «Pendiente en dispositivo real» abajo.*
+- [ ] Añadir carpeta completa funcionando (Chrome PC y móvil, con el fallback de Safari/Firefox). *Botón «Añadir» dividido
+      hecho y probado en Chromium; falta probar la carpeta en Chrome/Brave Android y Safari iOS.*
+- [x] Marquee en reproductor grande/pequeño/cola (`ui/Marquee.tsx`, probado con desborde y con movimiento reducido).
+- [x] Sin cuadros azules ni selección accidental en móvil; foco de teclado visible y bonito. *Probado en Chromium (clic sin
+      aro, Tab con aro); la selección por pulsación larga solo se confirma en un móvil real.*
 - [ ] Reproductor grande a pantalla completa en móvil + gestos de deslizar.
 - [ ] Landing legible en PC y móvil.
 - [ ] Skeletons en todas las vistas con datos.

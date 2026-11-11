@@ -103,7 +103,8 @@ export const audioSession: AudioSession = {
           title: track.title,
           artist: track.artist,
           album: track.album,
-          artwork: track.artworkUrl ? [{ src: track.artworkUrl }] : [],
+          // Una sola imagen (JPEG de 600 px, ver metadata.worker) declarada en los tres tamaños que piden Chrome y Android.
+          artwork: track.artworkUrl ? [96, 192, 512].map((size) => ({ src: track.artworkUrl!, sizes: `${size}x${size}`, type: "image/jpeg" })) : [],
         })
       : null;
   },

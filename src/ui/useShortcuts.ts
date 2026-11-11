@@ -13,7 +13,7 @@ function owns(target: EventTarget | null): boolean {
  * Espacio play/pausa · ←/→ ∓5 s · Mayús+←/→ anterior/siguiente · ↑/↓ volumen · M silencio · S aleatorio · R repetición · Q cola.
  * Los deslizadores de rango conservan sus propias flechas: si uno tiene el foco, ←/→/↑/↓ no se interceptan.
  */
-export function useShortcuts(panel: "player" | "queue" | null) {
+export function useShortcuts(queueOpen: boolean) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey || owns(event.target)) return;
@@ -50,10 +50,10 @@ export function useShortcuts(panel: "player" | "queue" | null) {
           return handled(player.cycleRepeat);
         case "q":
         case "Q":
-          return handled(() => (panel === "queue" ? closePanel() : openPanel("queue")));
+          return handled(() => (queueOpen ? closePanel() : openPanel("queue")));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [panel]);
+  }, [queueOpen]);
 }

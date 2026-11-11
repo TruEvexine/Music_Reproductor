@@ -158,6 +158,31 @@ const smallTargets = (page) =>
   await page.waitForTimeout(200);
   check("móvil: Escape cierra el menú pero no el reproductor expandido", (await menu(page).count()) === 0 && (await page.locator(".now-playing").count()) === 1);
   check("móvil: Aleatorio y Repetir siguen a un toque en el expandido", (await page.locator(".now-controls .transport-large").getByRole("button", { name: /Aleatorio/ }).count()) === 1 && (await page.locator(".now-controls .transport-large").getByRole("button", { name: /Repet/ }).count()) === 1);
+  // La cola es una capa sobre el reproductor grande: no lo cierra, y "atrás" cierra primero la cola.
+  const count = (selector) => page.locator(selector).count();
+  await page.locator('.now-header button[aria-label="Cola de reproducción"]').tap();
+  await page.waitForTimeout(400);
+  check("móvil: abrir la cola no cierra el reproductor (siguen montados los dos)", (await count(".queue-panel")) === 1 && (await count(".now-playing")) === 1);
+  check("móvil: la URL es panel=player&queue=1", page.url().includes("panel=player") && page.url().includes("queue=1"), page.url());
+  check("móvil: la cola queda encima del reproductor", await page.evaluate(() => {
+    const box = document.querySelector(".queue-panel").getBoundingClientRect();
+    return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest(".queue-panel") !== null;
+  }));
+  await page.screenshot({ path: join(shots, "cola-sobre-reproductor-390x844.png") });
+  await page.goBack();
+  await page.waitForTimeout(300);
+  check("móvil: atrás cierra primero la cola y deja el reproductor", (await count(".queue-panel")) === 0 && (await count(".now-playing")) === 1);
+  await page.goBack();
+  await page.waitForTimeout(300);
+  check("móvil: un segundo atrás cierra el reproductor", (await count(".now-playing")) === 0 && (await count(".queue-panel")) === 0);
+  check("móvil: sin reproductor, la cola sigue abriéndose sola (tecla Q) y atrás la cierra", await (async () => {
+    await page.evaluate(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "q" })));
+    await page.waitForTimeout(300);
+    const open = (await count(".queue-panel")) === 1 && (await count(".now-playing")) === 0;
+    await page.goBack();
+    await page.waitForTimeout(300);
+    return open && (await count(".queue-panel")) === 0;
+  })());
   check("móvil: sin errores de página", errors.length === 0, errors.join(" | "));
   await context.close();
 }
@@ -165,6 +190,25 @@ const smallTargets = (page) =>
 // ───────────── Escritorio: teclado, popover ─────────────
 {
   const { page, errors, context } = await open({ width: 1440, height: 900 }, false);
+
+  // Media Session: ficha completa con portada en 96/192/512 y reaplicada al volver a sonar (evento `playing`).
+  const session = () =>
+    page.evaluate(() => {
+      const m = navigator.mediaSession.metadata;
+      return m && { title: m.title, artist: m.artist, album: m.album, artwork: m.artwork.map(({ sizes, type }) => `${sizes} ${type}`), state: navigator.mediaSession.playbackState };
+    });
+  await page.waitForFunction(() => navigator.mediaSession.metadata?.artwork.length === 3, null, { timeout: 5000 }).catch(() => {});
+  let info = await session();
+  check("media session: título, artista y álbum de la pista", Boolean(info?.title && info.artist && info.album), JSON.stringify(info));
+  check("media session: portada en 96, 192 y 512 con type", JSON.stringify(info?.artwork) === JSON.stringify(["96x96 image/jpeg", "192x192 image/jpeg", "512x512 image/jpeg"]), JSON.stringify(info?.artwork));
+  check("media session: playbackState = playing", info?.state === "playing", info?.state);
+  await page.evaluate(() => (navigator.mediaSession.metadata = null));
+  await page.locator(".bar-center").getByRole("button", { name: "Pausar" }).click();
+  await page.locator(".bar-center").getByRole("button", { name: "Reproducir" }).click();
+  await page.waitForFunction(() => navigator.mediaSession.metadata?.artwork.length === 3, null, { timeout: 5000 }).catch(() => {});
+  info = await session();
+  check("media session: al empezar a sonar se reaplica la ficha con su portada", info?.artwork.length === 3 && Boolean(info.title), JSON.stringify(info));
+
   const trigger = page.locator('.bar-end button[aria-label="Menú del reproductor"]');
   await trigger.click();
   await page.waitForTimeout(300);
@@ -249,6 +293,48 @@ const smallTargets = (page) =>
   await page.screenshot({ path: join(shots, "menu-09-desde-expandido-1440x900.png") });
   await page.keyboard.press("Escape");
   check("escritorio: Escape no cierra también el reproductor expandido", (await page.locator(".now-playing").count()) === 1);
+
+  // Cola como cajón encima del reproductor grande; Escape la cierra primero.
+  const count = (selector) => page.locator(selector).count();
+  await page.locator('.now-header button[aria-label="Cola de reproducción"]').click();
+  await page.waitForTimeout(400);
+  const drawer = await page.locator(".queue-panel").boundingBox();
+  const onTop = await page.evaluate(() => {
+    const box = document.querySelector(".queue-panel").getBoundingClientRect();
+    return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest(".queue-panel") !== null;
+  });
+  check("escritorio: la cola es un cajón visible encima del reproductor grande", (await count(".now-playing")) === 1 && onTop && drawer.x > 0 && drawer.x + drawer.width <= 1440, JSON.stringify(drawer));
+  await page.screenshot({ path: join(shots, "cola-sobre-reproductor-1440x900.png") });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  check("escritorio: Escape cierra primero la cola y deja el reproductor", (await count(".queue-panel")) === 0 && (await count(".now-playing")) === 1);
+
+  // Marquee: solo se anima si el texto desborda, y no con movimiento reducido.
+  const marquee = page.locator(".now-title .marquee");
+  const animations = () => marquee.evaluate((el) => el.firstElementChild.getAnimations().length);
+  check("marquee: un título que cabe no se anima", (await animations()) === 0);
+  await marquee.evaluate((el) => (el.style.width = "40px"));
+  await page.waitForTimeout(300);
+  check("marquee: si desborda, se anima", (await animations()) === 1 && (await marquee.getAttribute("data-moving")) !== null);
+  await marquee.evaluate((el) => (el.style.width = ""));
+  await page.waitForTimeout(300);
+  check("marquee: al volver a caber, se detiene", (await animations()) === 0);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await marquee.evaluate((el) => (el.style.width = "40px"));
+  await page.waitForTimeout(300);
+  check("marquee: con movimiento reducido no se anima (queda el recorte «…»)", (await animations()) === 0);
+  await marquee.evaluate((el) => (el.style.width = ""));
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  check("escritorio: un segundo Escape cierra el reproductor", (await count(".now-playing")) === 0);
+
+  // Foco solo con teclado: el clic no deja aro; Tab sí.
+  const ring = (selector) => page.locator(selector).first().evaluate((el) => getComputedStyle(el).outlineStyle);
+  await page.locator(".nav-link").first().click();
+  check("foco: un clic no deja aro de foco", (await ring(".nav-link")) === "none");
+  await page.keyboard.press("Tab");
+  check("foco: con Tab el aro sí aparece", await page.evaluate(() => getComputedStyle(document.activeElement).outlineStyle !== "none"));
   check("escritorio: sin errores de página", errors.length === 0, errors.join(" | "));
   await context.close();
 }

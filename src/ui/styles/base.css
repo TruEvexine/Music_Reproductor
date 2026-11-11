@@ -64,7 +64,34 @@ button {
   background: none;
   padding: 0;
   cursor: pointer;
+}
+
+/* Táctil: sin retardo ni zoom por doble toque, y sin selección de texto, menú de pulsación larga ni arrastre de imágenes
+   al mantener pulsado un control o una fila. Los campos de texto y la letra siguen siendo seleccionables. */
+button,
+a,
+select,
+label,
+.track-row,
+.queue-row,
+.player-bar,
+.now-playing,
+.tabs,
+.nav {
   touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 button:disabled {
@@ -77,10 +104,16 @@ a {
   text-decoration: none;
 }
 
+/* Foco solo con teclado (:focus-visible). Aro propio y sutil: tinta translúcida (se lee sobre cualquier portada) con un
+   halo suave del acento. El contorno sigue el radio del elemento, así que los botones redondos siguen redondos. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid color-mix(in oklch, var(--ink) 80%, transparent);
   outline-offset: 2px;
-  border-radius: var(--radius-s);
+  box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 30%, transparent);
 }
 
 .visually-hidden {
@@ -319,9 +352,15 @@ a {
   font-size: 1rem;
 }
 
-.search:focus-within {
-  outline: 2px solid var(--accent);
+/* El campo de dentro no dibuja aro (outline: 0): lo dibuja el contenedor con el mismo estilo que el resto. */
+.search:has(:focus-visible) {
+  outline: 2px solid color-mix(in oklch, var(--ink) 80%, transparent);
   outline-offset: 2px;
+  box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 30%, transparent);
+}
+
+.search :focus-visible {
+  box-shadow: none; /* el halo es del contenedor */
 }
 
 .add-list {

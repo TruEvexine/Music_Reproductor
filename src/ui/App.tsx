@@ -30,12 +30,12 @@ function NavLink({ to, active, children }: { to: string; active: boolean; childr
 }
 
 function Shell() {
-  const { path, panel } = useRoute();
+  const { path, panel, queue } = useRoute();
   const auth = useAuthController();
   const [account, setAccount] = useState(false);
   const track = useCurrentTrack();
   const palette = usePalette(useCover(track?.coverHash, "small"));
-  useShortcuts(panel);
+  useShortcuts(queue);
   const userId = auth.session?.user.id ?? null;
   useEffect(() => setSyncUser(userId), [userId]);
 
@@ -58,7 +58,7 @@ function Shell() {
 
   return (
     <PaletteContext.Provider value={palette}>
-      <div className="shell" data-panel={panel ?? undefined} style={style}>
+      <div className="shell" data-panel={panel ?? undefined} data-queue={queue || undefined} style={style}>
         {panel !== "player" && <Tint />}
         <nav aria-label="Secciones" className="nav">
           <span className="brand">Reproductor</span>
@@ -78,9 +78,9 @@ function Shell() {
         <main className="main" inert={panel === "player"}>
           {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView path={path} />}
         </main>
-        {panel === "queue" && <QueuePanel />}
-        <PlayerBar queueOpen={panel === "queue"} />
-        {panel === "player" && <NowPlaying backdrop={<Backdrop />} />}
+        {queue && <QueuePanel />}
+        <PlayerBar queueOpen={queue} />
+        {panel === "player" && <NowPlaying backdrop={<Backdrop />} inert={queue} />}
         {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
       </div>
     </PaletteContext.Provider>

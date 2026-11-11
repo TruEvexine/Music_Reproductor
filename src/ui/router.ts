@@ -2,7 +2,8 @@ import { useMemo, useSyncExternalStore } from "react";
 import { isNative } from "../platform";
 
 // Router mínimo. Web: rutas reales (/app/...). App nativa: hash (#/app/...), porque se sirve desde archivos.
-// Los paneles (reproductor, cola) van en ?panel= para que el botón/gesto "atrás" del sistema los cierre.
+// Los paneles van en la URL para que el botón/gesto "atrás" del sistema los cierre: ?panel=player (reproductor grande) y
+// ?panel=queue (cola sola). Con el reproductor abierto, la cola es una capa encima: ?panel=player&queue=1 (atrás la cierra primero).
 
 export type Panel = "player" | "queue";
 
@@ -27,21 +28,32 @@ export function navigate(to: string, replace = false) {
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
-export function useRoute(): { path: string; panel: Panel | null } {
+export function useRoute(): { path: string; panel: Panel | null; queue: boolean } {
   const current = useSyncExternalStore(subscribe, raw);
   return useMemo(() => {
     const url = new URL(current, "http://local");
-    const panel = url.searchParams.get("panel");
+    const param = url.searchParams.get("panel");
+    const panel = param === "player" || param === "queue" ? param : null;
     return {
       path: url.pathname.replace(/\/+$/, "") || "/",
-      panel: panel === "player" || panel === "queue" ? panel : null,
+      panel,
+      queue: panel === "queue" || (panel === "player" && url.searchParams.get("queue") === "1"),
     };
   }, [current]);
 }
 
 export function openPanel(panel: Panel) {
   const url = new URL(raw(), "http://local");
-  const replace = url.searchParams.has("panel"); // de reproductor a cola no apila historial
+  if (panel === "queue" && url.searchParams.get("panel") === "player") {
+    // Capa sobre el reproductor: entrada de historial propia para que "atrás" cierre solo la cola.
+    if (url.searchParams.get("queue") !== "1") {
+      url.searchParams.set("queue", "1");
+      navigate(url.pathname + url.search);
+    }
+    return;
+  }
+  const replace = url.searchParams.has("panel");
+  url.searchParams.delete("queue");
   url.searchParams.set("panel", panel);
   navigate(url.pathname + url.search, replace);
 }

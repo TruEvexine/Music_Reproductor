@@ -204,6 +204,44 @@
   gap: var(--s2);
 }
 
+/* «Añadir»: botón con menú de dos entradas, anclado debajo. */
+.split {
+  position: relative;
+}
+
+.split-menu {
+  position: absolute;
+  top: calc(100% + var(--s1));
+  left: 0;
+  z-index: 6;
+  display: grid;
+  width: min(19rem, calc(100vw - 2 * var(--gutter)));
+  padding: var(--s1);
+  border-radius: var(--radius-m);
+  background: var(--surface-3);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
+}
+
+.split-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--tap-l);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius-s);
+  text-align: left;
+}
+
+.split-menu .subtitle {
+  white-space: normal;
+}
+
+@media (hover: hover) {
+  .split-menu button:hover {
+    background: var(--surface-2);
+  }
+}
+
 /* Pestañas de vista: se deslizan dentro de su fila en pantallas estrechas; la página nunca. */
 .tabs {
   display: flex;
@@ -254,11 +292,6 @@
   color: var(--ink);
   font: inherit;
   font-size: 1rem;
-}
-
-.sort select:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
 }
 
 .back-link {

@@ -92,7 +92,8 @@ const stored = (page) =>
     ["corrupto.mp3", fx("corrupto.mp3")],
   ]);
 
-  await page.getByRole("button", { name: "Añadir carpeta" }).click();
+  await page.getByRole("button", { name: "Añadir", exact: true }).click();
+  await page.getByRole("button", { name: /Carpeta completa/ }).click();
   await page.waitForFunction(() => document.querySelectorAll(".track-row").length >= 8);
   await scanDone(page);
   await page.waitForTimeout(600);

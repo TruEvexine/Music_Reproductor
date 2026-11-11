@@ -12,6 +12,8 @@ import type { EqChain } from "../core/audio";
 
 export interface EngineEvents {
   onPlaying(playing: boolean): void;
+  /** El audio activo ya suena de verdad (evento `playing`, no solo `play`): el sistema ya lo reconoce como fuente. */
+  onStarted(): void;
   onTime(position: number): void;
   onDuration(duration: number): void;
   onEnded(): void;
@@ -60,6 +62,7 @@ export class PlayerEngine {
     };
     audio.addEventListener("play", whenActive(() => this.events.onPlaying(true)));
     audio.addEventListener("pause", whenActive(() => this.events.onPlaying(false)));
+    audio.addEventListener("playing", whenActive(() => this.events.onStarted()));
     audio.addEventListener("timeupdate", whenActive(() => this.events.onTime(audio.currentTime)));
     audio.addEventListener("ended", whenActive(() => this.events.onEnded()));
     audio.addEventListener("error", whenActive(() => audio.getAttribute("src") && this.events.onError()));

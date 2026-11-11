@@ -52,6 +52,7 @@ let loadToken = 0; // la lectura del archivo es asíncrona: solo cuenta la últi
 
 const engine = new PlayerEngine({
   onPlaying: (isPlaying) => usePlayer.setState({ isPlaying }),
+  onStarted: republishSession,
   onTime: (position) => {
     if (position > 1) failuresInRow = 0;
     usePlayer.setState({ position });
@@ -294,15 +295,28 @@ audioSession.setHandlers({
   seekBy: player.seekBy,
 });
 
+/** `immediate`: ficha sin portada ya, y la portada cuando esté lista. Sin él, solo se reaplica la ficha completa. */
+function publishTrack(immediate: boolean) {
+  const track = trackOf(q().current);
+  const info = track && { title: track.title, artist: track.artist, album: track.album };
+  if (immediate) audioSession.setTrack(info ?? null);
+  void holdCover(track?.coverHash).then((artworkUrl) => {
+    if (info && q().current === track.id) audioSession.setTrack({ ...info, artworkUrl });
+  });
+}
+
+/** Android a veces ignora la ficha fijada antes de que haya reproducción real: se reaplica al empezar a sonar. */
+function republishSession() {
+  publishTrack(false);
+  const { isPlaying, position, duration, audio } = usePlayer.getState();
+  audioSession.setState({ playing: isPlaying, position, duration, rate: audio.speed });
+}
+
 function syncSession(state: PlayerState, previous: PlayerState) {
   const track = trackOf(state.queue.current);
   if (state.queue.current !== previous.queue.current || !lastSessionTitle || lastSessionTitle !== track?.title) {
     lastSessionTitle = track?.title;
-    const info = track && { title: track.title, artist: track.artist, album: track.album };
-    audioSession.setTrack(info ?? null);
-    void holdCover(track?.coverHash).then((artworkUrl) => {
-      if (info && artworkUrl && usePlayer.getState().queue.current === track.id) audioSession.setTrack({ ...info, artworkUrl });
-    });
+    publishTrack(true);
   }
   // La posición se publica al cambiar de estado o de duración, no en cada tic: el sistema la extrapola solo.
   const speed = state.audio.speed;

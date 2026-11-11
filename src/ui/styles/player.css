@@ -260,17 +260,26 @@
 
 .now-title {
   font-size: clamp(1.375rem, 1.1rem + 1.6vw, 2rem);
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .now-artist {
   color: var(--ink-2);
+}
+
+/* Texto de una línea que se desplaza solo si desborda (ver Marquee.tsx). Quieto: recorte con «…». */
+.marquee {
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.marquee[data-moving] {
+  text-overflow: clip;
+}
+
+.marquee[data-moving] > span {
+  display: inline-block; /* un <span> en línea ignora transform */
 }
 
 /* Horizontal (móvil girado, tablet, escritorio): portada | controles. */
@@ -329,6 +338,18 @@
     width: 22rem;
     min-height: 0;
     animation: none;
+  }
+  /* Con el reproductor grande abierto la cola es un cajón encima de él, no una columna oculta detrás. */
+  .shell[data-panel="player"] .queue-panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 20;
+    box-shadow: 0 0 48px oklch(0 0 0 / 0.45);
+    animation: rise var(--base) var(--ease);
+  }
+  /* El reproductor cede el ancho del cajón para que sus controles no queden tapados. */
+  .shell[data-panel="player"][data-queue] .now-playing {
+    right: 22rem;
   }
 }
 

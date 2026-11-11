@@ -26,6 +26,7 @@ import { useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
 import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
+import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
 import { VirtualList } from "./VirtualList";
 
@@ -133,8 +134,12 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
       <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
         <Cover className="bar-cover" seed={track.album} hash={track.coverHash} />
         <span className="bar-copy">
-          <span className="title">{track.title}</span>
-          <span className="subtitle">{track.artist}</span>
+          <span className="title">
+            <Marquee>{track.title}</Marquee>
+          </span>
+          <span className="subtitle">
+            <Marquee>{track.artist}</Marquee>
+          </span>
         </span>
       </button>
       <div className="bar-center">
@@ -192,12 +197,12 @@ function LyricsDialog({ lyrics, title, onClose }: { lyrics: Lyrics; title: strin
   );
 }
 
-export function NowPlaying({ backdrop }: { backdrop: ReactNode }) {
+export function NowPlaying({ backdrop, inert }: { backdrop: ReactNode; inert: boolean }) {
   const track = useCurrentTrack();
   const [lyrics, setLyrics] = useState(false);
   if (!track) return null;
   return (
-    <section aria-label="Reproduciendo ahora" className="now-playing">
+    <section aria-label="Reproduciendo ahora" className="now-playing" inert={inert}>
       {backdrop}
       <header className="now-header">
         <IconButton label="Cerrar reproductor" onClick={closePanel}>
@@ -220,9 +225,11 @@ export function NowPlaying({ backdrop }: { backdrop: ReactNode }) {
       </div>
       <div className="now-controls">
         <div className="now-copy">
-          <h2 className="now-title">{track.title}</h2>
+          <h2 className="now-title">
+            <Marquee>{track.title}</Marquee>
+          </h2>
           <p className="now-artist">
-            {track.artist} · {track.album}
+            <Marquee>{`${track.artist} · ${track.album}`}</Marquee>
           </p>
           <span className="quality">
             {qualityLabel(track)}
@@ -270,8 +277,12 @@ export function QueuePanel() {
                   <button className="row-main" onClick={() => player.playNow(id)} type="button">
                     <Cover className="row-cover" hash={track.coverHash} seed={track.album} />
                     <span className="row-copy">
-                      <span className="title">{track.title}</span>
-                      <span className="subtitle">{id === current ? "Sonando" : index === currentAt + 1 ? "A continuación" : track.artist}</span>
+                      <span className="title">
+                        <Marquee>{track.title}</Marquee>
+                      </span>
+                      <span className="subtitle">
+                        <Marquee>{id === current ? "Sonando" : index === currentAt + 1 ? "A continuación" : track.artist}</Marquee>
+                      </span>
                     </span>
                   </button>
                   <IconButton disabled={index === 0} label={`Subir ${track.title}`} onClick={() => player.move(index, index - 1)}>

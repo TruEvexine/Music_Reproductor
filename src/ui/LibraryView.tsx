@@ -1,6 +1,6 @@
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
-import { ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, Play, Search, TriangleAlert, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { formatTime, isHiRes, qualityLabel, searchKey } from "../core/format";
 import { groupTracks, matchesAll as matches, recentTracks, searchTextOf, sortGroups, sortTracks } from "../core/library";
 import type { GroupBy, GroupSort, TrackGroup, TrackSort } from "../core/library";
@@ -205,6 +205,61 @@ function GroupDetail({ group, tab, tracks }: { group: TrackGroup; tab: Tab; trac
   );
 }
 
+/** «Añadir»: una sola entrada con las dos vías, archivos sueltos o carpeta completa. Se cierra con Escape, fuera o al elegir. */
+function AddSplit({ primary = false, onFiles, onFolder }: { primary?: boolean; onFiles: () => void; onFolder: () => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => !box.current?.contains(event.target as Node) && setOpen(false);
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.stopPropagation(); // que no cierre también un panel
+      setOpen(false);
+      toggle.current?.focus();
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  const choose = (action: () => void) => () => {
+    setOpen(false);
+    action();
+  };
+  return (
+    <div className="split" ref={box}>
+      <button aria-controls={open ? menuId : undefined} aria-expanded={open} className={`button${primary ? " primary" : ""}`} onClick={() => setOpen(!open)} ref={toggle} type="button">
+        <Plus {...iconSmall} />
+        Añadir
+        <ChevronDown {...iconSmall} />
+      </button>
+      {open && (
+        <div className="split-menu" id={menuId}>
+          <button onClick={choose(onFolder)} type="button">
+            <FolderOpen {...icon} />
+            <span className="row-copy">
+              <span className="title">Carpeta completa</span>
+              <span className="subtitle">{library.keepsFolders ? "La recuerda y busca música nueva" : "Importa su contenido; este navegador no recuerda la carpeta"}</span>
+            </span>
+          </button>
+          <button onClick={choose(onFiles)} type="button">
+            <FilePlus {...icon} />
+            <span className="row-copy">
+              <span className="title">Archivos</span>
+              <span className="subtitle">Una o varias canciones sueltas</span>
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScanBar() {
   const scan = useLibrary((state) => state.scan);
   if (!scan) return null;
@@ -281,6 +336,7 @@ export function LibraryView({ path }: { path: string }) {
     return tab === "recientes" ? recentTracks(matching) : sortTracks(matching, trackSort);
   }, [group, byId, key, tab, matching, trackSort]);
 
+  const addFiles = () => filesInput.current?.click();
   const addFolder = () => (library.keepsFolders ? void library.addFolder() : folderInput.current?.click());
   const onDrop = (event: DragEvent) => {
     event.preventDefault();
@@ -362,16 +418,7 @@ export function LibraryView({ path }: { path: string }) {
         <p>Elige la carpeta donde guardas tu música y empieza a escuchar. Nada se sube a ningún servidor.</p>
         <ScanBar />
         {notices}
-        <div className="empty-actions">
-          <button className="button primary" onClick={addFolder} type="button">
-            <FolderOpen {...icon} />
-            Añadir carpeta
-          </button>
-          <button className="button" onClick={() => filesInput.current?.click()} type="button">
-            <FilePlus {...iconSmall} />
-            Añadir archivos
-          </button>
-        </div>
+        <AddSplit onFiles={addFiles} onFolder={addFolder} primary />
         <p className="hint">También puedes arrastrarla aquí. MP3, FLAC, WAV, M4A, OGG y Opus.</p>
       </section>
     );
@@ -399,13 +446,7 @@ export function LibraryView({ path }: { path: string }) {
           <p className="subtitle">{count}</p>
         </div>
         <div className="header-actions">
-          <button className="button" onClick={addFolder} type="button">
-            <FolderOpen {...iconSmall} />
-            Añadir carpeta
-          </button>
-          <IconButton label="Añadir archivos" onClick={() => filesInput.current?.click()}>
-            <FilePlus {...icon} />
-          </IconButton>
+          <AddSplit onFiles={addFiles} onFolder={addFolder} />
           <IconButton label="Carpetas y copia de seguridad" onClick={() => setSheet(true)}>
             <FolderSync {...icon} />
           </IconButton>
