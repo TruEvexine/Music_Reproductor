@@ -566,3 +566,103 @@ Arquitectura: **Capacitor** sobre la misma base web (§3.7 y `docs/ARQUITECTURA_
 5. Los commits no deben incluir líneas de coautoría ni enlaces de sesión de asistentes de IA.
 6. Verificar precios y APIs de terceros en su documentación oficial antes de implementarlos; no inventar.
 7. Al terminar cada fase: marcar casillas aquí, actualizar el snapshot de la §2 y anotar decisiones nuevas en la §3.
+
+---
+
+## 11. Pulido previo al deploy a producción (pedido del 2026-11-11)
+
+**Regla del usuario:** nada de esto llega a `main` hasta que lo móvil y la calidad de vida estén bien. Se prueba en el
+preview HTTPS de Vercel de la rama `desarrollo` (no en el servidor local por LAN: sin HTTPS no hay File System Access,
+service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa encontrada/hipótesis → arreglo → prueba**.
+
+### Orden recomendado (cada bloque = una sesión/commit grande)
+
+| Bloque | Contenido | Modelo sugerido |
+|---|---|---|
+| P1 | Bugs: cola cierra el reproductor, Media Session, carpeta completa, marquee, toque azul/foco | Sonnet 5.5 |
+| P2 | Móvil: reproductor grande a pantalla completa, gestos de deslizar, hoja de acciones, landing | Sonnet 5.5 |
+| P3 | Auditoría de diseño nº1 (tipografía y pesos) + skeletons + brillo "premium" | Sonnet 5.5 |
+| P4 | Fondo ambiental v2 (ver `docs/DISENO_FONDO_AMBIENTE.md`) | Sonnet 5.5 / Opus 5.5 |
+| P5 | Estadísticas (ver `docs/DISENO_ESTADISTICAS.md`): primero captura de eventos, luego panel | Opus 5.5 |
+| P6 | Auditoría de diseño nº2 (con capturas reales móvil+PC) y revisión de seguridad de lo nuevo | Fable / Opus |
+| Deploy | Merge `desarrollo` → `main` solo con checklist §11.4 completo | — |
+
+### 11.1 Hallazgos del diagnóstico (código real de `desarrollo`, commit 2b40f33)
+
+1. **Cola cierra el reproductor grande — causa confirmada.** `router.ts` guarda UN solo `?panel=` (`player` | `queue`).
+   `openPanel("queue")` *reemplaza* `player` por `queue`, y `App.tsx` solo pinta `NowPlaying` si `panel === "player"`.
+   Arreglo: la cola es una **capa sobre el reproductor**, no un panel hermano. Modelo: `?panel=player` + `&queue=1`
+   (o `panel=player,queue`). Atrás cierra primero la cola; luego el reproductor. Escape igual. Con el reproductor cerrado,
+   la cola sigue abriéndose sola como hoy. Prueba nueva en `scripts/prueba-menu.mjs`: abrir player → abrir cola → el player
+   sigue montado → atrás → cola cerrada y player abierto → atrás → player cerrado.
+2. **Biblioteca: ya existen** pestañas Canciones/Álbumes/Artistas/Carpetas/Géneros/Recientes, orden y agrupar
+   (`LibraryView.tsx`, `core/library`). Lo que el usuario vio probablemente es un preview anterior. **Verificar en el preview
+   actual antes de reescribir nada**; si falta, es lo que falta: filtros dentro de cada vista (año, formato/hi-res, género
+   dentro de artista…), orden por duración/año en canciones, "agrupar por" también en Canciones.
+3. **Media Session: el código existe** (`platform/web/index.ts`, `state/player.ts#syncSession`) pero tiene huecos reales:
+   - `artwork` se manda sin `sizes` ni `type`; Chrome/Brave Android suelen exigir al menos un tamaño ≥ 128 y conviene
+     96/192/512. La portada es una URL `blob:`: debe vivir mientras suena la pista (comprobar `holdCover`).
+   - Los metadatos se fijan al cambiar la pista, pero antes de que el `<audio>` esté reproduciendo; Android a veces ignora la
+     sesión hasta que hay reproducción real. Reaplicar en el evento `playing`.
+   - El motor usa dos `<audio>` (crossfade) y Web Audio: la notificación se ata al elemento que reproduce. Comprobar que el
+     elemento activo es el que tiene `src` y que el que no suena no reclama la sesión.
+   - Brave: puede bloquear/limitar la API según Shields; probar en Chrome Android y Brave. **Solo se cierra con prueba en
+     dispositivo real** (remote debugging vía `chrome://inspect` sobre el preview HTTPS).
+   - Es posible que lo que vio el usuario sea un preview anterior al commit del motor (1bb5335). Confirmar versión.
+4. **Landing minúscula en PC:** `Landing.tsx` son 23 líneas con estilos mínimos. Se rehace en la Fase 7, pero como el enlace
+   público lo ve cualquiera, **se sube de prioridad**: tipografía fluida con `clamp()`, ancho máximo, un visual (captura o
+   reproductor animado), CTA claro. Mientras tanto, mínimo viable en P2.
+5. **Tipografía:** no hay `@font-face`; se usa `var(--font)` del sistema con pesos 400/550/600/650/700 (sin fuente variable
+   ⇒ 550/650 se redondean y todo se ve igual). Arreglo en la auditoría nº1: fuente variable autoalojada
+   (`font-src 'self'` ya compatible con el CSP), escala tipográfica con tokens, y pesos con intención (números tabulares
+   para tiempos, títulos más pesados, metadatos ligeros, versalitas pequeñas para etiquetas).
+6. **Toque azul/cuadros del navegador:** `-webkit-tap-highlight-color` ya es transparente; lo que queda son `:focus-visible`
+   (`outline: 2px`) disparado por táctil/clic en algunos controles, selección de texto al mantener pulsado y `<select>`.
+   Arreglo: `:focus-visible` solo con teclado (`:focus:not(:focus-visible)` sin contorno y aro propio y sutil para teclado),
+   `user-select: none` en controles y filas, `-webkit-touch-callout: none`, `touch-action: manipulation` en todo lo pulsable.
+   **No quitar el foco de teclado**: se rediseña, no se elimina (accesibilidad).
+
+### 11.2 Funciones nuevas (alcance)
+
+- **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
+  estado vacío y en la barra. Ya existe la ruta de carpeta recordada (File System Access) y `webkitdirectory`; es mostrar
+  las dos entradas siempre y unificar el flujo de progreso.
+- **Texto desplazable (marquee):** componente `<Marquee>` que mide con `ResizeObserver`; solo anima si el texto desborda;
+  pausa en los extremos (~1,5 s), velocidad constante (~30 px/s), degrada a `text-overflow: ellipsis` con
+  `prefers-reduced-motion`. Se usa en reproductor grande, mini reproductor, cola. No en listas largas (coste).
+- **Gestos móviles:** deslizar fila → derecha "Reproducir a continuación", izquierda "Quitar de la lista / Añadir a cola";
+  pulsación larga → hoja de acciones; con umbral, háptico (`navigator.vibrate`) y deshacer. Implementar con Pointer Events
+  sobre `VirtualList` sin romper el scroll vertical (`touch-action: pan-y`).
+- **Reproductor grande en móvil a pantalla completa:** hoja que sube desde el mini reproductor, arrastrar hacia abajo para
+  cerrar, portada grande, controles al alcance del pulgar, respeta `safe-area-inset-*`. Hoy móvil no lo muestra igual que PC.
+- **Brillo "premium":** barrido de brillo sutil (no continuo) en botón de play y barra de progreso al reproducir/arrastrar;
+  la parte reproducida de la línea se acerca a blanco con gradiente de la paleta de la portada; todo detrás de
+  `prefers-reduced-motion` y de un interruptor de "efectos" en el menú ≡.
+- **Skeletons:** biblioteca (filas y mosaico), detalle de álbum/artista, playlists, panel de estadísticas, landing. Forma
+  idéntica al contenido real (sin saltos de layout), pulso lento y apagado con reduced-motion.
+
+### 11.3 Auditorías de diseño (mínimo 2)
+
+- **Nº1 — tras P1/P2:** tipografía, pesos, jerarquía, espaciado, estados (hover/active/focus/disabled/loading/empty/error),
+  móvil primero. Entregable `docs/AUDITORIA_DISENO_2.md` con capturas antes/después (`scripts/capturas.mjs` en 360×800,
+  390×844, 768×1024, 1440×900).
+- **Nº2 — tras P4/P5:** coherencia del conjunto (fondo ambiental + estadísticas + reproductor), contraste AA sobre fondos
+  dinámicos, rendimiento percibido, movimiento (skill `design-motion-principles`). Entregable `docs/AUDITORIA_DISENO_3.md`.
+- Usar las skills de diseño disponibles (taste-skill, UI UX Pro Max, design-motion-principles, awesome-claude-design) y el
+  enfoque *ponytail* en el código.
+
+### 11.4 Checklist para poder hacer deploy a producción
+
+- [ ] Cola sobre el reproductor sin cerrarlo (con prueba automática).
+- [ ] Media Session verificada en dispositivo real (Brave y Chrome Android) y en PC: título, artista, álbum, portada,
+      controles, barra de posición.
+- [ ] Añadir carpeta completa funcionando (Chrome PC y móvil, con el fallback de Safari/Firefox).
+- [ ] Marquee en reproductor grande/pequeño/cola.
+- [ ] Sin cuadros azules ni selección accidental en móvil; foco de teclado visible y bonito.
+- [ ] Reproductor grande a pantalla completa en móvil + gestos de deslizar.
+- [ ] Landing legible en PC y móvil.
+- [ ] Skeletons en todas las vistas con datos.
+- [ ] Auditoría de diseño nº1 aplicada. (La nº2 puede ser posterior si estadísticas/fondo v2 aún no están.)
+- [ ] `npm run check`, pruebas de scripts, `verificar-csp`, gitleaks y revisión de seguridad en verde.
+- [ ] Variables de entorno copiadas a "Preview" en Vercel y probado el login en el preview.
+- Estadísticas y fondo ambiental v2 **no bloquean** el deploy si no están: se despliegan detrás de bandera.
