@@ -39,5 +39,6 @@ export default defineConfig(({ mode }) => ({
   base: native ? "./" : "/",
   plugins: [react(), buildGuard(mode)],
   preview: { headers: globalHeaders },
+  worker: { format: "es" }, // el worker de metadatos carga music-metadata con imports dinámicos
   test: { include: ["src/**/*.test.ts", "scripts/**/*.test.ts"] },
 }));

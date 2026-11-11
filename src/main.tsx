@@ -4,6 +4,7 @@ import "@fontsource-variable/instrument-sans/wdth.css";
 import { target } from "./platform";
 import { initBackground } from "./state/background";
 import { initSession } from "./state/player";
+import { playlists } from "./state/playlists";
 import App from "./ui/App";
 import "./ui/styles/tokens.css";
 import "./ui/styles/base.css";
@@ -17,6 +18,7 @@ import "./ui/styles/backdrop.css";
 document.documentElement.dataset.platform = target;
 void initSession();
 void initBackground();
+void playlists.init();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

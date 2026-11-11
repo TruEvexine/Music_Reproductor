@@ -1,6 +1,6 @@
 # PLAN.md — Plan maestro del reproductor
 
-> **Última actualización:** 2026-11-10 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase compartido, hosting en Vercel). **Fases 0, 1 y 2 completas; siguiente: Fase 3 (biblioteca local).** Adelantos de la Fase 4 ya hechos: menú ≡ del reproductor y fondo reactivo.
+> **Última actualización:** 2026-11-11 · **Estado:** MVP web funcionando (Vite + React 19 + TS, Supabase compartido, hosting en Vercel). **Fases 0, 1, 2 y 3 completas; siguiente: Fase 4 (diseño Poweramp + Qobuz).** Adelantos de la Fase 4 ya hechos: menú ≡ del reproductor y fondo reactivo.
 > **Rama de trabajo:** `desarrollo` (nunca `main`). Pendientes del usuario: `DECISIONES_PENDIENTES.md`. Auditoría de diseño: `docs/AUDITORIA_DISENO.md`. Arquitectura de apps: `docs/ARQUITECTURA_APP.md`.
 > **Este documento manda.** Si contradice a `DESIGN.md`, `AGENTS.md`, `SUPABASE.md` o al README, gana este archivo hasta que esos documentos se actualicen (tarea de la Fase 1).
 > **Antes de escribir código:** leer `SECURITY_AUDIT.md` y completar la **Fase 0**. Es bloqueante.
@@ -49,11 +49,18 @@ No es copia literal de ninguna: tomamos principios, no assets ni layouts pixel a
 |------|-------|
 | Audio | Volumen y mute, shuffle, crossfade, gapless, ReplayGain, ecualizador, temporizador de apagado, velocidad |
 | Sistema | Media Session (controles en pantalla de bloqueo/auriculares), atajos de teclado, persistencia de sesión (última pista, posición, cola, ajustes) |
-| Biblioteca | Abrir **carpetas**, re-escaneo, caché persistente (IndexedDB), vistas por álbum/artista/carpeta/género, ordenamiento, virtualización para miles de pistas, OGG/Opus |
+| Biblioteca | ~~Carpetas, re-escaneo, caché persistente, vistas, orden, virtualización, OGG/Opus~~ → hecho en la Fase 3. Falta: re-escaneo automático en segundo plano con la pestaña cerrada (imposible en web), colecciones por artista del álbum con alias |
 | Diseño | Gradientes multicolor animados, modo ritmo, selector de fondo, reproductor expandido estilo Poweramp, gestos táctiles, drag & drop en cola, skeletons |
 | Producto | Landing/SEO, PWA, perfiles (avatar, ajustes sincronizados), nube de música, monetización, términos/privacidad |
 | Código | Reestructurado en la Fase 1 (ver abajo). Falta virtualización y workers |
 | Infra | Proyecto de Supabase compartido (aceptado); acciones manuales en paneles de Vercel/Supabase (`DECISIONES_PENDIENTES.md`) |
+
+### Hecho en la Fase 3 (2026-11-11)
+
+- La biblioteca persiste: pistas, raíces, portadas, playlists y outbox en IndexedDB (migración v2). Los archivos se leen de la carpeta recordada (handle de File System Access), de una copia privada en OPFS o, si no se puede copiar, de memoria durante la sesión con aviso.
+- Metadatos, `track:v2` y miniaturas (96 y 600 px) en un pool de workers con tiempo máximo; portadas deduplicadas por hash.
+- Vistas Canciones, Álbumes, Artistas, Carpetas, Géneros y Recientes con orden, búsqueda sin acentos por palabras y listas virtualizadas.
+- Playlists locales primero (sin cuenta y sin red) con outbox hacia Supabase; copia de seguridad en JSON; letras USLT/SYLT/.lrc.
 
 ### Hecho en la Fase 0 (2026-11-10)
 
@@ -73,7 +80,7 @@ No es copia literal de ninguna: tomamos principios, no assets ni layouts pixel a
 - **Motor de audio fuera de React:** una clase `PlayerEngine` (TS puro) dueña de los `<audio>` y del grafo Web Audio. React lo observa a través de un store pequeño (**Zustand**) — la UI nunca toca `HTMLAudioElement` directamente.
 - **Workers:** pool de 2–4 Web Workers para leer metadatos, calcular hashes y generar miniaturas/paletas (`OffscreenCanvas`). El hilo principal solo pinta.
 - **Persistencia local:** IndexedDB (librería `idb`, ~1 KB) para biblioteca, portadas, handles de carpetas y estado de sesión; `localStorage` solo para ajustes de UI triviales.
-- **Router:** propio (`src/ui/router.ts`, ~50 líneas, sin dependencia). Decisión 2026-11-10: con tres rutas y paneles en `?panel=` no compensa `react-router`; revisar si las vistas de álbum/artista de la Fase 3 lo complican.
+- **Router:** propio (`src/ui/router.ts`, ~50 líneas, sin dependencia). Decisión 2026-11-10: con tres rutas y paneles en `?panel=` no compensa `react-router`; revisar si las vistas de álbum/artista de la Fase 3 lo complican. Revisado 2026-11-11: las vistas usan `/app/<vista>/<grupo>` con el mismo router; sigue sin compensar.
 - **Listas largas:** `@tanstack/react-virtual`.
 
 ### 3.2 Música local y FLAC (núcleo del producto)
@@ -90,7 +97,18 @@ El navegador no puede vigilar una carpeta del disco. La estrategia por navegador
 - **Identidad de pista (`track:v2`):** SHA-256 de `tamaño + primer MB + último MB` calculado en worker. Sirve para deduplicar, enlazar playlists y emparejar con la nube. Se conserva `track:v1` (título|artista|álbum|duración, el actual) como **respaldo de coincidencia** entre dispositivos y para no romper playlists existentes.
 - **Formatos:** MP3, FLAC (incluido 24-bit/96 kHz+), WAV, M4A/AAC, OGG/Opus; ALAC solo donde `canPlayType` lo confirme. Probar `audio.canPlayType()` al importar y marcar las pistas no reproducibles en vez de fallar al darles play.
 - **Insignia de calidad:** "FLAC 24/96", "MP3 320" en fila y reproductor (dato ya disponible del lector de metadatos).
-- **Portadas:** se deduplican por hash y se guardan como `Blob` en IndexedDB en dos tamaños (96 px para listas, 600 px para el reproductor) generados en worker. Fallback: gradiente generado del hash de álbum, nunca un gris plano. Soportar también `cover.jpg`/`folder.jpg` en la carpeta.
+- **Portadas:** se deduplican por hash y se guardan como `Blob` en IndexedDB en dos tamaños (96 px para listas, 600 px para el reproductor) generados en worker. Fallback: gradiente generado del hash de álbum, nunca un gris plano. Soportar también `cover.jpg`/`folder.jpg` en la carpeta. Hecho: también `front`/`album` en JPG, PNG o WebP.
+
+**Decisiones de implementación (Fase 3, 2026-11-11):**
+
+- **Frontera `LocalLibrary`** (`src/platform/types.ts`, web en `platform/web/library.ts`): elegir carpeta, archivos arrastrados, permiso (consultar/pedir), recorrer, leer, copiar a OPFS, olvidar, espacio y `canPlayType`. La persistencia de pistas/portadas/playlists es la misma IndexedDB en web y en el WebView nativo, así que vive en `Storage` (tablas `tracks`, `roots`, `covers`, `playlists`, `outbox`).
+- **Tres clases de raíz:** `folder` (handle guardado, se re-escanea), `copy` (OPFS en `biblioteca/<id>/…`, para todo lo que llega sin handle: `<input webkitdirectory>`, archivos sueltos y arrastre sin handles) y `session` (no se pudo copiar: cuota llena u OPFS deshabilitado; suena hasta recargar y se avisa). La copia es automática si cabe (`estimate()` con 5 % de margen) y pide `storage.persist()`. Los archivos sueltos van todos a la raíz «Archivos importados».
+- **Id de pista** = `<raíz>:<ruta>`: estable entre sesiones, así la cola y la posición guardadas se restauran sin volver a leer nada. Las playlists siguen guardando `track:v1` (compatibles con las de la nube); `track:v2` se calcula siempre y también se reconoce al resolver una playlist.
+- **Restaurar no lee archivos:** al recargar se pinta la biblioteca guardada y la sesión; el archivo de la pista se lee al pulsar reproducir (con ese gesto se puede pedir el permiso de la carpeta). Si el permiso está pendiente, la pista no se marca como rota: se avisa y se ofrece «Reconectar».
+- **Re-escaneo:** botón «Buscar cambios» y al volver a la pestaña si pasó más de 1 minuto (solo carpetas con permiso). Lo nuevo aparece en cuanto se encuentra; los metadatos se leen al terminar el recorrido (para tener ya las portadas de carpeta y los `.lrc`); al final se quita lo que desapareció. Cancelar no borra nada; lo que quedó sin leer se retoma al recargar.
+- **Workers:** uno por trabajo a la vez, entre 1 y 4 según `hardwareConcurrency / 2`, 20 s máximo por archivo (se termina el worker y se crea otro). Miniaturas JPEG con `OffscreenCanvas` (recorte cuadrado centrado); si no hay `OffscreenCanvas` se guarda la imagen original. Hash de portada: SHA-256 truncado a 128 bits.
+- **URLs `blob:`**: las de audio se crean al reproducir y solo se conservan las 4 últimas; las de portada tienen conteo de uso y se revocan cuando sobran más de 120 sin usar.
+
 
 ### 3.3 Motor de audio (Web Audio)
 
@@ -382,9 +400,9 @@ Cada fase termina con build verde, prueba manual en móvil y escritorio, y un co
 Skills aplicadas: ponytail (router y diálogos sin dependencias, sin capas extra), impeccable (modo Operate, auditoría previa), apple-design (áreas táctiles, pestañas inferiores, hojas), design-taste-frontend (reglas de app-screens: sin eyebrows, sin bordes, sin degradados decorativos), ui-ux-pro-max (prioridades de accesibilidad y táctil), design-motion-principles (puerta de frecuencia), anti-slop (copia sin jerga).
 
 Límites conocidos de la Fase 1 (se resuelven en la fase indicada):
-- La biblioteca todavía no persiste: los archivos importados se pierden al recargar; la sesión guardada se restaura cuando vuelven a estar las mismas pistas (Fase 3: carpetas + IndexedDB).
-- Playlists siguen siendo solo en línea (Fase 3: locales primero + outbox).
-- Metadatos en el hilo principal, sin timeout (Fase 3: worker).
+- ~~La biblioteca todavía no persiste~~ → resuelto en la Fase 3 (2026-11-11).
+- ~~Playlists siguen siendo solo en línea~~ → resuelto en la Fase 3: locales primero + outbox.
+- ~~Metadatos en el hilo principal, sin timeout~~ → resuelto en la Fase 3: pool de workers con 20 s de tiempo máximo.
 - ~~Borrar playlist usa `window.confirm`~~ → resuelto 2026-11-10 con `ConfirmDialog` (`ui/dialogs.tsx`); el toast con deshacer sigue en la Fase 4.
 - Landing sin prerender ni SEO (Fase 7).
 
@@ -411,14 +429,32 @@ Límites conocidos de la Fase 2:
 - Sin ayuda de atajos visible (`?`); entra en la Fase 5.
 
 ### Fase 3 — Biblioteca local
-- [ ] Abrir carpetas (File System Access + fallback `webkitdirectory` + arrastrar carpeta)
-- [ ] Pool de workers para metadatos, hash `track:v2`, miniaturas y paletas
-- [ ] Caché en IndexedDB + re-escaneo por diferencias + reconexión de carpeta
-- [ ] OPFS opcional para Firefox/Safari con aviso de espacio
-- [ ] Vistas: Canciones, Álbumes, Artistas, Carpetas, Géneros, Recientes; ordenar; búsqueda con tolerancia a acentos
-- [ ] Virtualización; probar con 5 000 pistas
-- [ ] OGG/Opus, insignias de calidad, portada desde `cover.jpg`
-- [ ] Letras: tags USLT/SYLT y archivos `.lrc` hermanos
+- [x] Abrir carpetas: File System Access (handle recordado) en Chromium; `<input webkitdirectory>` y arrastrar (handles en Chromium, `webkitGetAsEntry` en el resto) con copia a OPFS — 2026-11-11
+- [x] Pool de workers (1–4, 20 s máximo por archivo) para metadatos, hash `track:v2` (conservando `track:v1`) y miniaturas de 96 y 600 px; portadas deduplicadas por hash. Paletas: siguen en el hilo principal desde la miniatura de 96 px (32×32 muestras, coste despreciable) — 2026-11-11
+- [x] Caché en IndexedDB (migración v2: `tracks`, `roots`, `covers`, `playlists`, `outbox`) + re-escaneo por diferencias (ruta + tamaño + fecha) + reconexión de permisos con un toque; escaneo progresivo y cancelable; lecturas interrumpidas se retoman al recargar — 2026-11-11
+- [x] OPFS para Firefox/Safari con comprobación de espacio (`estimate()`), `persist()` y aviso si no cabe o no está disponible (la música suena en esa sesión) — 2026-11-11
+- [x] Vistas: Canciones, Álbumes (rejilla), Artistas, Carpetas, Géneros, Recientes, con detalle de grupo; ordenar; búsqueda sin acentos por palabras en cualquier orden — 2026-11-11
+- [x] Virtualización (`ui/VirtualList.tsx`, también en la cola y la rejilla); probado con 5 000 pistas sintéticas (`node scripts/gen-biblioteca.mjs`) — 2026-11-11
+- [x] OGG/Opus marcados al importar según `canPlayType` (no fallan al darles play), insignias de calidad con Hi-Res, portada desde `cover`/`folder`/`front`/`album` (.jpg/.png/.webp) — 2026-11-11
+- [x] Letras: etiquetas USLT y SYLT y archivos `.lrc` hermanos; diálogo «Letra» en el reproductor que sigue la posición real — 2026-11-11
+- [x] Playlists locales primero (sin cuenta y sin red) con outbox hacia Supabase (`sync/playlistSync.ts`): compactación, reintento al volver la red y cada 30 s, fallos permanentes descartados, fusión con la nube. Exportar/importar playlists y ajustes en JSON validado campo a campo — 2026-11-11
+- [x] Sesión: cola guardada al cambiar y posición en su propia clave cada 2 s (antes se perdía al recargar en los primeros 5 s y podía guardarse con la posición de la pista anterior) — 2026-11-11
+
+Verificado (2026-11-11, todo con audio sintético):
+- `node scripts/prueba-biblioteca.mjs <url>` — **54 comprobaciones** en Chromium, Firefox y WebKit: carpeta con File System Access (handle real de OPFS en lugar del diálogo nativo), etiquetas, `track:v2`, portada de carpeta, deduplicación, archivo corrupto, letras .lrc/USLT/SYLT, persistencia y reproducción tras recargar, re-escaneo (1 nuevo, 1 borrado, **1 sola lectura**), permiso en «prompt» → aviso → Reconectar, arrastrar, vistas, búsqueda, playlist sin cuenta, exportar/importar (incluido un nombre con HTML que se pinta como texto y un JSON inválido); Firefox: `webkitdirectory` → OPFS → recarga → suena.
+- **5 000 pistas**: listadas en ≈ 10 s y etiquetadas en ≈ 36 s (copia a OPFS incluida); 18 filas en el DOM; scroll a 900 px por cuadro con p50 16,7 ms y p95 24–28 ms; búsqueda «nandu marea» pintada en ≈ 35 ms; 500 álbumes con 55 celdas en el DOM; **restaurar biblioteca, cola y posición en 387–419 ms** desde la navegación; cancelar a mitad no borra nada y al recargar se completan las ≈ 4 940 lecturas pendientes; un archivo de 150 MB se procesa en el worker con el peor cuadro en 183 ms; con la red cortada suena la música local y se crean playlists.
+- `prueba-audio.mjs` ampliada a **24** (sesión restaurada sin reimportar, posición y reproducción desde la copia guardada, archivo corrupto marcado), `prueba-menu.mjs` y `prueba-fondo.mjs` en verde, `verificar-csp.mjs` sin violaciones con el build real (worker y portadas `blob:` bajo `script-src 'self'`), matriz de 9 viewports con las vistas nuevas (`capturas.mjs`, que ahora mide también el desborde dentro de `.main`, la cola y los diálogos). 100 tests unitarios.
+
+Skills aplicadas: ponytail (sin librerías nuevas además de `@tanstack/react-virtual`, ya prevista en §3.1; una frontera `LocalLibrary` con segundo uso real en nativo; código muerto del visualizador fuera del commit), impeccable (modo Operate: patrones conocidos, precisión antes que expresión; `craft-floor` leído: estados vacío/carga/error, sin eyebrows, contraste), apple-design y design-taste-frontend aplicadas a través de `DESIGN.md` (hojas inferiores, áreas de 44 px, color solo en lo activo; no se releyeron en esta sesión), design-motion-principles (sin animación en pestañas ni en soltar archivos; letra sin suavizado con movimiento reducido).
+
+Límites conocidos de la Fase 3:
+- **Safari real sin probar** (D16): el WebKit de Playwright en Windows no tiene OPFS ni reproduce medios; se verificó solo la degradación a «solo esta sesión».
+- **Sincronización con Supabase sin probar contra el servidor** (D17): la lógica pura tiene tests y lo local se probó; falta una cuenta de prueba.
+- **Recargar sin red** necesita el service worker de la Fase 6 (D18).
+- El diálogo nativo de `showDirectoryPicker` y el arrastre de **carpetas** reales no se pueden automatizar: se probó con un handle de OPFS y con archivos arrastrados sintéticos. Falta probarlo a mano con una carpeta del disco.
+- Álbumes con varios artistas sin etiqueta «artista del álbum» se separan por artista (como en la mayoría de reproductores).
+- El primer escaneo de miles de archivos por la ruta de copia duplica el espacio (la música queda en OPFS); en Chromium la carpeta recordada no copia nada.
+- Las miniaturas se generan en JPEG; si el navegador no tiene `OffscreenCanvas` en workers se guarda la imagen original (≤ 12 MB).
 
 ### Fase 4 — Diseño Poweramp + Qobuz
 - [ ] Tokens + tipografía + set de iconos

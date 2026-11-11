@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { CircleUser, Library, ListMusic } from "lucide-react";
 import { isNative } from "../platform";
+import { useCover } from "../state/covers";
+import { setSyncUser } from "../sync/playlistSync";
 import { useAuthController } from "../sync/useAuthController";
 import { Backdrop, Tint } from "./Backdrop";
 import { AuthDialog } from "./dialogs";
@@ -14,14 +16,14 @@ import { closePanel, navigate, useRoute } from "./router";
 import { PaletteContext, usePalette } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
-function NavLink({ to, path, children }: { to: string; path: string; children: ReactNode }) {
+function NavLink({ to, active, children }: { to: string; active: boolean; children: ReactNode }) {
   const follow = (event: MouseEvent) => {
     if (event.metaKey || event.ctrlKey || event.shiftKey) return;
     event.preventDefault();
     navigate(to);
   };
   return (
-    <a aria-current={path === to ? "page" : undefined} className="nav-link" href={isNative ? `#${to}` : to} onClick={follow}>
+    <a aria-current={active ? "page" : undefined} className="nav-link" href={isNative ? `#${to}` : to} onClick={follow}>
       {children}
     </a>
   );
@@ -32,8 +34,10 @@ function Shell() {
   const auth = useAuthController();
   const [account, setAccount] = useState(false);
   const track = useCurrentTrack();
-  const palette = usePalette(track?.coverUrl);
+  const palette = usePalette(useCover(track?.coverHash, "small"));
   useShortcuts(panel);
+  const userId = auth.session?.user.id ?? null;
+  useEffect(() => setSyncUser(userId), [userId]);
 
   // Sin pista no hay reproductor que mostrar: se quita el panel de la URL. Se reemplaza la entrada del historial
   // (no se retrocede): al recargar con ?panel=player, "atrás" sacaba al usuario de la app.
@@ -58,11 +62,11 @@ function Shell() {
         {panel !== "player" && <Tint />}
         <nav aria-label="Secciones" className="nav">
           <span className="brand">Reproductor</span>
-          <NavLink path={path} to="/app">
+          <NavLink active={path !== "/app/playlists"} to="/app">
             <Library {...icon} />
-            <span>Canciones</span>
+            <span>Biblioteca</span>
           </NavLink>
-          <NavLink path={path} to="/app/playlists">
+          <NavLink active={path === "/app/playlists"} to="/app/playlists">
             <ListMusic {...icon} />
             <span>Playlists</span>
           </NavLink>
@@ -72,7 +76,7 @@ function Shell() {
           </button>
         </nav>
         <main className="main" inert={panel === "player"}>
-          {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView />}
+          {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView path={path} />}
         </main>
         {panel === "queue" && <QueuePanel />}
         <PlayerBar queueOpen={panel === "queue"} />

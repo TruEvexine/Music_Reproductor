@@ -36,6 +36,7 @@ local.properties
 src/assets/music/*
 !src/assets/music/README.md
 tests/fixtures/audio/
+tests/fixtures/biblioteca/
 
 # Archivos generados por la CLI de Supabase (contienen refs del proyecto)
 supabase/.temp/

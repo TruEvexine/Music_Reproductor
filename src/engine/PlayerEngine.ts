@@ -306,6 +306,7 @@ export class PlayerEngine {
       treble: this.treble?.gain.value,
       pan: this.panner?.pan.value,
       rate: this.current.audio.playbackRate,
+      src: this.current.audio.src,
     };
   }
 }

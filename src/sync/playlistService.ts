@@ -26,6 +26,17 @@ function requireSupabase() {
   return supabase;
 }
 
+/** Error de Supabase con su estado HTTP: el outbox decide con él si reintentar. */
+function failure(error: { message: string; code?: string }, status: number): Error & { status: number; code?: string } {
+  return Object.assign(new Error(error.message), { status, code: error.code });
+}
+
+/** Crea o renombra con el id generado en el dispositivo (la playlist ya existía localmente). */
+export async function upsertUserPlaylist(playlistId: string, userId: string, name: string): Promise<void> {
+  const { error, status } = await requireSupabase().from("playlists").upsert({ id: playlistId, user_id: userId, name }, { onConflict: "id" });
+  if (error) throw failure(error, status);
+}
+
 export async function fetchUserPlaylists(userId: string): Promise<Playlist[]> {
   const client = requireSupabase();
   const { data: playlistData, error: playlistError } = await client
@@ -64,53 +75,21 @@ export async function fetchUserPlaylists(userId: string): Promise<Playlist[]> {
   }));
 }
 
-export async function createUserPlaylist(
-  userId: string,
-  name: string,
-): Promise<Playlist> {
-  const client = requireSupabase();
-  const { data, error } = await client
-    .from("playlists")
-    .insert({ user_id: userId, name })
-    .select("id, name, created_at")
-    .single();
-  if (error) throw error;
-
-  const row: PlaylistRow = data;
-  return {
-    id: row.id,
-    name: row.name,
-    createdAt: row.created_at,
-    trackIdentifiers: [],
-  };
-}
-
-export async function renameUserPlaylist(
-  playlistId: string,
-  name: string,
-): Promise<void> {
-  const { error } = await requireSupabase()
-    .from("playlists")
-    .update({ name })
-    .eq("id", playlistId);
-  if (error) throw error;
-}
-
 export async function deleteUserPlaylist(playlistId: string): Promise<void> {
-  const { error } = await requireSupabase()
+  const { error, status } = await requireSupabase()
     .from("playlists")
     .delete()
     .eq("id", playlistId);
-  if (error) throw error;
+  if (error) throw failure(error, status);
 }
 
 export async function replacePlaylistTracks(
   playlistId: string,
   trackIdentifiers: string[],
 ): Promise<void> {
-  const { error } = await requireSupabase().rpc("replace_playlist_tracks", {
+  const { error, status } = await requireSupabase().rpc("replace_playlist_tracks", {
     p_playlist_id: playlistId,
     p_track_identifiers: trackIdentifiers,
   });
-  if (error) throw error;
+  if (error) throw failure(error, status);
 }

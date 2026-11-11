@@ -1,5 +1,7 @@
-import type { AudioSession, Connectivity, Storage } from "../types";
+import type { AudioSession, Connectivity, Storage, Table } from "../types";
 import { openDatabase } from "./db";
+
+export { localLibrary } from "./library";
 
 // Una sola conexión, abierta la primera vez que se usa. Si IndexedDB no está disponible
 // (modo privado de algunos navegadores) la app sigue funcionando sin persistencia.
@@ -26,6 +28,35 @@ export const storage: Storage = {
       await (await db()).delete("kv", key);
     } catch {
       // Igual que arriba.
+    }
+  },
+  async list<T>(table: Table) {
+    try {
+      return (await (await db()).getAll(table)) as T[];
+    } catch {
+      return [];
+    }
+  },
+  async read<T>(table: Table, key: IDBValidKey) {
+    try {
+      return (await (await db()).get(table, key)) as T | undefined;
+    } catch {
+      return undefined;
+    }
+  },
+  async write(table, put, remove = []) {
+    try {
+      const tx = (await db()).transaction(table, "readwrite");
+      await Promise.all([...put.map((value) => tx.store.put(value)), ...remove.map((key) => tx.store.delete(key)), tx.done]);
+    } catch {
+      // Sin almacenamiento: la biblioteca vive solo en memoria durante esta sesión.
+    }
+  },
+  async append(table, value) {
+    try {
+      return (await (await db()).add(table, value)) as number;
+    } catch {
+      return undefined;
     }
   },
 };

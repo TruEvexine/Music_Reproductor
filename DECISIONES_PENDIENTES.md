@@ -33,6 +33,21 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 ### D15 — Menú sin pista cargada
 - **Qué:** el menú ≡ vive en el mini reproductor y en el expandido, que no existen sin pista. Sin música cargada no se pueden tocar los ajustes de sonido ni de fondo.
 - **Opción:** añadir una entrada desde la navegación o los ajustes de la app cuando la biblioteca persista (Fase 3). No se hizo porque lo pedido era sacar esas opciones del flujo principal.
+- **Actualización 2026-11-11:** la biblioteca ya persiste y, tras recargar, la última pista vuelve sola, así que el menú está disponible casi siempre. Los ajustes también se pueden mover con la copia de seguridad (Biblioteca → Carpetas y copia de seguridad). La entrada propia queda para «Ajustes completos» de la Fase 5.
+
+### D16 — Safari real: copia en OPFS y reproducción sin verificar (Fase 3)
+- **Qué:** en Firefox la ruta `webkitdirectory` → OPFS → recarga → reproducir pasó entera. En WebKit solo se pudo probar la degradación: el WebKit de Playwright para Windows no trae OPFS (ni en contexto persistente) ni reproduce medios (ni un `new Audio()` suelto avanza). Ahí la app avisa «sonará hasta que recargues» y carga la pista desde memoria, pero no se oyó.
+- **Bloquea:** nada en Chromium/Firefox. En Safari, la biblioteca podría no persistir si su OPFS falla igual (la app lo trata como «solo esta sesión», no se rompe).
+- **Cómo cerrarlo:** en un Mac/iPhone con Safari 17+: añadir una carpeta, recargar, reproducir. Si `createWritable` no existiera, el código usa un worker con `createSyncAccessHandle` (`platform/web/opfsCopy.worker.ts`), que tampoco se ha podido ejecutar aquí.
+
+### D17 — Sincronización de playlists contra Supabase sin probar de extremo a extremo
+- **Qué:** las playlists ya son locales primero con outbox (`state/playlists.ts`, `sync/playlistSync.ts`); la lógica pura (compactar, fusionar, fallos permanentes) tiene tests y la parte local se probó en navegador sin cuenta y sin red. **No** se ejecutó contra el proyecto de Supabase: hacerlo exige una cuenta de prueba en un proyecto compartido con otra app.
+- **No requiere migración:** usa `playlists` (upsert por `id` generado en el dispositivo, permitido por las políticas `insert`/`update` existentes), el RPC `replace_playlist_tracks` y `delete`.
+- **Riesgo:** al iniciar sesión, las playlists creadas sin cuenta pasan a esa cuenta (se suben). Si se prefiere preguntar antes, es un cambio pequeño en `adoptOwnerless`.
+- **Cómo cerrarlo:** con una cuenta de prueba: crear/renombrar/borrar sin red, volver a conectar y comprobar en el panel de Supabase; repetir en dos dispositivos.
+
+### D18 — Recargar la página sin red
+- **Qué:** sin red todo lo local funciona mientras la página está abierta (probado: reproducir y crear playlists con la red cortada). **Recargar** sin red necesita el service worker de la Fase 6 (app shell offline); hoy el navegador no tiene de dónde sacar el HTML/JS.
 
 ## Manual del usuario (paneles y cuentas)
 

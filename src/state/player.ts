@@ -18,7 +18,8 @@ import {
 import type { QueueState } from "../core/queue";
 import { PlayerEngine } from "../engine/PlayerEngine";
 import { audioSession, storage } from "../platform";
-import { library, trackUrl, useLibrary } from "./library";
+import { holdCover } from "./covers";
+import { ensureTrackUrl, library, trackUrl, useLibrary } from "./library";
 
 // Fuente única de verdad de la reproducción. La UI solo lee este store y llama a `player.*`.
 interface PlayerState {
@@ -46,6 +47,8 @@ const MAX_FAILURES = 3;
 const PRELOAD_SECONDS = 15;
 let failuresInRow = 0;
 let fading = false; // crossfade o fundido de apagado en curso para la pista actual
+let loadedId: string | null = null; // pista cargada en el motor (una sesión restaurada aún no lee su archivo)
+let loadToken = 0; // la lectura del archivo es asíncrona: solo cuenta la última petición
 
 const engine = new PlayerEngine({
   onPlaying: (isPlaying) => usePlayer.setState({ isPlaying }),
@@ -88,13 +91,19 @@ function nearEnd(position: number) {
   const remaining = duration - position;
   if (remaining > PRELOAD_SECONDS) return;
   const next = nextInQueue(queue, true);
-  const url = next.current && next.current !== queue.current ? trackUrl(next.current) : undefined;
-  if (!url) return;
+  if (!next.current || next.current === queue.current) return;
+  const url = trackUrl(next.current);
+  if (!url) {
+    void ensureTrackUrl(next.current); // el próximo tic (≈250 ms) ya la encuentra
+    return;
+  }
   const endOfTrackSleep = sleep !== null && "endOfTrack" in sleep;
   if (audio.crossfade > 0 && !endOfTrackSleep && remaining <= audio.crossfade && duration > audio.crossfade * 2) {
     if (engine.crossfadeTo(url, Math.max(remaining / audio.speed, 0.5), gainOf(next.current))) {
       fading = true;
       setTimeout(() => (fading = false), 1000);
+      loadedId = next.current;
+      library.markPlayed(next.current);
       usePlayer.setState({ queue: next, position: 0, duration: trackOf(next.current)?.duration ?? 0 });
       return;
     }
@@ -105,22 +114,48 @@ function nearEnd(position: number) {
 /** Aplica una cola nueva; si la pista actual cambió (o `restart`), la carga en el motor. */
 function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolean; startAt?: number }) {
   const previous = usePlayer.getState().queue.current;
-  usePlayer.setState({ queue });
-  if (queue.current === previous && !options.restart) return;
+  if (queue.current === previous && !options.restart) {
+    usePlayer.setState({ queue });
+    return;
+  }
   fading = false;
   if (queue.current === null) {
     engine.stop();
-    usePlayer.setState({ isPlaying: false, position: 0, duration: 0 });
+    usePlayer.setState({ queue, isPlaying: false, position: 0, duration: 0 });
     return;
   }
-  const url = trackUrl(queue.current);
-  if (!url) {
-    fail();
+  const id = queue.current;
+  const track = trackOf(id);
+  // Cola y posición en el mismo cambio: si no, la sesión se guardaría con la posición de la pista anterior.
+  usePlayer.setState({ queue, position: options.startAt ?? 0, duration: track?.duration ?? 0 });
+  if (track?.unsupported) {
+    fail(`Este navegador no puede reproducir archivos ${track.fileName.split(".").pop()?.toUpperCase() ?? "de este tipo"}.`);
     return;
   }
-  usePlayer.setState({ position: options.startAt ?? 0, duration: trackOf(queue.current)?.duration ?? 0 });
-  engine.load(url, options.startAt, gainOf(queue.current));
-  if (options.autoplay) void engine.play().catch(() => fail());
+  // Restaurar la sesión no lee el archivo: así no se pide permiso a la carpeta sin que el usuario toque nada.
+  if (!options.autoplay && !trackUrl(id)) {
+    loadedId = null;
+    return;
+  }
+  const token = ++loadToken;
+  void ensureTrackUrl(id).then((url) => {
+    if (token !== loadToken || q().current !== id) return;
+    if (!url) {
+      const folder = library.accessFor(id);
+      if (folder && folder.access !== "granted" && folder.access !== "missing") {
+        engine.stop();
+        loadedId = null;
+        usePlayer.setState({ isPlaying: false, message: `Hace falta permiso para leer «${folder.name}». Toca «Reconectar» en tu biblioteca.` });
+      } else fail(`«${track?.title ?? "La pista"}» ya no está en tu dispositivo.`);
+      return;
+    }
+    loadedId = id;
+    engine.load(url, options.startAt, gainOf(id));
+    if (options.autoplay) {
+      library.markPlayed(id);
+      void engine.play().catch(() => fail());
+    }
+  });
 }
 
 function advance(auto: boolean) {
@@ -136,12 +171,12 @@ function advance(auto: boolean) {
 }
 
 /** Error de decodificación: marca la pista, avisa y salta; tras 3 seguidas, se detiene. */
-function fail() {
+function fail(reason?: string) {
   const queue = q();
   if (queue.current === null) return;
   library.markUnplayable(queue.current);
   failuresInRow += 1;
-  const message = `No se pudo reproducir «${trackOf(queue.current)?.title ?? "la pista"}».`;
+  const message = reason ?? `No se pudo reproducir «${trackOf(queue.current)?.title ?? "la pista"}».`;
   const next = nextInQueue({ ...queue, repeat: queue.repeat === "track" ? "off" : queue.repeat }, true);
   if (failuresInRow >= MAX_FAILURES || next.current === null || next.current === queue.current) {
     failuresInRow = 0;
@@ -188,11 +223,15 @@ export const player = {
   },
   toggle() {
     if (q().current === null) return;
-    if (engine.paused) player.play();
+    if (engine.paused || loadedId !== q().current) player.play();
     else player.pause();
   },
   play() {
-    if (q().current !== null && engine.paused) void engine.play(pauseFade()).catch(() => fail());
+    const { current } = q();
+    if (current === null) return;
+    // Sesión restaurada: el archivo se lee ahora, con el gesto del usuario (permiso de la carpeta si hace falta).
+    if (loadedId !== current) apply(q(), { autoplay: true, restart: true, startAt: usePlayer.getState().position });
+    else if (engine.paused) void engine.play(pauseFade()).catch(() => fail());
   },
   pause() {
     engine.pause(pauseFade());
@@ -259,7 +298,11 @@ function syncSession(state: PlayerState, previous: PlayerState) {
   const track = trackOf(state.queue.current);
   if (state.queue.current !== previous.queue.current || !lastSessionTitle || lastSessionTitle !== track?.title) {
     lastSessionTitle = track?.title;
-    audioSession.setTrack(track ? { title: track.title, artist: track.artist, album: track.album, artworkUrl: track.coverUrl } : null);
+    const info = track && { title: track.title, artist: track.artist, album: track.album };
+    audioSession.setTrack(info ?? null);
+    void holdCover(track?.coverHash).then((artworkUrl) => {
+      if (info && artworkUrl && usePlayer.getState().queue.current === track.id) audioSession.setTrack({ ...info, artworkUrl });
+    });
   }
   // La posición se publica al cambiar de estado o de duración, no en cada tic: el sistema la extrapola solo.
   const speed = state.audio.speed;
@@ -277,12 +320,21 @@ interface SavedSession {
 }
 
 let saved: SavedSession | undefined;
-let lastSave = 0;
+let lastPositionSave = 0;
+const POSITION_EVERY_MS = 2000;
 
-function save() {
+// La cola (hasta miles de ids) se guarda solo cuando cambia; la posición va en su propia clave, pequeña y frecuente.
+// No se confía en pagehide: al recargar, la escritura asíncrona de IndexedDB puede no llegar a completarse.
+function saveQueue() {
   const { queue, position } = usePlayer.getState();
-  lastSave = Date.now();
   void storage.set("session", { queue, position } satisfies SavedSession);
+  savePosition();
+}
+
+function savePosition() {
+  const { queue, position } = usePlayer.getState();
+  lastPositionSave = Date.now();
+  void storage.set("position", { id: queue.current, position });
 }
 
 /** Restaura la sesión con las pistas disponibles. Se reintenta cuando llegan pistas nuevas. */
@@ -303,8 +355,14 @@ function restore() {
 }
 
 export async function initSession() {
-  setAudio(sanitizeAudioSettings(await storage.get<AudioSettings>("audio")));
-  saved = await storage.get<SavedSession>("session");
+  const [audio, session, last] = await Promise.all([
+    storage.get<AudioSettings>("audio"),
+    storage.get<SavedSession>("session"),
+    storage.get<{ id: string | null; position: number }>("position"),
+    library.init(),
+  ]);
+  setAudio(sanitizeAudioSettings(audio));
+  saved = session && last?.id === session.queue.current ? { ...session, position: last.position } : session;
   restore();
   useLibrary.subscribe((state, previous) => {
     if (state.tracks.length !== previous.tracks.length) restore();
@@ -318,9 +376,10 @@ export async function initSession() {
   usePlayer.subscribe((state, previous) => {
     syncSession(state, previous);
     if (saved) return; // todavía esperando a que aparezcan las pistas guardadas: no pisar la sesión
-    if (state.queue !== previous.queue || Date.now() - lastSave > 5000) save();
+    if (state.queue !== previous.queue) saveQueue();
+    else if (state.position !== previous.position && Date.now() - lastPositionSave > POSITION_EVERY_MS) savePosition();
   });
-  window.addEventListener("pagehide", () => {
-    if (!saved) save();
-  });
+  const leave = () => !saved && savePosition();
+  window.addEventListener("pagehide", leave);
+  document.addEventListener("visibilitychange", () => document.visibilityState === "hidden" && leave());
 }

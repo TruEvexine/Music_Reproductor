@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 import { X } from "lucide-react";
+import { useCover } from "../state/covers";
+import type { CoverSize } from "../state/covers";
 
 /** Tamaño y trazo únicos para todos los iconos (Lucide). */
 export const icon = { size: 22, strokeWidth: 1.75, "aria-hidden": true } as const;
@@ -26,7 +28,8 @@ function hueOf(text: string): number {
   return hash % 360;
 }
 
-export function Cover({ src, seed, className = "" }: { src?: string; seed: string; className?: string }) {
+export function Cover({ hash, size = "small", seed, className = "" }: { hash?: string; size?: CoverSize; seed: string; className?: string }) {
+  const src = useCover(hash, size);
   const hue = hueOf(seed);
   return (
     <span

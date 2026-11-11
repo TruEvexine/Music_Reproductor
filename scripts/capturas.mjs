@@ -33,7 +33,9 @@ const measure = () => {
       minFont = Math.min(minFont, parseFloat(getComputedStyle(el).fontSize));
     }
   }
-  return { overflow: document.documentElement.scrollWidth > innerWidth, small: [...small], minFont };
+  // También dentro de los contenedores con scroll propio (.main, cola): ahí el desborde no ensancha el documento.
+  const inner = [...document.querySelectorAll(".main, .queue-list, .dialog-body")].some((el) => el.scrollWidth > el.clientWidth + 1);
+  return { overflow: document.documentElement.scrollWidth > innerWidth || inner, small: [...small], minFont };
 };
 
 const browser = await chromium.launch();
@@ -59,9 +61,22 @@ for (const name of matrix) {
   await page.waitForLoadState("networkidle");
   await check("01-vacio");
 
-  await page.locator('input[type="file"]').setInputFiles(files);
-  await page.waitForTimeout(2500);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
+  await page.waitForFunction(() => !document.querySelector(".scan-bar"), null, { timeout: 30_000 });
   await check("02-biblioteca");
+
+  // Vistas de la Fase 3: rejilla de álbumes, detalle, artistas y la hoja de carpetas/copia.
+  await page.getByRole("link", { name: "Álbumes", exact: true }).click();
+  await page.locator(".album-tile").first().waitFor();
+  await check("02b-albumes");
+  await page.locator(".album-tile", { hasText: "Ondas Puras" }).click();
+  await check("02c-album");
+  await page.getByRole("link", { name: "Artistas", exact: true }).click();
+  await check("02d-artistas");
+  await page.getByRole("button", { name: "Carpetas y copia de seguridad" }).click();
+  await check("02e-hoja-biblioteca");
+  await page.keyboard.press("Escape");
+  await page.getByRole("link", { name: "Canciones", exact: true }).click();
 
   await page.locator(".track-row .row-main").first().click();
   await page.waitForTimeout(1200);
@@ -96,6 +111,16 @@ for (const name of matrix) {
 
   await page.getByRole("searchbox").fill("zzzz");
   await check("06-busqueda-vacia");
+
+  // Letra: la pista "Con Letra" trae USLT; el botón Letra vive en el reproductor expandido.
+  await page.getByRole("searchbox").fill("con letra");
+  await page.locator(".track-row .row-main", { hasText: "Con Letra" }).click();
+  await page.locator(".bar-track").click();
+  await page.getByRole("button", { name: "Letra", exact: true }).click();
+  await check("06b-letra");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
 
   await page.goto(`${base}/app/playlists`);
   await check("07-playlists");

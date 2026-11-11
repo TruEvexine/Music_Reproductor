@@ -49,6 +49,8 @@
 
 .view {
   display: grid;
+  /* Una columna que nunca crece más que la vista: sin esto, el contenido ancho (pestañas, rejillas) la ensancha. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: var(--s4);
   padding: var(--s5) var(--gutter) var(--s6);
@@ -122,4 +124,10 @@
   .nav-link:hover {
     color: var(--ink);
   }
+}
+
+/* El bloque de título cede ancho y su texto se parte: un subtítulo largo no empuja la vista hacia la derecha. */
+.view-header > div:first-child {
+  flex: 1 1 14rem;
+  min-width: 0;
 }

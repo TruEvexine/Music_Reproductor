@@ -106,7 +106,14 @@ Unidades: `dvh` (nunca `100vh`), `env(safe-area-inset-*)` en barra, pestañas, r
 | Portada | Siempre 1:1. Sin imagen: degradado derivado del nombre del álbum, nunca gris plano ni un glifo |
 | Botón | Uno primario por pantalla (relleno de acento). El resto, tono `--surface-2` o enlace |
 | Menú del reproductor (≡) | Una sola entrada para lo avanzado (repetir, sonido, temporizador, fondo). Móvil: hoja inferior con grabber y arrastre (<600 px); ancho: popover anclado al icono. Los submenús se abren dentro del mismo panel con flecha de volver, nunca menús flotantes anidados. Filas de 52 px, opciones con marca ✓ además del color, interruptores cuya posición comunica el estado. Los controles de uso constante (aleatorio, repetir) siguen a un toque en el reproductor |
-| Insignia de calidad | Texto, sin caja: `FLAC 24/96`, `MP3 320` (`core/format.ts`) |
+| Insignia de calidad | Texto, sin caja: `FLAC 24/96`, `MP3 320` (`core/format.ts`). Hi-Res (sin pérdida y > 16 bit o > 48 kHz) añade «Hi-Res» en acento y peso 650 |
+| Pestañas de biblioteca | Canciones, Álbumes, Artistas, Carpetas, Géneros, Recientes. Píldoras de 44 px; la activa en `--surface-3` con tinta plena (no solo color). En pantallas estrechas se deslizan dentro de su fila; la página nunca hace scroll horizontal |
+| Rejilla de álbumes | Portada 1:1 a todo el ancho de la celda, título y «artista · N canciones» en una línea cada uno. 2 columnas mínimo; celdas de ~140 px en móvil y ~180 px desde 600 px. Virtualizada por filas |
+| Cabecera de grupo | Portada grande (112–240 px; encima del texto por debajo de 420 px), título en `--text-xl` condensado, datos (artista · año · canciones · duración), mejor calidad del grupo y un único botón primario «Reproducir». Álbum: filas numeradas por nº de pista, sin portada por fila |
+| Progreso de escaneo | Una línea de estado (`role=status`) con texto en cifras tabulares, barra de 4 px en acento y «Cancelar» como enlace. Sin spinners |
+| Reconectar carpeta | Aviso en línea con la acción primaria «Reconectar» (un toque pide el permiso). La biblioteca sigue visible debajo |
+| Soltar archivos | Contorno discontinuo en acento sobre el contenido con «Suelta para añadir a tu biblioteca»; sin animación |
+| Letra | `<dialog>` (hoja en móvil). Verso activo en `--ink` y peso 700, el resto en `--ink-3`; se centra solo (sin suavizado con movimiento reducido) |
 | Estado activo (shuffle, repetir) | Color de acento **y** punto bajo el icono; `aria-pressed` |
 | Estado vacío | Un título, una frase y una acción. Sin ilustraciones ni cajas punteadas |
 | Errores | Junto a lo que falló, en lenguaje del usuario, sin jerga técnica (ni "Supabase", ni mensajes crudos del servidor) |
@@ -130,4 +137,4 @@ Ninguna tarea de UI está terminada sin `node scripts/capturas.mjs docs/capturas
 
 ## 8. Pendiente de diseñar (Fase 4)
 
-Vistas de álbum y artista, rejilla de álbumes, gestos en la portada, arrastrar para reordenar, skeletons, toasts con deshacer, curva del ecualizador, letras. (Hecho: menú ≡, ecualizador con sliders y fondo dinámico con selector.)
+Gestos en la portada, arrastrar para reordenar, skeletons, toasts con deshacer, curva del ecualizador, letra a pantalla completa en el reproductor, cabecera de álbum con fondo derivado de la portada. (Hecho: menú ≡, ecualizador con sliders, fondo dinámico con selector y, en la Fase 3, pestañas de biblioteca, rejilla de álbumes, cabeceras de grupo y letra en diálogo.)

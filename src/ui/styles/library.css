@@ -164,3 +164,321 @@
     background: var(--surface-2);
   }
 }
+
+/* Listas virtualizadas: la lista mide lo que medirían todas las filas; solo existen las visibles. */
+.virtual-list {
+  position: relative;
+  contain: strict;
+  min-width: 0;
+}
+
+.virtual-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.virtual-row > .track-row,
+.virtual-row > .queue-row,
+.virtual-row > .group-row {
+  height: 100%;
+}
+
+.queue-rows {
+  margin: 0;
+}
+
+/* Biblioteca */
+.library,
+.view.empty {
+  position: relative;
+  min-height: 100%;
+}
+
+.header-actions,
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+
+/* Pestañas de vista: se deslizan dentro de su fila en pantallas estrechas; la página nunca. */
+.tabs {
+  display: flex;
+  gap: var(--s1);
+  overflow-x: auto;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 0 var(--gutter);
+  scrollbar-width: none;
+}
+
+.tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--s3);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* La vista activa: tono de superficie y tinta plena, no solo color. */
+.tab[aria-current="page"] {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+/* En pantallas estrechas el orden baja a su propia línea: el campo de búsqueda nunca se queda sin sitio. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.toolbar .search {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+.sort select {
+  height: 48px;
+  max-width: 11rem;
+  padding: 0 var(--s3);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.sort select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  justify-self: start;
+  min-height: var(--tap);
+  color: var(--ink-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.scan-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  padding: var(--s1) var(--s1) var(--s1) var(--s3);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+  font-size: var(--text-s);
+}
+
+.scan-text {
+  flex: 1 1 14rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.scan-bar progress {
+  flex: 1 1 8rem;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--surface-3);
+  accent-color: var(--accent);
+  appearance: none;
+}
+
+.scan-bar progress::-webkit-progress-bar {
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.scan-bar progress::-webkit-progress-value {
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.scan-bar progress::-moz-progress-bar {
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.drop-hint {
+  position: absolute;
+  inset: var(--s2);
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-m);
+  background: color-mix(in oklch, var(--bg) 82%, transparent);
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  font-size: var(--text-l);
+  font-weight: 650;
+  pointer-events: none;
+}
+
+.row-number {
+  justify-self: center;
+  color: var(--ink-3);
+}
+
+.hires {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.group-row {
+  text-decoration: none;
+}
+
+/* Rejilla de álbumes: la portada manda; el texto, dos líneas debajo. */
+.album-row {
+  display: grid;
+  gap: 16px;
+}
+
+.album-tile {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.album-tile .cover {
+  width: 100%;
+  margin-bottom: var(--s2);
+  border-radius: var(--radius-s);
+}
+
+.album-tile .title,
+.album-tile .subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Cabecera de álbum, artista, carpeta o género: portada grande y los datos que importan. */
+.group-header {
+  display: grid;
+  grid-template-columns: clamp(112px, 34vw, 240px) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--s4);
+}
+
+.group-cover {
+  width: 100%;
+  border-radius: var(--radius-m);
+}
+
+.group-copy {
+  display: grid;
+  justify-items: start;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.group-copy h2 {
+  font-size: var(--text-xl);
+  font-stretch: 80%;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+@media (max-width: 420px) {
+  .group-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .group-cover {
+    width: min(64vw, 240px);
+  }
+}
+
+@media (min-width: 700px) {
+  .group-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+}
+
+/* Hoja "Tu biblioteca" */
+.sheet-section {
+  display: grid;
+  gap: var(--s2);
+}
+
+.sheet-section + .sheet-section {
+  margin-top: var(--s4);
+}
+
+.sheet-section h3 {
+  margin: 0;
+  font-size: var(--text-m);
+  font-weight: 650;
+}
+
+.root-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  min-height: 56px;
+}
+
+.root-row .row-copy {
+  flex: 1;
+}
+
+/* Letra sincronizada: el verso que suena en tinta plena y más peso; el resto, atenuado. */
+.lyrics {
+  display: grid;
+  gap: var(--s2);
+  max-height: 60dvh;
+  overflow-y: auto;
+  padding: var(--s4) 0 30dvh;
+}
+
+.lyric-line {
+  color: var(--ink-3);
+  font-size: var(--text-l);
+  font-weight: 550;
+  line-height: 1.3;
+}
+
+.lyric-line[aria-current="true"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.lyrics-plain {
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+@media (hover: hover) {
+  .tab:hover:not([aria-current="page"]),
+  .back-link:hover {
+    color: var(--ink);
+  }
+  .album-tile:hover .title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* Dentro de un álbum el nombre del álbum sobra en cada fila; se conserva el hueco para que las columnas cuadren. */
+ol.track-list .row-album {
+  visibility: hidden;
+}

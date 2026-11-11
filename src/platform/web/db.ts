@@ -12,6 +12,14 @@ export const migrations: Migration[] = [
   (db) => {
     db.createObjectStore("kv");
   },
+  // v2 (Fase 3): biblioteca persistente, portadas deduplicadas, playlists locales y outbox de sincronización.
+  (db) => {
+    db.createObjectStore("tracks", { keyPath: "id" }).createIndex("rootId", "rootId");
+    db.createObjectStore("roots", { keyPath: "id" });
+    db.createObjectStore("covers", { keyPath: "hash" });
+    db.createObjectStore("playlists", { keyPath: "id" });
+    db.createObjectStore("outbox", { keyPath: "seq", autoIncrement: true });
+  },
 ];
 
 export const DB_NAME = "reproductor";

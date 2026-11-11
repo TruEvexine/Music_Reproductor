@@ -1,7 +1,7 @@
 // Genera audio SINTÉTICO (tonos) para pruebas en tests/fixtures/audio/ (ignorado por git).
 // WAV se escribe en Node puro; los demás formatos y las portadas requieren ffmpeg en el PATH (opcional).
 import { execFileSync } from "node:child_process";
-import { mkdirSync, writeFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const out = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
@@ -30,6 +30,8 @@ function wav(file, freq, seconds, rate = 44100) {
 
 wav("tono-sin-metadatos.wav", 330, 4);
 wav("tono-corto.wav", 523, 2);
+// Letra en archivo hermano (.lrc) para tono-sin-metadatos.wav: mismo nombre, otra extensión.
+writeFileSync(join(out, "tono-sin-metadatos.lrc"), "[ar:Prueba]\n[00:00.20]Primer verso sintético\n[00:01.50]Segundo verso sintético\n[00:03.00]Último verso\n");
 writeFileSync(join(out, "corrupto.mp3"), Buffer.from("esto no es audio ".repeat(200)));
 
 let hasFfmpeg = true;
@@ -69,5 +71,39 @@ if (hasFfmpeg) {
       ff([...audio, ...codec, ...meta, target]);
     }
   }
+}
+// Letras en etiquetas ID3v2.3 de verdad (ffmpeg las escribe como TXXX, no como USLT/SYLT): se construyen aquí.
+if (hasFfmpeg) {
+  const frame = (id, body) => {
+    const head = Buffer.alloc(10);
+    head.write(id, 0, "ascii");
+    head.writeUInt32BE(body.length, 4);
+    return Buffer.concat([head, body]);
+  };
+  const latin = (text) => Buffer.from(`${text}\0`, "latin1");
+  const tag = (frames) => {
+    const body = Buffer.concat(frames);
+    const head = Buffer.from([0x49, 0x44, 0x33, 3, 0, 0, 0, 0, 0, 0]);
+    for (let i = 0; i < 4; i++) head[9 - i] = (body.length >> (7 * i)) & 0x7f; // tamaño "syncsafe"
+    return Buffer.concat([head, body]);
+  };
+  const lyricMp3 = (file, title, lyricFrame) => {
+    const target = join(out, file);
+    if (existsSync(target)) return;
+    const raw = join(out, `${file}.raw.mp3`);
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-f", "lavfi", "-i", "sine=frequency=330:duration=5", "-c:a", "libmp3lame", "-b:a", "128k", "-write_id3v2", "0", raw]);
+    const text = (value) => frame(value[0], Buffer.concat([Buffer.from([0]), latin(value[1])]));
+    writeFileSync(target, Buffer.concat([tag([text(["TIT2", title]), text(["TPE1", "Ana Armónica"]), text(["TALB", "Frecuencias"]), lyricFrame]), readFileSync(raw)]));
+    rmSync(raw);
+  };
+  // USLT: codificación, idioma, descriptor vacío y el texto (aquí con marcas LRC dentro).
+  lyricMp3("10-letra.mp3", "Con Letra", frame("USLT", Buffer.concat([Buffer.from([0]), Buffer.from("spa"), latin(""), Buffer.from("[00:00.50]Verso uno de prueba\n[00:02.00]Verso dos de prueba", "latin1")])));
+  // SYLT: formato 2 (milisegundos), tipo 1 (letra) y pares texto + marca de 4 bytes.
+  const entries = [["Primera línea SYLT", 300], ["Segunda línea SYLT", 1800]].map(([line, ms]) => {
+    const stamp = Buffer.alloc(4);
+    stamp.writeUInt32BE(ms);
+    return Buffer.concat([latin(line), stamp]);
+  });
+  lyricMp3("11-sylt.mp3", "Letra Sincronizada", frame("SYLT", Buffer.concat([Buffer.from([0]), Buffer.from("spa"), Buffer.from([2, 1]), latin(""), ...entries])));
 }
 console.log(`Audio sintético listo en ${out}`);

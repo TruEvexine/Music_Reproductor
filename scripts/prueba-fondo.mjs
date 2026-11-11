@@ -27,7 +27,7 @@ async function open(browser, { viewport = { width: 1440, height: 900 }, touch = 
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${base}/app`);
-  await page.locator('input[type="file"]').setInputFiles(files);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
   await wait(page, 2500);
   await page.locator(".track-row .row-main").first().click();
   await wait(page, 800);
@@ -143,7 +143,7 @@ const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gestur
   // Persistencia.
   await page.keyboard.press("Escape");
   await page.reload();
-  await page.locator('input[type="file"]').setInputFiles(files);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
   await wait(page, 2500);
   await page.locator(".track-row .row-main").first().click();
   await wait(page, 600);

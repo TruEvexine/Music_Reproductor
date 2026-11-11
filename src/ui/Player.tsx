@@ -1,9 +1,11 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
   ChevronDown,
   ListMusic,
+  MicVocal,
   Pause,
   Play,
   Repeat,
@@ -16,13 +18,16 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import { formatTime, qualityLabel } from "../core/format";
+import { formatTime, isHiRes, qualityLabel } from "../core/format";
+import { lineAt } from "../core/lyrics";
+import type { Lyrics } from "../core/lyrics";
 import type { Track } from "../core/track";
 import { useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
-import { Cover, icon, IconButton, iconSmall } from "./parts";
+import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
 import { MenuButton } from "./PlayerMenu";
+import { VirtualList } from "./VirtualList";
 
 export function useCurrentTrack(): Track | undefined {
   const current = usePlayer((state) => state.queue.current);
@@ -126,7 +131,7 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
     <footer aria-label="Reproductor" className="player-bar">
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
       <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
-        <Cover className="bar-cover" seed={track.album} src={track.coverUrl} />
+        <Cover className="bar-cover" seed={track.album} hash={track.coverHash} />
         <span className="bar-copy">
           <span className="title">{track.title}</span>
           <span className="subtitle">{track.artist}</span>
@@ -163,8 +168,33 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
 }
 
 /** Reproductor expandido a pantalla completa: portada protagonista y controles en la mitad inferior. */
+/** Letra: sincronizada (sigue la posición real del audio) o texto sin marcas de tiempo. */
+function LyricsDialog({ lyrics, title, onClose }: { lyrics: Lyrics; title: string; onClose: () => void }) {
+  const position = usePlayer((state) => state.position);
+  const current = lyrics.synced ? lineAt(lyrics.synced, position) : -1;
+  const active = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    active.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
+  }, [current]);
+  return (
+    <Dialog onClose={onClose} title={`Letra de ${title}`}>
+      <div className="lyrics">
+        {lyrics.synced
+          ? lyrics.synced.map((line, index) => (
+              <p aria-current={index === current ? "true" : undefined} className="lyric-line" key={`${line.time}-${index}`} ref={index === current ? active : undefined}>
+                {line.text || "…"}
+              </p>
+            ))
+          : <p className="lyrics-plain">{lyrics.plain}</p>}
+      </div>
+    </Dialog>
+  );
+}
+
 export function NowPlaying({ backdrop }: { backdrop: ReactNode }) {
   const track = useCurrentTrack();
+  const [lyrics, setLyrics] = useState(false);
   if (!track) return null;
   return (
     <section aria-label="Reproduciendo ahora" className="now-playing">
@@ -174,6 +204,11 @@ export function NowPlaying({ backdrop }: { backdrop: ReactNode }) {
           <ChevronDown {...icon} />
         </IconButton>
         <div className="now-actions">
+          {track.lyrics && (
+            <IconButton label="Letra" onClick={() => setLyrics(true)}>
+              <MicVocal {...icon} />
+            </IconButton>
+          )}
           <IconButton label="Cola de reproducción" onClick={() => openPanel("queue")}>
             <ListMusic {...icon} />
           </IconButton>
@@ -181,7 +216,7 @@ export function NowPlaying({ backdrop }: { backdrop: ReactNode }) {
         </div>
       </header>
       <div className="now-art">
-        <Cover className="now-cover" seed={track.album} src={track.coverUrl} />
+        <Cover className="now-cover" hash={track.coverHash} seed={track.album} size="large" />
       </div>
       <div className="now-controls">
         <div className="now-copy">
@@ -189,11 +224,15 @@ export function NowPlaying({ backdrop }: { backdrop: ReactNode }) {
           <p className="now-artist">
             {track.artist} · {track.album}
           </p>
-          <span className="quality">{qualityLabel(track)}</span>
+          <span className="quality">
+            {qualityLabel(track)}
+            {isHiRes(track) && <span className="hires"> Hi-Res</span>}
+          </span>
         </div>
         <Seek />
         <Transport large />
       </div>
+      {lyrics && track.lyrics && <LyricsDialog lyrics={track.lyrics} onClose={() => setLyrics(false)} title={track.title} />}
     </section>
   );
 }
@@ -202,7 +241,7 @@ export function QueuePanel() {
   const order = usePlayer((state) => state.queue.order);
   const current = usePlayer((state) => state.queue.current);
   const tracks = useLibrary((state) => state.tracks);
-  const byId = new Map(tracks.map((track) => [track.id, track]));
+  const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
   const currentAt = current === null ? -1 : order.indexOf(current);
   return (
     <aside aria-label="Cola de reproducción" className="queue-panel">
@@ -221,38 +260,34 @@ export function QueuePanel() {
       {order.length === 0 ? (
         <p className="queue-empty">La cola está vacía. Toca una canción para empezar.</p>
       ) : (
-        <ol className="queue-list">
-          {order.map((id, index) => {
-            const track = byId.get(id);
-            if (!track) return null;
-            return (
-              <li aria-current={id === current ? "true" : undefined} className="queue-row" key={id}>
-                <button className="row-main" onClick={() => player.playNow(id)} type="button">
-                  <Cover className="row-cover" seed={track.album} src={track.coverUrl} />
-                  <span className="row-copy">
-                    <span className="title">{track.title}</span>
-                    <span className="subtitle">
-                      {id === current ? "Sonando" : index === currentAt + 1 ? "A continuación" : track.artist}
+        <div className="queue-list">
+          <VirtualList className="queue-rows" getKey={(id) => id} items={order} label="Canciones en cola" ordered rowHeight={64}>
+            {(id, index) => {
+              const track = byId.get(id);
+              if (!track) return null;
+              return (
+                <div aria-current={id === current ? "true" : undefined} className="queue-row">
+                  <button className="row-main" onClick={() => player.playNow(id)} type="button">
+                    <Cover className="row-cover" hash={track.coverHash} seed={track.album} />
+                    <span className="row-copy">
+                      <span className="title">{track.title}</span>
+                      <span className="subtitle">{id === current ? "Sonando" : index === currentAt + 1 ? "A continuación" : track.artist}</span>
                     </span>
-                  </span>
-                </button>
-                <IconButton disabled={index === 0} label={`Subir ${track.title}`} onClick={() => player.move(index, index - 1)}>
-                  <ArrowUp {...iconSmall} />
-                </IconButton>
-                <IconButton
-                  disabled={index === order.length - 1}
-                  label={`Bajar ${track.title}`}
-                  onClick={() => player.move(index, index + 1)}
-                >
-                  <ArrowDown {...iconSmall} />
-                </IconButton>
-                <IconButton label={`Quitar ${track.title} de la cola`} onClick={() => player.remove(id)}>
-                  <X {...iconSmall} />
-                </IconButton>
-              </li>
-            );
-          })}
-        </ol>
+                  </button>
+                  <IconButton disabled={index === 0} label={`Subir ${track.title}`} onClick={() => player.move(index, index - 1)}>
+                    <ArrowUp {...iconSmall} />
+                  </IconButton>
+                  <IconButton disabled={index === order.length - 1} label={`Bajar ${track.title}`} onClick={() => player.move(index, index + 1)}>
+                    <ArrowDown {...iconSmall} />
+                  </IconButton>
+                  <IconButton label={`Quitar ${track.title} de la cola`} onClick={() => player.remove(id)}>
+                    <X {...iconSmall} />
+                  </IconButton>
+                </div>
+              );
+            }}
+          </VirtualList>
+        </div>
       )}
     </aside>
   );

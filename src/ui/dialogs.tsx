@@ -4,7 +4,7 @@ import { Check, Plus } from "lucide-react";
 import { matchesSearch } from "../core/format";
 import { trackV1Id } from "../core/track";
 import type { Track } from "../core/track";
-import type { Playlist } from "../sync/playlistService";
+import type { LocalPlaylist } from "../core/outbox";
 import type { AuthController } from "../sync/useAuthController";
 import { Dialog, IconButton, iconSmall } from "./parts";
 
@@ -185,6 +185,8 @@ export function PlaylistNameDialog({
   );
 }
 
+const SHOWN = 100;
+
 export function AddTracksDialog({
   isSaving,
   onAdd,
@@ -195,12 +197,15 @@ export function AddTracksDialog({
   isSaving: boolean;
   onAdd: (track: Track) => Promise<void>;
   onClose: () => void;
-  playlist: Playlist;
+  playlist: LocalPlaylist;
   tracks: Track[];
 }) {
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const matching = tracks.filter((track) => matchesSearch(track, search));
+  const all = tracks.filter((track) => matchesSearch(track, search));
+  // Con miles de pistas no se pintan todas: se pide afinar la búsqueda.
+  const matching = all.slice(0, SHOWN);
+  const inPlaylist = new Set(playlist.trackIdentifiers);
 
   return (
     <Dialog onClose={onClose} title={`Añadir a ${playlist.name}`}>
@@ -220,7 +225,7 @@ export function AddTracksDialog({
       )}
       <ul className="add-list">
         {matching.map((track) => {
-          const added = playlist.trackIdentifiers.includes(trackV1Id(track));
+          const added = inPlaylist.has(trackV1Id(track)) || (track.v2 !== undefined && inPlaylist.has(track.v2));
           return (
             <li className="add-row" key={track.id}>
               <span className="row-copy">
@@ -241,6 +246,7 @@ export function AddTracksDialog({
         })}
       </ul>
       {matching.length === 0 && <p className="subtitle">Ninguna canción coincide.</p>}
+      {all.length > SHOWN && <p className="subtitle">Se muestran {SHOWN} de {all.length}. Escribe para afinar la búsqueda.</p>}
     </Dialog>
   );
 }

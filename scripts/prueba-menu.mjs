@@ -27,7 +27,7 @@ async function open(viewport, touch) {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto(`${base}/app`);
-  await page.locator('input[type="file"]').setInputFiles(files);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
   await page.waitForTimeout(2500);
   await page.locator(".track-row .row-main").first().click();
   await page.waitForTimeout(800);
@@ -228,7 +228,7 @@ const smallTargets = (page) =>
   // Persistencia: tras recargar, el EQ y la banda siguen.
   await page.reload();
   await page.waitForTimeout(1200);
-  await page.locator('input[type="file"]').setInputFiles(files);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
   await page.waitForTimeout(2500);
   await page.locator(".track-row .row-main").first().click();
   await page.waitForTimeout(600);

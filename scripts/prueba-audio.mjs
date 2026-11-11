@@ -1,7 +1,7 @@
 // Prueba de audio real en Chromium contra `npm run dev` (puerto 5173). Uso: node scripts/prueba-audio.mjs
 // Importa tonos sintéticos de tests/fixtures/audio y comprueba reproducción, atajos, fin de pista,
 // repetición, crossfade, ecualizador, volumen, archivo corrupto y restauración de sesión.
-// Sale con 1 si algo falla. La biblioteca no persiste entre recargas (Fase 3): se reimporta tras recargar.
+// Sale con 1 si algo falla. Desde la Fase 3 la biblioteca persiste (copia en OPFS): tras recargar no se reimporta.
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
 
@@ -35,7 +35,7 @@ const setRange = (locator, value) =>
     el.dispatchEvent(new Event("input", { bubbles: true }));
   }, String(value));
 const load = async (files) => {
-  await page.locator('input[type="file"]').setInputFiles(files);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
   await page.waitForTimeout(2500);
 };
 
@@ -120,7 +120,7 @@ await setRange(menu.getByLabel(/Fundido entre canciones/), 2);
 await page.waitForTimeout(600);
 await page.keyboard.press("Escape");
 await page.reload();
-await load(all); // sin pista no hay barra ni menú: se vuelve a importar y la sesión restaura la última pista
+await page.waitForTimeout(1500); // la biblioteca y la sesión se restauran solas
 await openMenu();
 await menu.getByRole("button", { name: /^Sonido/ }).click();
 check("el EQ persiste tras recargar", (await menu.getByRole("button", { name: /^Ecualizador/ }).innerText()).includes("Graves"));
@@ -128,16 +128,20 @@ check("el crossfade persiste tras recargar", (await menu.getByLabel(/Fundido ent
 await page.keyboard.press("Escape");
 
 // 9. Crossfade: amanecer dura 8 s; con 2 s de fundido la siguiente ya suena a los 7 s (sin él, seguiría amanecer).
-await load([f("01-amanecer.flac"), f("02-marea.flac")]);
+// La biblioteca persiste y se ordena por título: la búsqueda deja solo Ondas Puras, así la cola es amanecer → marea.
+await page.getByRole("searchbox").fill("osciladores");
 await row("amanecer").click();
+await page.getByRole("searchbox").fill("");
 await page.waitForTimeout(7200);
 check("con crossfade la siguiente ya suena antes del final de la anterior", (await title()) === "Marea de Fase" && (await playing()), await title());
 
 // 10. Archivo corrupto: aviso visible y la app sigue viva.
-await load([f("corrupto.mp3")]);
+await page.getByRole("searchbox").fill("corrupto");
 await row("corrupto").click();
 await page.waitForTimeout(2000);
-check("archivo corrupto muestra aviso y la app sigue viva", (await page.locator(".notice").count()) > 0 && errors.length === 0, errors.join(" | "));
+check("archivo corrupto muestra aviso y la app sigue viva", (await page.locator(".notice", { hasText: "No se pudo reproducir" }).count()) > 0 && errors.length === 0, errors.join(" | ") || (await page.locator(".notices").innerText().catch(() => "sin aviso")));
+check("el archivo corrupto queda marcado en la lista", (await page.locator(".track-row .warn").count()) === 1);
+await page.getByRole("searchbox").fill("");
 
 // 11. Temporizador: "al terminar la canción" detiene al final de la pista, sin avanzar.
 await row("Marea").click();
@@ -149,12 +153,19 @@ await setRange(page.locator(".bar-center .seek input"), 5);
 await page.waitForTimeout(2200);
 check("temporizador al terminar la canción detiene sin avanzar", !(await playing()) && (await title()) === "Marea de Fase", `${await title()} playing=${await playing()}`);
 
-// 12. Sesión: tras recargar y volver a importar el archivo, la pista se restaura.
+// 12. Sesión: tras recargar, sin reimportar nada, la pista y la posición vuelven y suenan desde la copia guardada.
 await row("Marea").click();
-await page.waitForTimeout(1500);
+await page.waitForTimeout(2500);
 await page.reload();
-await load([f("02-marea.flac")]);
-check("la sesión restaura la pista al volver a tener el archivo", (await title()) === "Marea de Fase" && !(await playing()), `title=${await title().catch(() => "—")}`);
+await page.waitForTimeout(1500);
+check("la sesión restaura la pista sin reimportar", (await title()) === "Marea de Fase" && !(await playing()), `title=${await title().catch(() => "—")}`);
+const restoredAt = await position();
+check("la sesión restaura la posición", restoredAt >= 1.5, `pos=${restoredAt}`);
+await idle();
+await page.keyboard.press("Space");
+await page.waitForTimeout(1000);
+check("Espacio reproduce la pista restaurada leyendo el archivo guardado", (await playing()) && (await position()) > restoredAt, `${restoredAt} → ${await position()}`);
+check("la biblioteca sigue completa tras recargar", (await page.locator(".track-row").count()) >= 5);
 
 await browser.close();
 const failed = results.filter((ok) => !ok).length;

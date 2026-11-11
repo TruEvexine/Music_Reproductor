@@ -32,4 +32,17 @@ describe("esquema local versionado", () => {
     expect([...v2.objectStoreNames]).toEqual(["kv", "tracks"]);
     v2.close();
   });
+
+  it("v1 → v2 conserva la sesión y crea la biblioteca", async () => {
+    const v1 = await openDatabase("test-v2", migrations.slice(0, 1));
+    await v1.put("kv", { position: 12 }, "session");
+    v1.close();
+    const v2 = await openDatabase("test-v2", migrations.slice(0, 2));
+    expect(await v2.get("kv", "session")).toEqual({ position: 12 });
+    expect([...v2.objectStoreNames].sort()).toEqual(["covers", "kv", "outbox", "playlists", "roots", "tracks"]);
+    await v2.put("tracks", { id: "a", rootId: "r" });
+    expect(await v2.getAllFromIndex("tracks", "rootId", "r")).toEqual([{ id: "a", rootId: "r" }]);
+    expect(await v2.add("outbox", { op: 1 })).toBe(1);
+    v2.close();
+  });
 });

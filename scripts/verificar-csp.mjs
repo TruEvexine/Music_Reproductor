@@ -26,7 +26,7 @@ try {
   page.on("console", (m) => /Content Security Policy|Refused to/i.test(m.text()) && violations.push(m.text()));
   page.on("response", (r) => r.url().includes("supabase.co") && supabase.push(`${r.status()} ${new URL(r.url()).pathname}`));
   await page.goto(url);
-  await page.locator('input[type="file"]').setInputFiles(files);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
   await page.waitForTimeout(2000);
   const covers = await page.locator('img[src^="blob:"]').count();
   await page.locator(".track-row .row-main").first().click();
