@@ -1,5 +1,5 @@
 import { oklchToRgb } from "../core/palette";
-import type { Rgb } from "../core/palette";
+import type { Gamut, Rgb } from "../core/palette";
 
 // Render WebGL del fondo: un solo triángulo a pantalla completa y un shader que suma manchas gaussianas de color.
 // Sin librerías: es un shader de ~40 líneas. El lienzo se dibuja a baja resolución (los degradados no necesitan más)
@@ -19,6 +19,14 @@ export interface Look {
   colors: Rgb[];
   intensity: number;
   blobs: number;
+  /** Fondo sobre el que se suman las manchas: el de la app, o negro puro en HDR. */
+  base: Rgb;
+  /** Gama del lienzo: con "p3" el búfer de dibujo es Display P3 y los colores ya vienen convertidos a ella. */
+  gamut: Gamut;
+  /** 0 = sin curva; 1 = curva en S completa (negros más hondos, medios más vivos). Solo en HDR. */
+  contrast: number;
+  /** Techo del brillo de los reflejos (0 = sin reflejos). Solo en HDR. */
+  glint: number;
 }
 
 export interface Renderer {
@@ -34,7 +42,7 @@ void main() { uv = position * 0.5 + 0.5; gl_Position = vec4(position, 0.0, 1.0);
 const fragment = `precision mediump float;
 varying vec2 uv;
 uniform vec2 res;
-uniform float time, drift, swell, mid, intensity;
+uniform float time, drift, swell, mid, intensity, contrast, glint;
 uniform int blobs;
 uniform vec3 base, c0, c1, c2, c3;
 
@@ -53,9 +61,12 @@ void main() {
     float d = length(p - centre) / radius;
     vec3 tint = i == 0 ? c0 : i == 1 ? c1 : i == 2 ? c2 : i == 3 ? c3 : mix(c0, c2, 0.5);
     col += tint * exp(-d * d * 2.2) * intensity * (0.9 + swell * 0.35);
+    // Reflejo (HDR): un núcleo pequeño y más claro en el centro de cada mancha. glint es su techo: 0,25 como máximo, para que el texto siga legible.
+    col += mix(tint, vec3(1.0), 0.4) * exp(-d * d * 14.0) * intensity * glint * 0.25;
   }
   // Más oscuro hacia abajo, donde están los controles: el texto claro sigue legible con cualquier portada.
   col *= mix(0.55, 1.0, smoothstep(0.0, 0.55, uv.y));
+  col = mix(col, col * col * (3.0 - 2.0 * col), contrast); // curva en S: oscurece los bajos y separa los tonos, lo que sube la saturación percibida
   col += (hash(gl_FragCoord.xy) - 0.5) / 255.0; // ruido mínimo: evita las bandas del degradado
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -68,7 +79,8 @@ function compile(gl: WebGLRenderingContext, type: number, source: string): WebGL
   return gl.getShaderParameter(shader, gl.COMPILE_STATUS) ? shader : null;
 }
 
-const BASE = oklchToRgb(0.145, 0.004, 70); // el --bg de la app (tokens.css)
+/** El --bg de la app (tokens.css). */
+export const APP_BASE: Rgb = oklchToRgb(0.145, 0.004, 70);
 
 /**
  * Crea el render sobre `canvas`. Devuelve null si no hay WebGL o el shader no compila (el llamador usa el respaldo CSS).
@@ -95,8 +107,8 @@ export function createRenderer(canvas: HTMLCanvasElement, onLost: () => void): R
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
 
   const at = (name: string) => gl.getUniformLocation(program, name);
-  const u = { res: at("res"), time: at("time"), drift: at("drift"), swell: at("swell"), mid: at("mid"), intensity: at("intensity"), blobs: at("blobs"), base: at("base"), colors: [at("c0"), at("c1"), at("c2"), at("c3")] };
-  gl.uniform3f(u.base, BASE[0], BASE[1], BASE[2]);
+  const u = { res: at("res"), time: at("time"), drift: at("drift"), swell: at("swell"), mid: at("mid"), intensity: at("intensity"), contrast: at("contrast"), glint: at("glint"), blobs: at("blobs"), base: at("base"), colors: [at("c0"), at("c1"), at("c2"), at("c3")] };
+  let gamut: Gamut = "srgb";
 
   const lost = (event: Event) => {
     event.preventDefault(); // sin esto el navegador no intentaría restaurarlo; aquí se prefiere el respaldo CSS
@@ -110,7 +122,14 @@ export function createRenderer(canvas: HTMLCanvasElement, onLost: () => void): R
       gl.uniform1f(u.drift, frame.drift);
       gl.uniform1f(u.swell, frame.swell);
       gl.uniform1f(u.mid, frame.mid);
+      if (look.gamut !== gamut && "drawingBufferColorSpace" in gl) {
+        gamut = look.gamut;
+        gl.drawingBufferColorSpace = gamut === "p3" ? "display-p3" : "srgb"; // sin soporte, los colores P3 se verían en sRGB: solo menos vivos
+      }
+      gl.uniform3f(u.base, look.base[0], look.base[1], look.base[2]);
       gl.uniform1f(u.intensity, look.intensity);
+      gl.uniform1f(u.contrast, look.contrast);
+      gl.uniform1f(u.glint, look.glint);
       gl.uniform1i(u.blobs, look.blobs);
       look.colors.forEach((color, i) => i < 4 && gl.uniform3f(u.colors[i], color[0], color[1], color[2]));
       gl.drawArrays(gl.TRIANGLES, 0, 3);

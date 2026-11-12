@@ -53,6 +53,55 @@
   --bg: oklch(0 0 0);
 }
 
+/*
+ * HDR simulado (lo pone state/background.ts en <html data-bg="hdr">). En la web no hay HDR garantizado: esto es negro profundo con luces
+ * de croma alto y reflejos con techo, y degrada solo por capacidad de la pantalla:
+ *   sRGB          → curva de contraste y saturación (ganancia de croma 1,2 y curva en S al 35 %);
+ *   color-gamut p3 → luces en Display P3 (croma ×1,5, curva más suave);
+ *   + dynamic-range high → techo de reflejos al máximo y de acentos un poco más alto.
+ * Las --hdr-* las leen también el fondo WebGL y la paleta (ui/hdr.ts): una sola política para CSS y lienzo.
+ */
+:root[data-bg="hdr"] {
+  --bg: oklch(0 0 0);
+  --surface-1: oklch(0.17 0.004 70);
+  --surface-2: oklch(0.22 0.005 70);
+  --surface-3: oklch(0.285 0.007 70);
+  --danger: oklch(0.78 0.16 25);
+  --hdr-chroma: 1.2;
+  --hdr-contrast: 0.35;
+  --hdr-glint: 0.6;
+  --hdr-peak: 0.86;
+}
+
+@media (color-gamut: p3) {
+  :root[data-bg="hdr"] {
+    --danger: color(display-p3 1 0.47 0.4);
+    --hdr-chroma: 1.5;
+    --hdr-contrast: 0.25;
+    --hdr-glint: 0.8;
+  }
+}
+
+@media (color-gamut: p3) and (dynamic-range: high) {
+  :root[data-bg="hdr"] {
+    --hdr-glint: 1;
+    --hdr-peak: 0.9;
+  }
+}
+
+/* La paleta de la portada llega en --accent-in y --glow-in (App.tsx); aquí se convierten en los acentos de la interfaz. */
+.shell {
+  --accent: var(--accent-in);
+  --glow: var(--glow-in);
+}
+
+@supports (color: oklch(from red l c h)) {
+  :root[data-bg="hdr"] .shell {
+    --accent: oklch(from var(--accent-in) min(l, var(--hdr-peak)) calc(c * var(--hdr-chroma)) h);
+    --glow: oklch(from var(--glow-in) l calc(c * var(--hdr-chroma)) h);
+  }
+}
+
 @media (prefers-contrast: more) {
   :root {
     --ink-2: oklch(0.9 0.006 85);

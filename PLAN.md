@@ -712,6 +712,11 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
    pasa de ×0,77 (suave) a ×1,41 (fuerte) en unos segundos, sin cambiar más de 1/s y sin saltos de fase. `prueba-fondo.mjs` (Chromium) sigue en verde, con
    movimiento reducido incluido.
 
+2. **HDR simulado.** Modo `hdr` junto a AMOLED (`docs/DISENO_HDR.md`): negro puro, luces en OKLCH con ganancia de croma, Display P3 de verdad
+   (`oklchToRgb(…, "p3")`, `drawingBufferColorSpace`, `color(display-p3 …)` en el respaldo), reflejos con techo de brillo y curva de contraste/saturación
+   en SDR. La política vive en `tokens.css` bajo `@media (color-gamut: p3)` y `(dynamic-range: high)`; CSS y WebGL leen las mismas `--hdr-*`. Probado con
+   `scripts/prueba-hdr.mjs` (CDP para el gamut, `--force-color-profile=hdr10` para el rango alto) y tests de `core/`. **Solo en pantalla real:** el aspecto en OLED/P3/HDR.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

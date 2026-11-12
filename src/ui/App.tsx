@@ -55,7 +55,7 @@ function Shell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [panel]);
 
-  const style = { "--accent": palette.accent, "--on-accent": palette.onAccent, "--glow": palette.glow } as CSSProperties;
+  const style = { "--accent-in": palette.accent, "--on-accent": palette.onAccent, "--glow-in": palette.glow } as CSSProperties;
 
   return (
     <PaletteContext.Provider value={palette}>

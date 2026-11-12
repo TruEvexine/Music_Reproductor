@@ -1,17 +1,18 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Device } from "../core/quality";
 import { backgroundColors, gradientCss, isAnimated } from "../core/background";
-import type { BackgroundSettings } from "../core/background";
+import type { BackgroundSettings, HdrLook } from "../core/background";
 import type { Rgb } from "../core/palette";
 import type { Bands } from "../core/rhythm";
 import { createGovernor, fpsCap, QUALITY_LEVELS, startLevel } from "../core/quality";
 import { bandEnergies, createBeatDetector, createLight, follow } from "../core/rhythm";
 import { useBackground } from "../state/background";
 import { player } from "../state/player";
-import { createRenderer } from "./backdropRenderer";
+import { APP_BASE, createRenderer } from "./backdropRenderer";
+import { useHdrLook } from "./hdr";
 import { PaletteContext } from "./usePalette";
 
-// Fondo del reproductor. Portada / Ritmo: lienzo WebGL animado. Estático: degradado CSS fijo. AMOLED: nada (negro).
+// Fondo del reproductor. Portada / Ritmo / HDR: lienzo WebGL animado. Estático: degradado CSS fijo. AMOLED: nada (negro).
 // Respaldo CSS (mismo aspecto, sin movimiento) si no hay WebGL, se pierde el contexto o el sistema pide menos movimiento.
 // El lienzo solo existe mientras este componente está montado: con el reproductor colapsado no hay bucle ni contexto.
 
@@ -26,6 +27,8 @@ export function useReducedMotion(): boolean {
     () => window.matchMedia(reducedQuery).matches,
   );
 }
+
+const BLACK: Rgb = [0, 0, 0];
 
 type BatteryManager = EventTarget & { charging: boolean; level: number };
 type NavigatorExtras = Navigator & { getBattery?: () => Promise<BatteryManager>; connection?: { saveData?: boolean }; deviceMemory?: number };
@@ -43,7 +46,7 @@ interface Stats {
 }
 
 /** Bucle de dibujo. Devuelve la función que lo detiene y libera todo. */
-function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { settings: BackgroundSettings; colors: Rgb[] } }, onFail: () => void): () => void {
+function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { settings: BackgroundSettings; colors: Rgb[]; hdr: HdrLook } }, onFail: () => void): () => void {
   const renderer = createRenderer(canvas, onFail);
   if (!renderer) {
     onFail();
@@ -70,7 +73,7 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
 
   function tick(now: number) {
     raf = requestAnimationFrame(tick);
-    const { settings, colors } = live.current;
+    const { settings, colors, hdr } = live.current;
     const interval = 1000 / fpsCap(settings.fps, governor.level);
     const dt = now - last;
     if (dt < interval - 2) return; // tope de cuadros (2 ms de holgura por la irregularidad de rAF)
@@ -108,7 +111,19 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
       sizedFor = level;
       dirty = false;
     }
-    renderer!.draw({ time, drift: frame.drift, swell: frame.swell, mid: frame.mid }, { colors: shown, intensity: shownIntensity, blobs: QUALITY_LEVELS[level].blobs });
+    const hdrOn = settings.mode === "hdr";
+    renderer!.draw(
+      { time, drift: frame.drift, swell: frame.swell, mid: frame.mid },
+      {
+        colors: shown,
+        intensity: shownIntensity,
+        blobs: QUALITY_LEVELS[level].blobs,
+        base: hdrOn ? BLACK : APP_BASE,
+        gamut: hdrOn ? hdr.gamut : "srgb",
+        contrast: hdrOn ? hdr.contrast : 0,
+        glint: hdrOn ? hdr.glint : 0,
+      },
+    );
 
     stats.frames += 1;
     stats.cpuMs = stats.cpuMs * 0.95 + (performance.now() - started) * 0.05;
@@ -161,13 +176,14 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
 export function Backdrop() {
   const settings = useBackground();
   const palette = useContext(PaletteContext);
-  const colors = backgroundColors(settings, palette);
+  const hdr = useHdrLook();
+  const colors = backgroundColors(settings, palette, hdr);
   const reduced = useReducedMotion();
   const [failed, setFailed] = useState(false);
   const host = useRef<HTMLDivElement>(null);
-  const live = useRef({ settings, colors });
+  const live = useRef({ settings, colors, hdr });
   useLayoutEffect(() => {
-    live.current = { settings, colors };
+    live.current = { settings, colors, hdr };
   });
 
   const animated = isAnimated(settings.mode) && !reduced && !failed;
@@ -187,13 +203,14 @@ export function Backdrop() {
   if (animated) return <div aria-hidden="true" className="backdrop" ref={host} />;
   if (settings.mode === "amoled") return null;
   const kind = settings.mode === "static" ? "linear" : "blobs";
-  return <div aria-hidden="true" className="backdrop" style={{ background: gradientCss(colors, settings.intensity, kind) }} />;
+  return <div aria-hidden="true" className="backdrop" style={{ background: gradientCss(colors, settings.intensity, kind, settings.mode === "hdr" ? hdr.gamut : "srgb") }} />;
 }
 
 /** Tinte sutil de toda la app con el reproductor colapsado (solo en los modos con color): CSS, sin lienzo ni bucle. */
 export function Tint() {
   const settings = useBackground();
   const palette = useContext(PaletteContext);
+  const hdr = useHdrLook();
   if (!isAnimated(settings.mode)) return null;
-  return <div aria-hidden="true" className="tint" style={{ background: gradientCss(backgroundColors(settings, palette), settings.intensity * 0.3) }} />;
+  return <div aria-hidden="true" className="tint" style={{ background: gradientCss(backgroundColors(settings, palette, hdr), settings.intensity * 0.3, "blobs", settings.mode === "hdr" ? hdr.gamut : "srgb") }} />;
 }

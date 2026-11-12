@@ -12,7 +12,17 @@ export interface Palette {
   hue: number;
   /** Colores del fondo animado (hasta 4, sRGB 0–1): tonos distintos de la portada, oscuros para que el texto se lea. */
   colors: Rgb[];
+  /** Tono y croma de cada color anterior: el modo HDR los reconvierte a otra gama y con otra ganancia de croma. */
+  swatches: Swatch[];
 }
+
+export interface Swatch {
+  hue: number;
+  chroma: number;
+}
+
+/** Gama en la que se pintan los colores del fondo: sRGB, o Display P3 (≈ 25 % más ancha) si la pantalla la tiene. */
+export type Gamut = "srgb" | "p3";
 
 /** sRGB con canales de 0 a 1. */
 export type Rgb = [number, number, number];
@@ -28,6 +38,7 @@ export const fallbackPalette: Palette = {
   glow: "oklch(0.3 0.03 85)",
   hue: 85,
   colors: colorsFromHue(85, 0.05),
+  swatches: hueSwatches(85, 0.05),
 };
 
 function toLinear(channel: number): number {
@@ -35,11 +46,14 @@ function toLinear(channel: number): number {
   return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
 }
 
-/** sRGB (0–255) → OKLCH. Fórmulas de Björn Ottosson. */
-export function rgbToOklch(r: number, g: number, b: number): { l: number; c: number; h: number } {
-  const lr = toLinear(r);
-  const lg = toLinear(g);
-  const lb = toLinear(b);
+/** RGB lineal Display P3 → RGB lineal sRGB (puede salirse de 0–1: es un color que sRGB no alcanza). */
+function p3ToLinearSrgb(r: number, g: number, b: number): Rgb {
+  return [1.2249401 * r - 0.2249404 * g, -0.0420569 * r + 1.0420571 * g, -0.0196376 * r - 0.0786361 * g + 1.0982735 * b];
+}
+
+/** RGB codificado (0–255) → OKLCH, en sRGB o en Display P3 (misma curva de transferencia). Fórmulas de Björn Ottosson. */
+export function rgbToOklch(r: number, g: number, b: number, gamut: Gamut = "srgb"): { l: number; c: number; h: number } {
+  const [lr, lg, lb] = gamut === "p3" ? p3ToLinearSrgb(toLinear(r), toLinear(g), toLinear(b)) : [toLinear(r), toLinear(g), toLinear(b)];
   const l = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
   const m = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
   const s = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
@@ -60,6 +74,11 @@ function fromLinear(channel: number): number {
   return c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055;
 }
 
+/** RGB lineal sRGB → RGB lineal Display P3 (mismo blanco D65, primarios más separados). */
+function toLinearP3([r, g, b]: Rgb): Rgb {
+  return [0.8224621 * r + 0.177538 * g, 0.0331941 * r + 0.9668058 * g, 0.0170827 * r + 0.0723974 * g + 0.9105199 * b];
+}
+
 function linearRgb(l: number, c: number, h: number): Rgb {
   const rad = (h * Math.PI) / 180;
   const a = c * Math.cos(rad);
@@ -74,20 +93,33 @@ function linearRgb(l: number, c: number, h: number): Rgb {
   ];
 }
 
-/** OKLCH → sRGB (0–1). Si el color cae fuera de la gama, baja el croma hasta que quepa (mismo tono y luminosidad). */
-export function oklchToRgb(l: number, c: number, h: number): Rgb {
+/**
+ * OKLCH → RGB codificado (0–1) en la gama pedida (Display P3 usa la misma curva de transferencia que sRGB).
+ * Si el color cae fuera de la gama, baja el croma hasta que quepa (mismo tono y luminosidad).
+ */
+export function oklchToRgb(l: number, c: number, h: number, gamut: Gamut = "srgb"): Rgb {
+  const linear = (chroma: number) => (gamut === "p3" ? toLinearP3(linearRgb(l, chroma, h)) : linearRgb(l, chroma, h));
   let chroma = c;
-  let rgb = linearRgb(l, chroma, h);
+  let rgb = linear(chroma);
   while (chroma > 0.002 && rgb.some((v) => v < -0.001 || v > 1.001)) {
     chroma *= 0.92;
-    rgb = linearRgb(l, chroma, h);
+    rgb = linear(chroma);
   }
   return [fromLinear(rgb[0]), fromLinear(rgb[1]), fromLinear(rgb[2])];
 }
 
-/** Paleta analógica (tono, ±38°, +76°) alrededor de un tono: es la del origen "acento" y "elegida". */
+/** Los cuatro tonos analógicos (tono, +38°, −38°, +76°) alrededor de un tono: son la paleta de "acento" y "elegida". */
+export function hueSwatches(hue: number, chroma = 0.12): Swatch[] {
+  return [0, 38, -38, 76].map((offset) => ({ hue: (hue + offset + 360) % 360, chroma }));
+}
+
+/** Pinta tonos con las luminosidades del fondo. `gain` multiplica el croma (el modo HDR lo sube; la gama recorta lo que no quepa). */
+export function swatchColors(swatches: Swatch[], gamut: Gamut = "srgb", gain = 1): Rgb[] {
+  return swatches.map(({ hue, chroma }, i) => oklchToRgb(BLOB_LIGHTNESS[i], chroma * gain, hue, gamut));
+}
+
 export function colorsFromHue(hue: number, chroma = 0.12): Rgb[] {
-  return [0, 38, -38, 76].map((offset, i) => oklchToRgb(BLOB_LIGHTNESS[i], chroma, (hue + offset + 360) % 360));
+  return swatchColors(hueSwatches(hue, chroma));
 }
 
 /**
@@ -95,7 +127,7 @@ export function colorsFromHue(hue: number, chroma = 0.12): Rgb[] {
  * croma²), elige los sectores más pesados separados al menos 45° y completa con giros del dominante si faltan.
  * Devuelve null si la imagen es gris o transparente.
  */
-export function paletteColors(rgba: ArrayLike<number>, count = 4): Rgb[] | null {
+export function paletteSwatches(rgba: ArrayLike<number>, count = 4): Swatch[] | null {
   const bins = Array.from({ length: 12 }, () => ({ a: 0, b: 0, weight: 0, chroma: 0, pixels: 0 }));
   for (let i = 0; i + 3 < rgba.length; i += 4) {
     if (rgba[i + 3] < 128) continue;
@@ -123,7 +155,12 @@ export function paletteColors(rgba: ArrayLike<number>, count = 4): Rgb[] | null 
     if (chosen.length >= count) break;
     chosen.push({ hue: (chosen[0].hue + turn + 360) % 360, chroma: chosen[0].chroma });
   }
-  return chosen.map(({ hue, chroma }, i) => oklchToRgb(BLOB_LIGHTNESS[i], chroma, hue));
+  return chosen;
+}
+
+export function paletteColors(rgba: ArrayLike<number>, count = 4): Rgb[] | null {
+  const swatches = paletteSwatches(rgba, count);
+  return swatches && swatchColors(swatches);
 }
 
 const css = (l: number, c: number, h: number) => `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`;
@@ -150,11 +187,13 @@ export function paletteFromPixels(rgba: ArrayLike<number>): Palette {
   const chroma = Math.hypot(a, b) / weight;
   if (chroma < 0.02) return fallbackPalette;
   const hue = ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+  const swatches = paletteSwatches(rgba);
   return {
     accent: css(0.82, Math.min(Math.max(chroma, 0.07), 0.14), hue),
     onAccent: css(0.2, 0.04, hue),
     glow: css(0.32, Math.min(chroma, 0.09), hue),
     hue,
-    colors: paletteColors(rgba) ?? colorsFromHue(hue),
+    colors: swatches ? swatchColors(swatches) : colorsFromHue(hue),
+    swatches: swatches ?? hueSwatches(hue),
   };
 }

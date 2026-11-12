@@ -333,9 +333,10 @@ function EqPage() {
 
 const modes: { value: BackgroundMode; label: string; hint: string }[] = [
   { value: "cover", label: "Portada", hint: "Degradado animado con los colores de la portada." },
-  { value: "rhythm", label: "Ritmo", hint: "Los graves hinchan las manchas, los golpes las hacen latir y los agudos aceleran el giro." },
+  { value: "rhythm", label: "Ritmo", hint: "Los graves hinchan las manchas, los golpes las hacen latir y la energía de la música acelera el giro, sin parpadeos bruscos." },
   { value: "static", label: "Estático", hint: "Degradado fijo de dos colores de la portada." },
   { value: "amoled", label: "AMOLED", hint: "Negro puro en toda la app: ahorra batería en pantallas OLED." },
+  { value: "hdr", label: "HDR simulado", hint: "Negro puro con luces más vivas y reflejos con techo de brillo. No es HDR real: la web no lo garantiza. En pantallas Display P3 los colores son más intensos." },
 ];
 
 const sources: { value: PaletteSource; label: string }[] = [

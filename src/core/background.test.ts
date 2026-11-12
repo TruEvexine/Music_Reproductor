@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { backgroundColors, defaultBackground, gradientCss, isAnimated, sanitizeBackground } from "./background";
-import { colorsFromHue, fallbackPalette } from "./palette";
+import { colorsFromHue, fallbackPalette, paletteFromPixels, rgbToOklch } from "./palette";
 
 describe("ajustes del fondo", () => {
   it("sin datos devuelve los valores por defecto", () => {
@@ -26,8 +26,12 @@ describe("ajustes del fondo", () => {
     expect(sanitizeBackground(ok)).toEqual(ok);
   });
 
-  it("solo cover y rhythm se mueven", () => {
-    expect(["cover", "rhythm", "static", "amoled"].map((mode) => isAnimated(mode as never))).toEqual([true, true, false, false]);
+  it("solo cover, rhythm y hdr se mueven", () => {
+    expect(["cover", "rhythm", "static", "amoled", "hdr"].map((mode) => isAnimated(mode as never))).toEqual([true, true, false, false, true]);
+  });
+
+  it("acepta el modo hdr guardado", () => {
+    expect(sanitizeBackground({ mode: "hdr" }).mode).toBe("hdr");
   });
 });
 
@@ -37,6 +41,37 @@ describe("origen de la paleta", () => {
     expect(backgroundColors({ ...defaultBackground, palette: "cover" }, palette)).toBe(palette.colors);
     expect(backgroundColors({ ...defaultBackground, palette: "accent" }, palette)).toEqual(colorsFromHue(200));
     expect(backgroundColors({ ...defaultBackground, palette: "custom", hue: 90 }, palette)).toEqual(colorsFromHue(90));
+  });
+});
+
+describe("modo HDR simulado", () => {
+  const palette = paletteFromPixels(Uint8ClampedArray.from({ length: 4 * 64 }, (_, i) => [200, 40, 60, 255][i % 4]));
+  const chroma = (colors: number[][], gamut: "srgb" | "p3") => colors.reduce((sum, [r, g, b]) => sum + rgbToOklch(r * 255, g * 255, b * 255, gamut).c, 0);
+  const hdr = { ...defaultBackground, mode: "hdr" as const };
+
+  it("en sRGB sube la saturación respecto al modo Portada sin salirse de la gama", () => {
+    const plain = backgroundColors({ ...defaultBackground, mode: "cover" }, palette);
+    const boosted = backgroundColors(hdr, palette, { gamut: "srgb", chroma: 1.2, contrast: 0.35, glint: 0.6 });
+    expect(boosted).toHaveLength(plain.length);
+    expect(chroma(boosted, "srgb")).toBeGreaterThan(chroma(plain, "srgb"));
+    for (const color of boosted) for (const channel of color) expect(channel >= 0 && channel <= 1).toBe(true);
+  });
+
+  it("en Display P3 las luces son aún más intensas que en sRGB con la misma ganancia", () => {
+    const srgb = backgroundColors(hdr, palette, { gamut: "srgb", chroma: 1.5, contrast: 0.35, glint: 0.6 });
+    const p3 = backgroundColors(hdr, palette, { gamut: "p3", chroma: 1.5, contrast: 0.35, glint: 0.6 });
+    expect(chroma(p3, "p3")).toBeGreaterThan(chroma(srgb, "srgb"));
+  });
+
+  it("fuera del modo hdr los colores no cambian aunque se pase la mirada HDR", () => {
+    expect(backgroundColors({ ...defaultBackground, mode: "cover" }, palette, { gamut: "p3", chroma: 2, contrast: 1, glint: 1 })).toBe(palette.colors);
+  });
+
+  it("el respaldo CSS en P3 usa color(display-p3 …) y el de sRGB sigue en rgb()", () => {
+    const colors = colorsFromHue(250);
+    expect(gradientCss(colors, 0.6, "blobs", "p3")).toMatch(/color\(display-p3 [\d.]+ [\d.]+ [\d.]+ \/ [\d.]+\)/);
+    expect(gradientCss(colors, 0.6)).not.toContain("display-p3");
+    expect(gradientCss(colors, 0.6, "blobs", "p3").endsWith("var(--bg)")).toBe(true);
   });
 });
 

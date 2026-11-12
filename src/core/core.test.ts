@@ -94,6 +94,21 @@ describe("colores del fondo animado", () => {
   const hueOf = ([r, g, b]: [number, number, number]) => rgbToOklch(r * 255, g * 255, b * 255).h;
   const apart = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
 
+  it("Display P3 conserva más croma que sRGB en colores vivos, con el mismo tono, y deja iguales los grises", () => {
+    const back = (rgb: number[], gamut: "srgb" | "p3") => rgbToOklch(rgb[0] * 255, rgb[1] * 255, rgb[2] * 255, gamut);
+    for (const hue of [25, 145, 250, 320]) {
+      const srgb = back(oklchToRgb(0.45, 0.25, hue), "srgb");
+      const p3Rgb = oklchToRgb(0.45, 0.25, hue, "p3");
+      const p3 = back(p3Rgb, "p3");
+      expect(p3.c).toBeGreaterThan(srgb.c * 1.05); // 0,45 es la luminosidad de las manchas del fondo
+      expect(Math.abs(p3.l - 0.45)).toBeLessThan(0.02);
+      expect(Math.min(Math.abs(p3.h - hue), 360 - Math.abs(p3.h - hue))).toBeLessThan(3);
+      for (const channel of p3Rgb) expect(channel >= 0 && channel <= 1).toBe(true);
+    }
+    const gray = oklchToRgb(0.5, 0, 0);
+    oklchToRgb(0.5, 0, 0, "p3").forEach((channel, i) => expect(channel).toBeCloseTo(gray[i], 2));
+  });
+
   it("oklchToRgb es la inversa de rgbToOklch dentro de gama y siempre devuelve canales de 0 a 1", () => {
     const [r, g, b] = oklchToRgb(0.5, 0.1, 145);
     const back = rgbToOklch(r * 255, g * 255, b * 255);
