@@ -702,6 +702,16 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
   con la URL de la LAN. iPhone: el preview HTTPS de Vercel. No se añadió HTTPS local (certificado propio = dependencia y aviso
   de certificado en el móvil).
 
+### 11.1e Luces, HDR simulado, movimiento y landing (2026-11-12)
+
+1. **Luces reactivas.** Causa de «la velocidad no responde» y de los destellos: el shader multiplicaba el tiempo acumulado por los agudos
+   (`time * (1 + treble*1.5)`), así que cada cambio de agudos desplazaba las manchas de golpe, y el brillo seguía al bombo cuadro a cuadro.
+   Arreglo: `createLight` (`core/rhythm.ts`) entrega `swell`, `rate` y `drift` ya suavizados (ver `docs/DISENO_FONDO_AMBIENTE.md`).
+   Medido con `core/rhythm.test.ts` (señal sintética → FFT → detector → luz, a 60 fps): a 240 BPM el brillo antiguo daba 4,0 destellos/s y
+   saltos de 28 % en 100 ms; el nuevo, 2,5 destellos/s y 7 %. A 300 BPM y con el detector disparando en todos los cuadros, ≤ 3/s. La velocidad
+   pasa de ×0,77 (suave) a ×1,41 (fuerte) en unos segundos, sin cambiar más de 1/s y sin saltos de fase. `prueba-fondo.mjs` (Chromium) sigue en verde, con
+   movimiento reducido incluido.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

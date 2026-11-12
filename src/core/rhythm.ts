@@ -78,8 +78,71 @@ export function createBeatDetector({ history = 40, k = 1.6, floor = 0.25, minGap
   };
 }
 
+/** Mueve `current` hacia `target` sin superar `perSecond` unidades por segundo. */
+export function slew(current: number, target: number, dtMs: number, perSecond: number): number {
+  const step = (perSecond * dtMs) / 1000;
+  return current + Math.max(-step, Math.min(step, target - current));
+}
+
 /** Sigue un valor con ataque rápido y caída lenta (constantes en ms): así las manchas "respiran" sin parpadear. */
 export function follow(current: number, target: number, dtMs: number, attackMs = 60, releaseMs = 280): number {
   const tau = target > current ? attackMs : releaseMs;
   return current + (target - current) * (1 - Math.exp(-dtMs / tau));
+}
+
+/** Separación mínima entre destellos del fondo: 340 ms = 2,9 por segundo, bajo el límite de 3 de las pautas de fotosensibilidad (WCAG 2.3.1). */
+export const FLASH_GAP_MS = 340;
+/** Cuánto puede cambiar el brillo del fondo por segundo (0–1 de recorrido): en 100 ms, menos del 10 % de luminancia relativa. */
+export const SWELL_SLEW = 2.5;
+/** Energía de reposo: con ella la velocidad es la elegida por el usuario (×1). Sin ritmo, el fondo "Portada" la usa. */
+export const REST_ENERGY = 0.25;
+const RATE_PER_ENERGY = 2;
+const RATE_LIMITS = [0.5, 2.5] as const;
+
+export interface LightInput {
+  /** Energía por bandas ya escalada (0–1). `null` = fondo sin reacción al audio (modo Portada). */
+  bands: Bands | null;
+  /** Golpe detectado en este cuadro. */
+  beat: boolean;
+  dtMs: number;
+  /** Reloj monótono (ms). */
+  now: number;
+  /** Velocidad elegida por el usuario (0,25–2×). */
+  speed: number;
+}
+
+/**
+ * Convierte el análisis del audio en lo único que el fondo necesita para dibujar, ya suavizado:
+ * - `swell` (0–1): hinchazón y brillo. Ataque 90 ms y caída 450 ms en los graves; los golpes sostienen un pulso de 100 ms,
+ *   con separación mínima de `FLASH_GAP_MS` (nunca más de 3 destellos por segundo); y el resultado tiene tope de cambio (`SWELL_SLEW`).
+ * - `rate`: multiplicador de velocidad, ligado a una envolvente de energía lenta (sube en ~2 s, baja en ~4 s).
+ * - `drift`: fase de la deriva, integrada con `rate` cuadro a cuadro, de modo que cambiar la velocidad nunca la hace saltar.
+ */
+export function createLight() {
+  let bass = 0;
+  let mid = 0;
+  let pulse = 0;
+  let hold = 0;
+  let swell = 0;
+  let energy = REST_ENERGY;
+  let drift = 0;
+  let lastFlash = -Infinity;
+  return {
+    push({ bands, beat, dtMs, now, speed }: LightInput) {
+      bass = follow(bass, bands?.bass ?? 0, dtMs, 90, 450);
+      mid = follow(mid, bands?.mid ?? 0, dtMs, 120, 500);
+      if (bands && beat && now - lastFlash >= FLASH_GAP_MS) {
+        lastFlash = now;
+        hold = 100;
+      }
+      hold = Math.max(0, hold - dtMs);
+      pulse = follow(pulse, hold > 0 ? 1 : 0, dtMs, 70, 300);
+      swell = slew(swell, Math.min(1, bass + 0.5 * pulse), dtMs, SWELL_SLEW);
+      const loudness = bands ? Math.min(1, 0.5 * bands.bass + 0.3 * bands.mid + 0.2 * bands.treble) : REST_ENERGY;
+      energy = follow(energy, loudness, dtMs, 2000, 4000);
+      const rate = Math.min(RATE_LIMITS[1], Math.max(RATE_LIMITS[0], 1 + RATE_PER_ENERGY * (energy - REST_ENERGY)));
+      drift += (dtMs / 1000) * speed * rate;
+      return { swell, mid, rate, drift };
+    },
+  };
 }

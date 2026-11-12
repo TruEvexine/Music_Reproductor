@@ -22,6 +22,19 @@ texto y quema batería. Mi recomendación es **un fondo en capas, contenido y co
 5. **Grano fino** muy sutil: evita bandas de color en degradados y da textura premium.
 6. **Velo de legibilidad** bajo textos y controles (degradado local), no sobre toda la pantalla.
 
+## Luz sin parpadeo (implementado en `core/rhythm.ts` → `createLight`)
+
+El modo Ritmo no pinta el análisis crudo: lo pasa por un limitador que el shader solo lee.
+
+- **Brillo (`swell`):** graves con ataque 90 ms y caída 450 ms; cada golpe sostiene un pulso de 100 ms y entre dos pulsos hay al menos
+  340 ms (≤ 2,9 destellos/s, bajo el límite de 3 de WCAG 2.3.1). Tope de cambio de 2,5 unidades/s: ningún paso de 100 ms supera el 10 % de
+  luminancia.
+- **Velocidad (`rate`):** multiplicador 0,5–2,5× ligado a una envolvente de energía lenta (ataque 2 s, caída 4 s). La fase de la deriva se
+  integra en la CPU (`drift`), así que cambiar la velocidad, por la música o por el control, nunca la hace saltar. Antes se multiplicaba el
+  tiempo acumulado por los agudos, y cada cambio desplazaba las manchas de golpe.
+- **Intensidad del control:** se acerca a su valor con ataque 120 ms y caída 400 ms.
+- **Movimiento reducido:** sin lienzo ni bucle; el mismo gradiente en CSS, quieto.
+
 ## Reglas de armonía y contraste
 
 - Paleta: análoga a la portada + **un** acento complementario de baja saturación; nunca arcoíris.

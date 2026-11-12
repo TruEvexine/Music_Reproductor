@@ -3,8 +3,9 @@ import type { Device } from "../core/quality";
 import { backgroundColors, gradientCss, isAnimated } from "../core/background";
 import type { BackgroundSettings } from "../core/background";
 import type { Rgb } from "../core/palette";
+import type { Bands } from "../core/rhythm";
 import { createGovernor, fpsCap, QUALITY_LEVELS, startLevel } from "../core/quality";
-import { bandEnergies, createBeatDetector, follow } from "../core/rhythm";
+import { bandEnergies, createBeatDetector, createLight, follow } from "../core/rhythm";
 import { useBackground } from "../state/background";
 import { player } from "../state/player";
 import { createRenderer } from "./backdropRenderer";
@@ -36,6 +37,9 @@ interface Stats {
   level: number;
   mode: string;
   intensity: number;
+  /** Multiplicador de velocidad y brillo por la música en el último cuadro (solo para las pruebas). */
+  rate: number;
+  swell: number;
 }
 
 /** Bucle de dibujo. Devuelve la función que lo detiene y libera todo. */
@@ -50,14 +54,12 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   const governor = createGovernor(startLevel(device(), live.current.settings.batterySaver));
   const buffer = new Uint8Array(1024);
   const detector = createBeatDetector();
+  const light = createLight();
   const shown = live.current.colors.map((color) => [...color] as Rgb); // colores en pantalla: se acercan a los objetivos al cambiar de pista
-  const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0 };
+  const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0, rate: 1, swell: 0 };
   if (import.meta.env.DEV) ((window as unknown as { __backdrop?: Stats[] }).__backdrop ??= []).push(stats); // solo desarrollo: lo leen las pruebas
 
-  let bass = 0;
-  let mid = 0;
-  let treble = 0;
-  let pulse = 0;
+  let shownIntensity = live.current.settings.intensity;
   let time = 0;
   let last = performance.now();
   let raf = 0;
@@ -77,23 +79,22 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     const started = performance.now();
 
     const analyser = player.analyser();
+    let bands: Bands | null = null;
     let beat = false;
-    if (settings.mode === "rhythm" && analyser) {
-      analyser.getByteFrequencyData(buffer);
-      const rate = analyser.context.sampleRate;
-      const bands = bandEnergies(buffer, rate, analyser.fftSize);
-      // Los agudos y medios traen mucha menos energía que los graves en la escala del analizador: se compensan.
-      bass = follow(bass, Math.min(1, bands.bass * 1.15), dt);
-      mid = follow(mid, Math.min(1, bands.mid * 1.8), dt);
-      treble = follow(treble, Math.min(1, bands.treble * 3), dt);
-      beat = detector.push(buffer, rate, analyser.fftSize, now).beat;
-    } else {
-      bass = follow(bass, 0, dt);
-      mid = follow(mid, 0, dt);
-      treble = follow(treble, 0, dt);
+    if (settings.mode === "rhythm") {
+      bands = { bass: 0, mid: 0, treble: 0 };
+      if (analyser) {
+        analyser.getByteFrequencyData(buffer);
+        const rate = analyser.context.sampleRate;
+        const raw = bandEnergies(buffer, rate, analyser.fftSize);
+        // Los agudos y medios traen mucha menos energía que los graves en la escala del analizador: se compensan.
+        bands = { bass: Math.min(1, raw.bass * 1.15), mid: Math.min(1, raw.mid * 1.8), treble: Math.min(1, raw.treble * 3) };
+        beat = detector.push(buffer, rate, analyser.fftSize, now).beat;
+      }
     }
-    pulse = beat ? 1 : pulse * Math.exp(-dt / 120);
+    const frame = light.push({ bands, beat, dtMs: dt, now, speed: settings.speed });
     time += (dt / 1000) * settings.speed;
+    shownIntensity = follow(shownIntensity, settings.intensity, dt, 120, 400); // el control de intensidad no da saltos
 
     const ease = 1 - Math.exp(-dt / 250);
     shown.forEach((color, i) => {
@@ -107,13 +108,15 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
       sizedFor = level;
       dirty = false;
     }
-    renderer!.draw({ time, bass, mid, treble, beat: pulse }, { colors: shown, intensity: settings.intensity, blobs: QUALITY_LEVELS[level].blobs });
+    renderer!.draw({ time, drift: frame.drift, swell: frame.swell, mid: frame.mid }, { colors: shown, intensity: shownIntensity, blobs: QUALITY_LEVELS[level].blobs });
 
     stats.frames += 1;
     stats.cpuMs = stats.cpuMs * 0.95 + (performance.now() - started) * 0.05;
     stats.level = level;
     stats.mode = settings.mode;
     stats.intensity = settings.intensity;
+    stats.rate = frame.rate;
+    stats.swell = frame.swell;
   }
 
   const onVisibility = () => {

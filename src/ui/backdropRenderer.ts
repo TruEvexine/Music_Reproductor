@@ -6,13 +6,13 @@ import type { Rgb } from "../core/palette";
 // y el navegador lo escala. El coste en CPU por cuadro es un puñado de uniformes y una llamada de dibujo.
 
 export interface Frame {
-  /** Tiempo simulado (s): ya incluye la velocidad elegida. */
+  /** Tiempo simulado (s): ya incluye la velocidad elegida. Mueve la respiración lenta del radio. */
   time: number;
-  bass: number;
+  /** Fase de la deriva de las manchas, integrada en la CPU con la velocidad ya suavizada (core/rhythm.ts `createLight`). */
+  drift: number;
+  /** Hinchazón y brillo por la música, 0–1, ya con ataque, caída y tope de cambio. */
+  swell: number;
   mid: number;
-  treble: number;
-  /** Pulso del último golpe, 1 → 0 en ~120 ms. */
-  beat: number;
 }
 
 export interface Look {
@@ -34,7 +34,7 @@ void main() { uv = position * 0.5 + 0.5; gl_Position = vec4(position, 0.0, 1.0);
 const fragment = `precision mediump float;
 varying vec2 uv;
 uniform vec2 res;
-uniform float time, bass, mid, treble, beat, intensity;
+uniform float time, drift, swell, mid, intensity;
 uniform int blobs;
 uniform vec3 base, c0, c1, c2, c3;
 
@@ -44,16 +44,15 @@ void main() {
   float aspect = res.x / res.y;
   vec2 p = vec2(uv.x * aspect, uv.y);
   vec3 col = base;
-  // Las manchas derivan despacio; con música, los agudos aceleran el giro, los graves hinchan y el golpe pulsa.
-  float drift = time * (1.0 + treble * 1.5);
+  // Las manchas derivan despacio (drift ya viene integrado y suavizado); con música, swell las hincha y las ilumina un poco.
   for (int i = 0; i < 5; i++) {
     if (i >= blobs) break;
     float f = float(i);
     vec2 centre = vec2(aspect * (0.5 + 0.42 * sin(drift * (0.17 + 0.05 * f) + f * 2.3)), 0.5 + 0.4 * cos(drift * (0.13 + 0.04 * f) + f * 1.7));
-    float radius = 0.4 + 0.1 * sin(time * 0.21 + f) + bass * 0.16 + beat * 0.08 + mid * 0.04;
+    float radius = 0.4 + 0.1 * sin(time * 0.21 + f) + swell * 0.2 + mid * 0.04;
     float d = length(p - centre) / radius;
     vec3 tint = i == 0 ? c0 : i == 1 ? c1 : i == 2 ? c2 : i == 3 ? c3 : mix(c0, c2, 0.5);
-    col += tint * exp(-d * d * 2.2) * intensity * min(0.9 + bass * 0.5 + beat * 0.3, 1.25);
+    col += tint * exp(-d * d * 2.2) * intensity * (0.9 + swell * 0.35);
   }
   // Más oscuro hacia abajo, donde están los controles: el texto claro sigue legible con cualquier portada.
   col *= mix(0.55, 1.0, smoothstep(0.0, 0.55, uv.y));
@@ -96,7 +95,7 @@ export function createRenderer(canvas: HTMLCanvasElement, onLost: () => void): R
   gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
 
   const at = (name: string) => gl.getUniformLocation(program, name);
-  const u = { res: at("res"), time: at("time"), bass: at("bass"), mid: at("mid"), treble: at("treble"), beat: at("beat"), intensity: at("intensity"), blobs: at("blobs"), base: at("base"), colors: [at("c0"), at("c1"), at("c2"), at("c3")] };
+  const u = { res: at("res"), time: at("time"), drift: at("drift"), swell: at("swell"), mid: at("mid"), intensity: at("intensity"), blobs: at("blobs"), base: at("base"), colors: [at("c0"), at("c1"), at("c2"), at("c3")] };
   gl.uniform3f(u.base, BASE[0], BASE[1], BASE[2]);
 
   const lost = (event: Event) => {
@@ -108,10 +107,9 @@ export function createRenderer(canvas: HTMLCanvasElement, onLost: () => void): R
   return {
     draw(frame, look) {
       gl.uniform1f(u.time, frame.time);
-      gl.uniform1f(u.bass, frame.bass);
+      gl.uniform1f(u.drift, frame.drift);
+      gl.uniform1f(u.swell, frame.swell);
       gl.uniform1f(u.mid, frame.mid);
-      gl.uniform1f(u.treble, frame.treble);
-      gl.uniform1f(u.beat, frame.beat);
       gl.uniform1f(u.intensity, look.intensity);
       gl.uniform1i(u.blobs, look.blobs);
       look.colors.forEach((color, i) => i < 4 && gl.uniform3f(u.colors[i], color[0], color[1], color[2]));
