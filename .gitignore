@@ -48,3 +48,6 @@ android/app/build/
 android/.gradle/
 ios/App/Pods/
 ios/App/build/
+
+# Música y portadas de ejemplo de la landing (scripts/descargar-musica-landing.mjs)
+tests/fixtures/landing/

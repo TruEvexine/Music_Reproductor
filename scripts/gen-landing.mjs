@@ -1,18 +1,27 @@
-// Genera las capturas reales de la app que usa la landing (src/assets/landing/*.jpg), con el audio sintético de
-// tests/fixtures/audio (nunca música con derechos). Uso: node scripts/gen-landing.mjs [url-base] [carpeta]
-// Requiere `npm run dev` y `npm run test:audio`. Repetir cuando cambie el aspecto de la app.
+// Genera las capturas reales de la app que usa la landing (src/assets/landing/*.jpg) con música real CC0 o de dominio público
+// (tests/fixtures/landing, que descarga y etiqueta scripts/descargar-musica-landing.mjs; nunca música con derechos).
+// Uso: node scripts/gen-landing.mjs [url-base] [carpeta]. Requiere `npm run dev` y haber ejecutado antes
+// `node scripts/descargar-musica-landing.mjs`. Repetir cuando cambie el aspecto de la app.
 import { chromium } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const out = process.argv[3] ?? join(import.meta.dirname, "..", "src", "assets", "landing");
-const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
-const files = ["01-amanecer.flac", "02-marea.flac", "03-hires.flac", "04-senoidal.mp3", "05-titulo-largo.mp3", "06-cuadrada.m4a", "07-opus.opus", "08-vorbis.ogg", "09-sin-portada.flac", "10-letra.mp3"].map((name) => join(fixtures, name));
+const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "landing");
+const files = readdirSync(fixtures)
+  .filter((name) => /^\d\d-.*\.(ogg|flac)$/.test(name))
+  .sort()
+  .map((name) => join(fixtures, name));
+if (files.length < 8) throw new Error(`Faltan pistas en ${fixtures}: ejecuta antes node scripts/descargar-musica-landing.mjs`);
 mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
-const shot = (page, name) => page.screenshot({ path: join(out, name), type: "jpeg", quality: 80 });
+// Los títulos largos corren en un marquee: se detiene al principio para que la captura no los corte a mitad de palabra.
+const shot = async (page, name) => {
+  await page.evaluate(() => document.getAnimations().forEach((animation) => animation.effect?.target?.closest?.(".marquee") && animation.cancel()));
+  return page.screenshot({ path: join(out, name), type: "jpeg", quality: 80 });
+};
 
 async function session(viewport, touch) {
   const context = await browser.newContext({ viewport, hasTouch: touch, deviceScaleFactor: touch ? 2 : 1 });
@@ -20,9 +29,12 @@ async function session(viewport, touch) {
   await page.route("**/demoCatalog.dev.ts*", (route) => route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }));
   await page.goto(`${base}/app`);
   await page.getByLabel("Elegir archivos de música").setInputFiles(files);
-  await page.waitForTimeout(4000);
-  await page.locator(".track-row .row-main").nth(1).click();
+  await page.waitForTimeout(5000);
+  await page.locator(".track-row .row-main", { hasText: "Nocturne No. 21" }).click(); // la portada de Delacroix da un ambiente rojo
   await page.waitForTimeout(1500);
+  await page.getByRole("link", { name: "Álbumes", exact: true }).click();
+  await page.locator(".album-tile").first().waitFor();
+  await page.waitForTimeout(800);
   return { page, context };
 }
 

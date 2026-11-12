@@ -195,3 +195,16 @@ body:has(.landing) {
 .landing main {
   padding-top: var(--s5);
 }
+
+/* Créditos de las capturas: una nota pequeña al pie, con tinta secundaria (≥ 6:1 sobre el fondo). */
+.landing-credits {
+  max-width: 96rem;
+  margin: var(--gap) auto 0;
+}
+
+.landing-credits p {
+  max-width: 44rem;
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  line-height: 1.5;
+}

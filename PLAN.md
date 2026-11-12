@@ -725,6 +725,17 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
    `@media (hover: hover)`, mutación comprobada), `scripts/prueba-movimiento.mjs` (estilos calculados en Chromium, escritorio, móvil y movimiento reducido). `prueba-menu.mjs`
    ahora espera la salida de 140 ms tras Escape.
 
+4. **Landing.** Texto reescrito en español concreto (`docs/COPY_LANDING.md`: cada frase con su prueba en el código; lo que no está verificado, como el uso sin
+   conexión, no se afirma). Se quitaron «Pensado para el pulgar», «Calidad que se nota» y «Tu música, como suena de verdad». Capturas nuevas con música real CC0 o de
+   dominio público: `scripts/descargar-musica-landing.mjs` (`npm run landing:musica`) baja 10 pistas y 5 portadas de Wikimedia Commons, **aborta si una licencia no es CC0
+   o dominio público**, las etiqueta con ffmpeg y escribe `CREDITOS.md`; `scripts/gen-landing.mjs` (`npm run landing:capturas`) hace las capturas con ellas. El audio vive
+   en `tests/fixtures/landing/` (ignorada). Sin CC-BY: no hay atribución obligatoria, pero el pie de la landing nombra a los intérpretes. Inspector de la skill taste: 0 FAIL;
+   mismos 4 WARN que antes (paleta cálida = tono oscuro de `DESIGN.md`; sin vídeo: no hay clip honesto; 14 elementos con movimiento; «sección sin título» a 768/390 px, medido
+   mientras el título aún está oculto por la entrada). Landing sin scroll horizontal, texto ≥ 13 px y áreas ≥ 44 px en los 9 tamaños.
+   Skills aplicadas: ponytail; design-taste-frontend (inspector sobre la landing); ui-ux-pro-max (leída; sin buscador: no hay Python); design-motion-principles (puerta de
+   frecuencia, salidas más cortas que entradas, reduced-motion); impeccable (leída; sin su lanzador de contexto); make-interfaces-feel-better (existe y se aplicó: 0.96 al
+   pulsar, sin `transition: all`, un solo conjunto de curvas, sin animar lo frecuente); anti-slop (revisión manual de patrones: no hay Python para sus scripts).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
