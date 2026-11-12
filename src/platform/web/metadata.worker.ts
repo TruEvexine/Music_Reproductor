@@ -27,17 +27,18 @@ async function thumbnail(bitmap: ImageBitmap, size: number, original: Blob): Pro
 }
 
 async function coverFrom(bytes: Uint8Array<ArrayBuffer>, type: string): Promise<MetadataReply["cover"]> {
-  const hash = (await sha256Hex(bytes)).slice(0, 32);
-  if (known.has(hash)) return { hash };
-  const original = new Blob([bytes], { type });
   try {
+    // Sin contexto seguro (http en la red local) no hay crypto.subtle: se pierde la portada, no las etiquetas.
+    const hash = (await sha256Hex(bytes)).slice(0, 32);
+    if (known.has(hash)) return { hash };
+    const original = new Blob([bytes], { type });
     const bitmap = await createImageBitmap(original);
     const [small, large] = await Promise.all([thumbnail(bitmap, THUMB_SIZES.small, original), thumbnail(bitmap, THUMB_SIZES.large, original)]);
     bitmap.close();
     known.add(hash);
     return { hash, small, large };
   } catch {
-    return undefined; // imagen corrupta: la pista queda con el degradado de respaldo
+    return undefined; // imagen corrupta o sin hash: la pista queda con el degradado de respaldo
   }
 }
 

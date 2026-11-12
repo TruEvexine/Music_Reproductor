@@ -1,4 +1,5 @@
 import { audioTypeOf, isAudioFile, isFolderCover, isLyricsFile } from "../../core/library";
+import { newId } from "../../core/id";
 import type { FolderAccess, LibraryFile, LibraryRoot, LocalLibrary } from "../types";
 
 // File System Access no es Baseline: se decide por detección de la función, nunca por navegador.
@@ -12,7 +13,7 @@ type DropItem = DataTransferItem & { getAsFileSystemHandle?(): Promise<FileSyste
 const picker = (globalThis as { showDirectoryPicker?: Picker }).showDirectoryPicker;
 const wanted = (name: string) => isAudioFile(name) || isLyricsFile(name) || isFolderCover(name);
 const newRoot = (name: string, kind: LibraryRoot["kind"], handle?: FileSystemDirectoryHandle): LibraryRoot => ({
-  id: crypto.randomUUID(),
+  id: newId(),
   name,
   kind,
   handle,
@@ -84,7 +85,7 @@ function copyInWorker(dir: string[], name: string, file: File): Promise<void> {
   copyWorker ??= new Worker(new URL("./opfsCopy.worker.ts", import.meta.url), { type: "module" });
   const worker = copyWorker;
   return new Promise((resolve, reject) => {
-    const id = crypto.randomUUID();
+    const id = newId();
     const done = (event: MessageEvent<{ id: string; ok: boolean }>) => {
       if (event.data.id !== id) return;
       worker.removeEventListener("message", done);

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { newId } from "../core/id";
 import type { LocalPlaylist, OutboxEntry, PlaylistOp } from "../core/outbox";
 import { storage } from "../platform";
 
@@ -74,7 +75,7 @@ export const playlists = {
     return () => listeners.delete(listener);
   },
   async create(name: string): Promise<string> {
-    const playlist: LocalPlaylist = { id: crypto.randomUUID(), name: name.trim().slice(0, 120), trackIdentifiers: [], createdAt: new Date().toISOString(), ownerId: userId };
+    const playlist: LocalPlaylist = { id: newId(), name: name.trim().slice(0, 120), trackIdentifiers: [], createdAt: new Date().toISOString(), ownerId: userId };
     await save([...usePlaylists.getState().all, playlist], [playlist]);
     if (userId) await enqueue([{ type: "upsert", playlistId: playlist.id, userId, name: playlist.name }]);
     return playlist.id;

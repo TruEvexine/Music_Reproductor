@@ -689,6 +689,18 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
   arrastrando la cabecera en móvil (con asa). Auditoría del resto: `Dialog` (hoja de acciones, letra, cuenta, biblioteca,
   confirmaciones), menú ≡ y «Añadir ▾» ya cerraban con Escape y clic fuera (y arrastre en móvil); no había un fallo común en
   `Dialog`. Prueba: `prueba-menu.mjs` (no inert, control usable, botón, clic fuera, arrastre en móvil).
+- **Por la LAN (`http://<ip>:5173`) no dejaba añadir ni leía metadatos.** Reproducido con Playwright (Pixel 7) contra la IP:
+  `isSecureContext` es falso, así que no existen `crypto.randomUUID`, `crypto.subtle`, OPFS ni `showDirectoryPicker`.
+  Causas: (1) `crypto.randomUUID()` lanzaba al crear la raíz al añadir → nada se añadía; (2) en el worker, el hash de la
+  portada (`crypto.subtle`) estaba fuera del `try` → la lectura entera fallaba y se perdían las etiquetas. Descartado: CSP (en
+  dev no hay; solo en `vercel.json`/preview), hosts de Vite (las IP se aceptan) y Supabase (no interviene al añadir).
+  Arreglo: `core/id.ts` (UUID v4 con `getRandomValues` si falta `randomUUID`; Supabase guarda el id de playlist como `uuid`),
+  hash de portada dentro del `try` (sin contexto seguro: etiquetas sí, portada no) y aviso «Sin HTTPS…» al caer a música de
+  sesión. Script `npm run dev:lan` (`vite --host`); `dev` sigue solo en localhost. Prueba: `scripts/prueba-lan.mjs <url-lan>`.
+  **Para probar en el móvil con todo (guardar la biblioteca):** Chrome/Brave Android → `adb reverse tcp:5173 tcp:5173` por USB
+  y abrir `http://localhost:5173` (localhost sí es contexto seguro), o `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+  con la URL de la LAN. iPhone: el preview HTTPS de Vercel. No se añadió HTTPS local (certificado propio = dependencia y aviso
+  de certificado en el móvil).
 
 ### 11.2 Funciones nuevas (alcance)
 

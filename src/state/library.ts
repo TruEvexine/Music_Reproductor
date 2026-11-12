@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { newId } from "../core/id";
 import { diffScan, isAudioFile, isFolderCover, isLyricsFile, stemOf } from "../core/library";
 import { parseLrc } from "../core/lyrics";
 import { folderOf, titleFromFileName, UNKNOWN_ALBUM, UNKNOWN_ARTIST } from "../core/track";
@@ -294,7 +295,7 @@ async function importFiles(files: LibraryFile[]) {
   for (const [name, group] of groups) {
     if (!group.some(({ path }) => isAudioFile(path))) continue;
     const reuse = name === LOOSE ? [...roots.values()].find((root) => root.name === LOOSE && root.kind === "copy") : undefined;
-    const root: LibraryRoot = reuse ?? { id: crypto.randomUUID(), name, kind: "copy", addedAt: Date.now() };
+    const root: LibraryRoot = reuse ?? { id: newId(), name, kind: "copy", addedAt: Date.now() };
     const copied = await localLibrary.copyIn(root, group, scanning?.signal);
     if (copied !== "ok") {
       if (reuse) continue; // la raíz de sueltos ya guardada no pasa a ser de sesión: este lote se queda fuera
@@ -302,7 +303,9 @@ async function importFiles(files: LibraryFile[]) {
       say(
         copied === "space"
           ? "No hay espacio para guardar una copia: esta música sonará hasta que recargues la página."
-          : "Este navegador no permite guardar una copia: esta música sonará hasta que recargues la página.",
+          : !isSecureContext // http con una IP de la red local: el navegador apaga el almacenamiento de archivos y otras APIs
+            ? "Sin HTTPS el navegador no deja guardar la música: abre la app por HTTPS o en localhost. Por ahora sonará hasta que recargues la página."
+            : "Este navegador no permite guardar una copia: esta música sonará hasta que recargues la página.",
       );
     }
     if (!reuse) await addRoot(root);
