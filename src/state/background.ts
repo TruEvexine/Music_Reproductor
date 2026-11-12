@@ -15,9 +15,12 @@ export const background = {
 };
 
 export async function initBackground() {
-  // AMOLED también cambia el negro de toda la app: el modo vive en <html> para que lo vea el CSS (tokens.css).
-  const reflect = (mode: string) => (document.documentElement.dataset.bg = mode);
-  useBackground.subscribe((state) => reflect(state.mode));
+  // AMOLED y HDR cambian el negro y los colores de toda la app: viven en <html> (data-bg, data-hdr) para que los vea el CSS (tokens.css).
+  const reflect = ({ mode, hdr }: BackgroundSettings) => {
+    document.documentElement.dataset.bg = mode;
+    document.documentElement.toggleAttribute("data-hdr", hdr);
+  };
+  useBackground.subscribe(reflect);
   useBackground.setState(sanitizeBackground(await storage.get<BackgroundSettings>("background")));
-  reflect(useBackground.getState().mode);
+  reflect(useBackground.getState());
 }

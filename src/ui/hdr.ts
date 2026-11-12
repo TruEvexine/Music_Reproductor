@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import type { HdrLook } from "../core/background";
 
-// Lo que el modo HDR pide a esta pantalla. La política vive en tokens.css (variables `--hdr-*` bajo `@media (color-gamut: p3)` y
+// Lo que el HDR simulado pide a esta pantalla. La política vive en tokens.css (variables `--hdr-*` bajo `@media (color-gamut: p3)` y
 // `(dynamic-range: high)`): aquí solo se leen, así CSS y WebGL no pueden discrepar.
 const queries = ["(color-gamut: p3)", "(dynamic-range: high)"];
 const sdr: HdrLook = { gamut: "srgb", chroma: 1.2, contrast: 0.35, glint: 0.6 }; // respaldo si el navegador no devuelve las variables
@@ -22,9 +22,9 @@ export function readHdrLook(): HdrLook {
 
 const key = (look: HdrLook) => `${look.gamut}/${look.chroma}/${look.contrast}/${look.glint}`;
 let cached = { key: "", look: sdr };
-// getSnapshot corre en cada render: solo se vuelve a leer el CSS si cambió el modo (<html data-bg>) o saltó una media query.
+// getSnapshot corre en cada render: solo se vuelve a leer el CSS si cambió el interruptor HDR (<html data-hdr>) o saltó una media query.
 let dirty = true;
-let seenMode: string | undefined;
+let seenHdr: boolean | undefined;
 
 /** Se actualiza si la pantalla cambia de gama o rango (por ejemplo, al arrastrar la ventana a otro monitor). */
 export function useHdrLook(): HdrLook {
@@ -39,10 +39,10 @@ export function useHdrLook(): HdrLook {
       return () => lists.forEach((list) => list.removeEventListener("change", onChange));
     },
     () => {
-      const mode = document.documentElement.dataset.bg;
-      if (dirty || mode !== seenMode) {
+      const hdr = document.documentElement.hasAttribute("data-hdr");
+      if (dirty || hdr !== seenHdr) {
         dirty = false;
-        seenMode = mode;
+        seenHdr = hdr;
         const look = readHdrLook();
         if (key(look) !== cached.key) cached = { key: key(look), look };
       }

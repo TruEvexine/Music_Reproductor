@@ -22,16 +22,18 @@ describe("ajustes del fondo", () => {
   });
 
   it("conserva ajustes válidos", () => {
-    const ok = { mode: "rhythm", intensity: 0.3, speed: 1.5, palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
+    const ok = { mode: "rhythm", hdr: true, intensity: 0.3, speed: 1.5, palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
     expect(sanitizeBackground(ok)).toEqual(ok);
   });
 
-  it("solo cover, rhythm y hdr se mueven", () => {
-    expect(["cover", "rhythm", "static", "amoled", "hdr"].map((mode) => isAnimated(mode as never))).toEqual([true, true, false, false, true]);
+  it("solo cover y rhythm se mueven", () => {
+    expect(["cover", "rhythm", "static", "amoled"].map((mode) => isAnimated(mode as never))).toEqual([true, true, false, false]);
   });
 
-  it("acepta el modo hdr guardado", () => {
-    expect(sanitizeBackground({ mode: "hdr" }).mode).toBe("hdr");
+  it("el modo hdr guardado por versiones anteriores pasa a Portada con el interruptor HDR encendido", () => {
+    expect(sanitizeBackground({ mode: "hdr" } as never)).toMatchObject({ mode: "cover", hdr: true });
+    expect(sanitizeBackground({ mode: "static" })).toMatchObject({ mode: "static", hdr: false });
+    expect(sanitizeBackground({ hdr: "sí" } as never).hdr).toBe(false);
   });
 });
 
@@ -47,7 +49,7 @@ describe("origen de la paleta", () => {
 describe("modo HDR simulado", () => {
   const palette = paletteFromPixels(Uint8ClampedArray.from({ length: 4 * 64 }, (_, i) => [200, 40, 60, 255][i % 4]));
   const chroma = (colors: number[][], gamut: "srgb" | "p3") => colors.reduce((sum, [r, g, b]) => sum + rgbToOklch(r * 255, g * 255, b * 255, gamut).c, 0);
-  const hdr = { ...defaultBackground, mode: "hdr" as const };
+  const hdr = { ...defaultBackground, hdr: true };
 
   it("en sRGB sube la saturación respecto al modo Portada sin salirse de la gama", () => {
     const plain = backgroundColors({ ...defaultBackground, mode: "cover" }, palette);
@@ -63,7 +65,7 @@ describe("modo HDR simulado", () => {
     expect(chroma(p3, "p3")).toBeGreaterThan(chroma(srgb, "srgb"));
   });
 
-  it("fuera del modo hdr los colores no cambian aunque se pase la mirada HDR", () => {
+  it("con el HDR apagado los colores no cambian aunque se pase la mirada HDR", () => {
     expect(backgroundColors({ ...defaultBackground, mode: "cover" }, palette, { gamut: "p3", chroma: 2, contrast: 1, glint: 1 })).toBe(palette.colors);
   });
 

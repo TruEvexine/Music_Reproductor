@@ -13,6 +13,8 @@
   --accent: oklch(0.84 0.09 85);
   --on-accent: oklch(0.2 0.03 85);
   --glow: oklch(0.3 0.03 85);
+  --accent-in: oklch(0.84 0.09 85); /* valores de partida de la portada: .shell los sustituye con los de la pista (App.tsx) */
+  --glow-in: oklch(0.3 0.03 85);
 
   /* Tipografía: una familia variable; los títulos usan el eje de anchura condensado. */
   --font: "Instrument Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -59,38 +61,55 @@
 }
 
 /*
- * HDR simulado (lo pone state/background.ts en <html data-bg="hdr">). En la web no hay HDR garantizado: esto es negro profundo con luces
- * de croma alto y reflejos con techo, y degrada solo por capacidad de la pantalla:
- *   sRGB          → curva de contraste y saturación (ganancia de croma 1,2 y curva en S al 35 %);
- *   color-gamut p3 → luces en Display P3 (croma ×1,5, curva más suave);
- *   + dynamic-range high → techo de reflejos al máximo y de acentos un poco más alto.
- * Las --hdr-* las leen también el fondo WebGL y la paleta (ui/hdr.ts): una sola política para CSS y lienzo.
+ * HDR simulado (lo pone state/background.ts en <html data-hdr>; es un interruptor global, no un modo del fondo). En la web no hay HDR
+ * garantizado: esto es negro profundo con colores más vivos en toda la app (acentos, portadas, brillos y fondo) y reflejos con techo.
+ * Degrada solo por capacidad de la pantalla:
+ *   sRGB           → croma ×1,2 y curva de contraste al 35 %; portadas con saturación 1,08;
+ *   color-gamut p3 → croma ×1,5, curva más suave, luces en Display P3 y portadas con saturación 1,16;
+ *   + dynamic-range high → techo de reflejos al máximo y de acentos un poco más alto;
+ *   prefers-contrast: more → sin realce (SDR plano).
+ * Tope de saturación: el croma de un acento nunca pasa de --hdr-cmax, y su luminosidad de --hdr-peak, así el texto de --on-accent y
+ * el acento sobre negro conservan ≥ 4,5:1 (lo comprueba src/core/hdr.test.ts). Las --hdr-* las leen también el fondo WebGL y la paleta
+ * (ui/hdr.ts): una sola política para CSS y lienzo. Sin movimiento propio: con movimiento reducido el fondo ya se pinta sin animar.
  */
-:root[data-bg="hdr"] {
+:root[data-hdr] {
   --bg: oklch(0 0 0);
   --surface-1: oklch(0.17 0.004 70);
   --surface-2: oklch(0.22 0.005 70);
   --surface-3: oklch(0.285 0.007 70);
   --danger: oklch(0.78 0.16 25);
   --hdr-chroma: 1.2;
+  --hdr-cmax: 0.15;
   --hdr-contrast: 0.35;
   --hdr-glint: 0.6;
   --hdr-peak: 0.86;
+  --hdr-cover: saturate(1.08) contrast(1.04);
 }
 
 @media (color-gamut: p3) {
-  :root[data-bg="hdr"] {
+  :root[data-hdr] {
     --danger: color(display-p3 1 0.47 0.4);
     --hdr-chroma: 1.5;
+    --hdr-cmax: 0.18;
     --hdr-contrast: 0.25;
     --hdr-glint: 0.8;
+    --hdr-cover: saturate(1.16) contrast(1.06);
   }
 }
 
 @media (color-gamut: p3) and (dynamic-range: high) {
-  :root[data-bg="hdr"] {
+  :root[data-hdr] {
     --hdr-glint: 1;
     --hdr-peak: 0.9;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root[data-hdr] {
+    --hdr-chroma: 1;
+    --hdr-contrast: 0;
+    --hdr-glint: 0;
+    --hdr-cover: none;
   }
 }
 
@@ -100,11 +119,18 @@
   --glow: var(--glow-in);
 }
 
+/* HDR: los mismos acentos y brillos con más croma (con tope) en toda la app, también fuera de .shell (landing). */
 @supports (color: oklch(from red l c h)) {
-  :root[data-bg="hdr"] .shell {
-    --accent: oklch(from var(--accent-in) min(l, var(--hdr-peak)) calc(c * var(--hdr-chroma)) h);
-    --glow: oklch(from var(--glow-in) l calc(c * var(--hdr-chroma)) h);
+  :root[data-hdr],
+  :root[data-hdr] .shell {
+    --accent: oklch(from var(--accent-in) min(l, var(--hdr-peak)) min(calc(c * var(--hdr-chroma)), var(--hdr-cmax)) h);
+    --glow: oklch(from var(--glow-in) l min(calc(c * var(--hdr-chroma)), var(--hdr-cmax)) h);
   }
+}
+
+/* Las portadas, con su respaldo en degradado, pasan por el mismo realce (sin animación: es un filtro estático). */
+:root[data-hdr] .cover {
+  filter: var(--hdr-cover);
 }
 
 @media (prefers-contrast: more) {

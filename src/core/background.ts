@@ -8,14 +8,19 @@ import type { FpsSetting } from "./quality";
  * - rhythm: lo mismo, reactivo al audio (graves, golpes, agudos).
  * - static: gradiente fijo de dos colores.
  * - amoled: negro puro.
- * - hdr: "HDR simulado": negro puro con luces de croma alto, en Display P3 si la pantalla lo tiene, y reflejos con techo de brillo.
- *   La web no garantiza HDR real (ver docs/DISENO_HDR.md): esto es una imitación que degrada a una curva de contraste y saturación en SDR.
+ *
+ * El «HDR simulado» ya no es un modo: es el interruptor `hdr` de abajo y afecta a toda la app (docs/DISENO_HDR.md).
  */
-export type BackgroundMode = "cover" | "rhythm" | "static" | "amoled" | "hdr";
+export type BackgroundMode = "cover" | "rhythm" | "static" | "amoled";
 export type PaletteSource = "cover" | "accent" | "custom";
 
 export interface BackgroundSettings {
   mode: BackgroundMode;
+  /**
+   * HDR simulado en toda la app: negro puro, más croma en acentos, portadas y luces (en Display P3 si la pantalla lo tiene) y reflejos con
+   * techo de brillo. No es HDR real: la web no lo garantiza. Un solo interruptor; degrada a SDR según la pantalla.
+   */
+  hdr: boolean;
   /** 0–1: fuerza del color. */
   intensity: number;
   /** Velocidad de la deriva (0,25–2×). */
@@ -30,6 +35,7 @@ export interface BackgroundSettings {
 
 export const defaultBackground: BackgroundSettings = {
   mode: "cover",
+  hdr: false,
   intensity: 0.6,
   speed: 1,
   palette: "cover",
@@ -41,14 +47,16 @@ export const defaultBackground: BackgroundSettings = {
 export const SPEED_LIMITS = { min: 0.25, max: 2 } as const;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
-const modes: readonly BackgroundMode[] = ["cover", "rhythm", "static", "amoled", "hdr"];
+const modes: readonly BackgroundMode[] = ["cover", "rhythm", "static", "amoled"];
 const sources: readonly PaletteSource[] = ["cover", "accent", "custom"];
 
 /** Acepta ajustes guardados por cualquier versión (o corruptos) y devuelve unos válidos. */
 export function sanitizeBackground(saved: Partial<BackgroundSettings> | undefined): BackgroundSettings {
   const s = { ...defaultBackground, ...saved };
+  const legacyHdr = (s.mode as string) === "hdr"; // antes el HDR era un modo del fondo; ahora es el interruptor global y el fondo vuelve a Portada
   return {
     mode: modes.includes(s.mode) ? s.mode : defaultBackground.mode,
+    hdr: typeof saved?.hdr === "boolean" ? saved.hdr : legacyHdr,
     intensity: clamp(s.intensity, 0, 1),
     speed: clamp(s.speed, SPEED_LIMITS.min, SPEED_LIMITS.max),
     palette: sources.includes(s.palette) ? s.palette : defaultBackground.palette,
@@ -59,7 +67,7 @@ export function sanitizeBackground(saved: Partial<BackgroundSettings> | undefine
 }
 
 /** Modos con movimiento: solo en ellos tienen sentido la velocidad, el tope de cuadros y el ahorro de batería. */
-export const isAnimated = (mode: BackgroundMode) => mode === "cover" || mode === "rhythm" || mode === "hdr";
+export const isAnimated = (mode: BackgroundMode) => mode === "cover" || mode === "rhythm";
 
 /** Lo que el modo HDR pide a la pantalla. Sale de las variables `--hdr-*` de tokens.css, que cambian con `color-gamut` y `dynamic-range`. */
 export interface HdrLook {
@@ -74,7 +82,7 @@ export interface HdrLook {
 
 /** Colores del fondo según el origen elegido: la portada, el tono del acento o un tono propio. */
 export function backgroundColors(settings: BackgroundSettings, palette: Palette, hdr?: HdrLook): Rgb[] {
-  if (settings.mode === "hdr" && hdr) {
+  if (settings.hdr && hdr) {
     const swatches = settings.palette === "custom" ? hueSwatches(settings.hue) : settings.palette === "accent" ? hueSwatches(palette.hue) : palette.swatches;
     return swatchColors(swatches, hdr.gamut, hdr.chroma);
   }

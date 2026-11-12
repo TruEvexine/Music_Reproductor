@@ -13,7 +13,7 @@ import { useHdrLook } from "./hdr";
 import { useReducedMotion } from "./motion";
 import { PaletteContext } from "./usePalette";
 
-// Fondo del reproductor. Portada / Ritmo / HDR: lienzo WebGL animado. Estático: degradado CSS fijo. AMOLED: nada (negro).
+// Fondo del reproductor. Portada / Ritmo: lienzo WebGL animado (con el interruptor HDR, con curva de contraste y reflejos). Estático: degradado CSS fijo. AMOLED: nada (negro).
 // Respaldo CSS (mismo aspecto, sin movimiento) si no hay WebGL, se pierde el contexto o el sistema pide menos movimiento.
 // El lienzo solo existe mientras este componente está montado: con el reproductor colapsado no hay bucle ni contexto.
 
@@ -100,7 +100,7 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
       sizedFor = level;
       dirty = false;
     }
-    const hdrOn = settings.mode === "hdr";
+    const hdrOn = settings.hdr;
     renderer!.draw(
       { time, drift: frame.drift, swell: frame.swell, mid: frame.mid },
       {
@@ -192,7 +192,7 @@ export function Backdrop() {
   if (animated) return <div aria-hidden="true" className="backdrop" ref={host} />;
   if (settings.mode === "amoled") return null;
   const kind = settings.mode === "static" ? "linear" : "blobs";
-  return <div aria-hidden="true" className="backdrop" style={{ background: gradientCss(colors, settings.intensity, kind, settings.mode === "hdr" ? hdr.gamut : "srgb") }} />;
+  return <div aria-hidden="true" className="backdrop" style={{ background: gradientCss(colors, settings.intensity, kind, settings.hdr ? hdr.gamut : "srgb") }} />;
 }
 
 /** Tinte sutil de toda la app con el reproductor colapsado (solo en los modos con color): CSS, sin lienzo ni bucle. */
@@ -201,5 +201,5 @@ export function Tint() {
   const palette = useContext(PaletteContext);
   const hdr = useHdrLook();
   if (!isAnimated(settings.mode)) return null;
-  return <div aria-hidden="true" className="tint" style={{ background: gradientCss(backgroundColors(settings, palette, hdr), settings.intensity * 0.3, "blobs", settings.mode === "hdr" ? hdr.gamut : "srgb") }} />;
+  return <div aria-hidden="true" className="tint" style={{ background: gradientCss(backgroundColors(settings, palette, hdr), settings.intensity * 0.3, "blobs", settings.hdr ? hdr.gamut : "srgb") }} />;
 }

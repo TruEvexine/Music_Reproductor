@@ -1,6 +1,16 @@
-# Modo «HDR simulado»
+# «HDR simulado» (interruptor global)
 
-Un modo de fondo junto a AMOLED (`Menú ≡ → Fondo → HDR simulado`, `data-bg="hdr"` en `<html>`).
+Un solo interruptor para toda la app (`Menú ≡ → Fondo → HDR simulado en toda la app`, o Ajustes → Apariencia; `data-hdr` en `<html>`, campo `hdr` de los ajustes del fondo). Ya no es un modo del fondo: convive con Portada, Ritmo, Estático y AMOLED. Los ajustes guardados con el antiguo modo `hdr` se migran solos a Portada + interruptor encendido.
+
+## Qué cambia con el interruptor
+
+| Parte de la app | Efecto | Tope |
+|---|---|---|
+| Fondo y negro | `--bg` a negro puro; manchas del reproductor y tinte de la app con más croma (y curva de contraste y reflejos en el lienzo) | Reflejos ≤ 0,25 × techo; tinta ≥ 4,5:1 |
+| Acentos (botón primario, progreso, pista actual) | `--accent` con ganancia de croma | Croma ≤ `--hdr-cmax` (0,15 sRGB / 0,18 P3), luminosidad ≤ `--hdr-peak` |
+| Brillos y difuminados (`--glow`) | Misma ganancia con tope | Igual |
+| Portadas y su respaldo en degradado | `filter: saturate() contrast()` estático sobre `.cover` | sRGB 1,08 / 1,04 · P3 1,16 / 1,06 |
+| Error (`--danger`) | Más vivo; en P3, `color(display-p3 …)` | — |
 
 ## Qué es y qué no es
 
@@ -10,6 +20,8 @@ tres cosas que sí se controlan: negro puro (en OLED, píxel apagado), luces de 
 tiene, y reflejos pequeños con un techo de brillo. La etiqueta del menú dice «simulado» y el texto de ayuda lo repite.
 
 ## Cómo degrada (una sola política, en `tokens.css`)
+
+Siempre a SDR sin romper nada: sin sintaxis de color relativo el acento queda como el de la portada; con `prefers-contrast: more` el realce se apaga (croma ×1, sin curva, sin reflejos, sin filtro en portadas); con `prefers-reduced-motion` o sin WebGL el fondo es un gradiente CSS quieto (el interruptor no añade ningún movimiento propio).
 
 | Pantalla | Se detecta con | Croma de las luces | Curva de contraste | Reflejos (techo) | Techo de luminosidad del acento |
 |---|---|---|---|---|---|
@@ -35,7 +47,9 @@ tiene, y reflejos pequeños con un techo de brillo. La etiqueta del menú dice �
 
 Probado (Chromium, `node scripts/prueba-hdr.mjs`; los tests de `core/` cubren la matemática):
 
-- El modo se aplica, persiste y deja `--bg` en negro puro.
+- El interruptor se aplica, persiste, deja `--bg` en negro puro y, al apagarlo, vuelve todo a SDR (sin filtro de portadas ni `--hdr-*`).
+- Las portadas reciben el filtro de la fila (1,08 en sRGB, 1,16 en P3) y `prefers-contrast: more` lo quita.
+- Contraste real en el navegador: acento sobre negro y `--on-accent` sobre acento ≥ 4,5:1 en sRGB y P3 (medidos 10–12:1). El peor caso de todos los tonos (0–355°, croma 0,07–0,14, con ganancia y tope) está en `src/core/hdr.test.ts`.
 - Las reglas de las tres filas de la tabla: `color-gamut` por emulación CDP y `dynamic-range: high` con `--force-color-profile=hdr10`
   (CDP no emula `dynamic-range`).
 - El acento resuelto sube el croma ×1,2 / ×1,5 sin cambiar de tono y sin superar el techo de luminosidad.

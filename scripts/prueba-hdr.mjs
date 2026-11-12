@@ -1,5 +1,7 @@
-// Prueba del modo «HDR simulado» en Chromium contra `npm run dev`. Uso: node scripts/prueba-hdr.mjs [url-base] [carpeta-capturas]
-// Comprueba: el modo existe y persiste; negro puro; la política --hdr-* cambia con `color-gamut: p3` y `dynamic-range: high` (emulados por CDP);
+// Prueba del «HDR simulado» (interruptor global) en Chromium contra `npm run dev`. Uso: node scripts/prueba-hdr.mjs [url-base] [carpeta-capturas]
+// Comprueba: el interruptor existe, persiste y al apagarlo todo vuelve a SDR; negro puro; las portadas y los acentos de toda la app se realzan
+// con tope; «más contraste» del sistema lo desactiva; acento y texto sobre acento conservan ≥ 4.5:1;
+// la política --hdr-* cambia con `color-gamut: p3` y `dynamic-range: high` (emulados por CDP);
 // el acento sube de croma sin pasar el techo de luminosidad; el lienzo pasa a Display P3 solo con pantalla P3; el respaldo CSS usa
 // color(display-p3 …) solo con P3; el brillo máximo del fondo deja el texto legible (≥ 4.5:1); movimiento reducido y sin WebGL degradan sin errores.
 // LO QUE ESTA PRUEBA NO PUEDE VER: cómo luce en una pantalla P3/HDR real. Emular el media query cambia las reglas, no la pantalla.
@@ -45,7 +47,7 @@ const chooseHdr = async (page) => {
   await wait(page, 300);
   await menu(page).getByRole("button", { name: /^Fondo/ }).click();
   await wait(page, 300);
-  await menu(page).getByRole("radio", { name: "HDR simulado" }).click();
+  await menu(page).getByRole("switch", { name: "HDR simulado en toda la app" }).click();
   await wait(page, 500);
   await page.keyboard.press("Escape");
   await wait(page, 300);
@@ -69,12 +71,32 @@ const vars = (page) =>
       accent: resolve("--accent"),
       accentIn: resolve("--accent-in"),
       danger: resolve("--danger"),
+      onAccent: resolve("--on-accent"),
       p3: matchMedia("(color-gamut: p3)").matches,
       hdr: matchMedia("(dynamic-range: high)").matches,
     };
     probe.remove();
     return out;
   });
+// Contraste WCAG entre dos colores CSS (el lienzo 2D los pasa a sRGB, recortando lo que sRGB no alcanza).
+const contrastOf = (page, fg, bg) =>
+  page.evaluate(
+    ([a, b]) => {
+      const context = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+      const luminance = (css) => {
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = css;
+        context.fillRect(0, 0, 1, 1);
+        const [r, g, bl] = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+        return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+      };
+      const [x, y] = [luminance(a), luminance(b)];
+      return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    },
+    [fg, bg],
+  );
+// Filtro que el realce aplica a las portadas, leído en la primera `.cover` de la página.
+const coverFilter = (page) => page.evaluate(() => getComputedStyle(document.querySelector(".cover")).filter);
 const oklch = (css) => {
   const m = css.match(/oklch\(([\d.]+) ([\d.]+) ([\d.]+)/);
   return m ? { l: +m[1], c: +m[2], h: +m[3] } : null;
@@ -118,7 +140,11 @@ let sdrPeak;
   const cover = await backdropLuminance(page);
   await chooseHdr(page);
   const v = await vars(page);
-  check("el modo HDR existe, se aplica a <html> y deja el negro puro", (await page.evaluate(() => document.documentElement.dataset.bg)) === "hdr" && /oklch\(0 0 0\)/.test(v.bg), v.bg);
+  check("el interruptor HDR se aplica a <html> y deja el negro puro", (await page.evaluate(() => document.documentElement.hasAttribute("data-hdr"))) && /oklch\(0 0 0\)/.test(v.bg), v.bg);
+  const sdrFilter = await coverFilter(page);
+  check("SDR: las portadas se realzan (saturación 1,08, contraste 1,04)", /saturate\(1\.08\)/.test(sdrFilter) && /contrast\(1\.04\)/.test(sdrFilter), sdrFilter);
+  const sdrRatios = [await contrastOf(page, v.accent, v.bg), await contrastOf(page, v.onAccent, v.accent)];
+  check("SDR: el acento sobre negro y el texto sobre acento conservan ≥ 4.5:1", sdrRatios.every((r) => r >= 4.5), sdrRatios.map((r) => `${r.toFixed(1)}:1`).join(" · "));
   check("SDR: curva de saturación y contraste (croma ×1,2, curva al 35 %), reflejos al 0,6", v.chroma === 1.2 && v.contrast === 0.35 && v.glint === 0.6 && !v.p3 && !v.hdr, JSON.stringify({ ...v, accent: "", accentIn: "", danger: "" }));
   const accent = oklch(v.accent);
   const input = oklch(v.accentIn);
@@ -132,8 +158,20 @@ let sdrPeak;
   await page.screenshot({ path: join(shots, "hdr-sdr-1440x900.png") });
   await page.reload();
   await wait(page, 800);
-  check("el modo persiste tras recargar", (await page.evaluate(() => document.documentElement.dataset.bg)) === "hdr");
+  check("el interruptor persiste tras recargar", await page.evaluate(() => document.documentElement.hasAttribute("data-hdr")));
   check("sin errores de página (SDR)", errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+
+// ───────────── Apagar el interruptor devuelve todo a SDR ─────────────
+{
+  const { page, context } = await open(browser, { media: [["color-gamut", "srgb"]] });
+  await chooseHdr(page);
+  const on = await coverFilter(page);
+  await chooseHdr(page); // segundo clic: apaga el interruptor
+  const off = await vars(page);
+  const offFilter = await coverFilter(page);
+  check("con el interruptor apagado todo vuelve a SDR (sin filtro de portadas, sin --hdr-*, fondo de la app)", on !== "none" && !(await page.evaluate(() => document.documentElement.hasAttribute("data-hdr"))) && offFilter === "none" && Number.isNaN(off.chroma) && !/oklch(0 0 0)/.test(off.bg), `${on} → ${offFilter} · ${off.bg}`);
   await context.close();
 }
 
@@ -146,7 +184,11 @@ let sdrPeak;
   check("P3: el rojo de error usa color(display-p3 …)", /display-p3/.test(v.danger), v.danger);
   const accent = oklch(v.accent);
   const input = oklch(v.accentIn);
-  check("P3: el acento sube de croma ×1,5", accent && input && Math.abs(accent.c / input.c - 1.5) < 0.05, `${v.accentIn} → ${v.accent}`);
+  check("P3: el acento sube de croma ×1,5 (con tope 0,18)", accent && input && (Math.abs(accent.c / input.c - 1.5) < 0.05 || accent.c <= 0.181), `${v.accentIn} → ${v.accent}`);
+  const p3Filter = await coverFilter(page);
+  check("P3: las portadas se realzan con saturación 1,16", /saturate\(1\.16\)/.test(p3Filter), p3Filter);
+  const p3Ratios = [await contrastOf(page, v.accent, v.bg), await contrastOf(page, v.onAccent, v.accent)];
+  check("P3: el acento sobre negro y el texto sobre acento conservan ≥ 4.5:1", p3Ratios.every((r) => r >= 4.5), p3Ratios.map((r) => `${r.toFixed(1)}:1`).join(" · "));
   const canvasSpace = await page.evaluate(() => document.querySelector("canvas.backdrop-canvas")?.getContext("webgl")?.drawingBufferColorSpace ?? "sin soporte");
   check("P3: el lienzo WebGL pasa a Display P3 (si el navegador lo soporta)", canvasSpace === "display-p3" || canvasSpace === "sin soporte", canvasSpace);
   await wait(page, 600);
@@ -189,6 +231,17 @@ for (const [label, options] of [
   const p3 = label.includes("P3");
   check(`${label}: sin lienzo y con gradiente CSS ${p3 ? "en display-p3" : "en rgb()"} sobre negro`, state.canvases === 0 && state.paint.includes(p3 ? "display-p3" : "rgb(") && (p3 || !state.paint.includes("display-p3")) && state.paint.endsWith("var(--bg)"), state.paint.slice(0, 70));
   check(`${label}: sin errores de página`, errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+
+// ───────────── «Más contraste» del sistema: sin realce ─────────────
+{
+  const { page, errors, context } = await open(browser, { media: [["color-gamut", "p3"], ["prefers-contrast", "more"]] });
+  await chooseHdr(page);
+  const v = await vars(page);
+  const filter = await coverFilter(page);
+  check("prefers-contrast: more: croma ×1, sin curva ni reflejos y portadas sin filtro", v.chroma === 1 && v.contrast === 0 && v.glint === 0 && filter === "none", JSON.stringify({ chroma: v.chroma, contrast: v.contrast, glint: v.glint, filter }));
+  check("prefers-contrast: more: sin errores de página", errors.length === 0, errors.join(" | "));
   await context.close();
 }
 

@@ -162,6 +162,7 @@ function RootPage({ go }: { go: (page: PageId) => void }) {
   const audio = usePlayer((state) => state.audio);
   const sleep = usePlayer((state) => state.sleep);
   const backgroundMode = useBackground((state) => state.mode);
+  const hdr = useBackground((state) => state.hdr);
   return (
     <>
       <section aria-labelledby="menu-play" className="menu-group">
@@ -189,7 +190,7 @@ function RootPage({ go }: { go: (page: PageId) => void }) {
         <NavRow go={go} id="timer" label="Temporizador" value={sleepSummary(sleep)}>
           <Moon {...icon} />
         </NavRow>
-        <NavRow go={go} id="background" label="Fondo" value={modes.find((mode) => mode.value === backgroundMode)?.label ?? ""}>
+        <NavRow go={go} id="background" label="Fondo" value={`${modes.find((mode) => mode.value === backgroundMode)?.label ?? ""}${hdr ? " · HDR" : ""}`}>
           <Palette {...icon} />
         </NavRow>
       </section>
@@ -337,7 +338,6 @@ const modes: { value: BackgroundMode; label: string; hint: string }[] = [
   { value: "rhythm", label: "Ritmo", hint: "Los graves hinchan las manchas, los golpes las hacen latir y la energía de la música acelera el giro, sin parpadeos bruscos." },
   { value: "static", label: "Estático", hint: "Degradado fijo de dos colores de la portada." },
   { value: "amoled", label: "AMOLED", hint: "Negro puro en toda la app: ahorra batería en pantallas OLED." },
-  { value: "hdr", label: "HDR simulado", hint: "Negro puro con luces más vivas y reflejos con techo de brillo. No es HDR real: la web no lo garantiza. En pantallas Display P3 los colores son más intensos." },
 ];
 
 const sources: { value: PaletteSource; label: string }[] = [
@@ -365,6 +365,10 @@ function BackgroundPage() {
       <div aria-hidden="true" className="backdrop-preview">
         <Backdrop />
       </div>
+      <section className="menu-group">
+        <SwitchRow checked={settings.hdr} label="HDR simulado en toda la app" onChange={(hdr) => background.set({ hdr })} />
+        <p className="hint">Negro más hondo y colores más vivos en acentos, portadas y luces, con un tope para que el texto siga legible. No es HDR real: la web no lo garantiza. En pantallas Display P3 el realce es mayor; con «más contraste» activado en el sistema se desactiva.</p>
+      </section>
       <section aria-labelledby="menu-mode" className="menu-group">
         <h3 id="menu-mode">Modo</h3>
         <div aria-labelledby="menu-mode" className="chips cols-2" role="radiogroup">
