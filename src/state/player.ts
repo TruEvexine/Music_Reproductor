@@ -8,13 +8,14 @@ import {
   enqueue,
   moveInQueue,
   nextInQueue,
+  playEntry,
   playNext,
-  playNow,
   previousInQueue,
   removeFromQueue,
   replaceQueue,
   restoreQueue,
   toggleShuffle,
+  upgradeQueue,
 } from "../core/queue";
 import type { QueueState } from "../core/queue";
 import { PlayerEngine } from "../engine/PlayerEngine";
@@ -48,7 +49,7 @@ const MAX_FAILURES = 3;
 const PRELOAD_SECONDS = 15;
 let failuresInRow = 0;
 let fading = false; // crossfade o fundido de apagado en curso para la pista actual
-let loadedId: string | null = null; // pista cargada en el motor (una sesión restaurada aún no lee su archivo)
+let loadedId: string | null = null; // clave de la entrada cargada en el motor (una sesión restaurada aún no lee su archivo)
 let loadToken = 0; // la lectura del archivo es asíncrona: solo cuenta la última petición
 
 const engine = new PlayerEngine({
@@ -72,9 +73,9 @@ const engine = new PlayerEngine({
 });
 
 const q = () => usePlayer.getState().queue;
-const trackOf = (id: string | null) => useLibrary.getState().tracks.find((track) => track.id === id);
+const trackOf = (id: string | null | undefined) => useLibrary.getState().tracks.find((track) => track.id === id);
 const pauseFade = () => (usePlayer.getState().audio.fadePause ? FADE_PAUSE_SECONDS : 0);
-const gainOf = (id: string | null) => replayGainFor(trackOf(id), usePlayer.getState().audio.replayGain);
+const gainOf = (id: string | null | undefined) => replayGainFor(trackOf(id), usePlayer.getState().audio.replayGain);
 
 /** Cerca del final: precarga la siguiente, arranca el crossfade o el fundido del temporizador. */
 function nearEnd(position: number) {
@@ -93,20 +94,21 @@ function nearEnd(position: number) {
   const remaining = duration - position;
   if (remaining > PRELOAD_SECONDS) return;
   const next = nextInQueue(queue, true);
-  if (!next.current || next.current === queue.current) return;
-  const url = trackUrl(next.current);
+  if (!next.current || next.current.key === queue.current?.key) return;
+  const nextId = next.current.id;
+  const url = trackUrl(nextId);
   if (!url) {
-    void ensureTrackUrl(next.current); // el próximo tic (≈250 ms) ya la encuentra
+    void ensureTrackUrl(nextId); // el próximo tic (≈250 ms) ya la encuentra
     return;
   }
   const endOfTrackSleep = sleep !== null && "endOfTrack" in sleep;
   if (audio.crossfade > 0 && !endOfTrackSleep && remaining <= audio.crossfade && duration > audio.crossfade * 2) {
-    if (engine.crossfadeTo(url, Math.max(remaining / audio.speed, 0.5), gainOf(next.current))) {
+    if (engine.crossfadeTo(url, Math.max(remaining / audio.speed, 0.5), gainOf(nextId))) {
       fading = true;
       setTimeout(() => (fading = false), 1000);
-      loadedId = next.current;
-      library.markPlayed(next.current);
-      usePlayer.setState({ queue: next, position: 0, duration: trackOf(next.current)?.duration ?? 0 });
+      loadedId = next.current.key;
+      library.markPlayed(nextId);
+      usePlayer.setState({ queue: next, position: 0, duration: trackOf(nextId)?.duration ?? 0 });
       return;
     }
   }
@@ -115,8 +117,8 @@ function nearEnd(position: number) {
 
 /** Aplica una cola nueva; si la pista actual cambió (o `restart`), la carga en el motor. */
 function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolean; startAt?: number }) {
-  const previous = usePlayer.getState().queue.current;
-  if (queue.current === previous && !options.restart) {
+  const previous = usePlayer.getState().queue.current?.key;
+  if (queue.current?.key === previous && !options.restart) {
     usePlayer.setState({ queue });
     return;
   }
@@ -126,7 +128,7 @@ function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolea
     usePlayer.setState({ queue, isPlaying: false, position: 0, duration: 0 });
     return;
   }
-  const id = queue.current;
+  const { id, key } = queue.current;
   const track = trackOf(id);
   // Cola y posición en el mismo cambio: si no, la sesión se guardaría con la posición de la pista anterior.
   usePlayer.setState({ queue, position: options.startAt ?? 0, duration: track?.duration ?? 0 });
@@ -141,7 +143,7 @@ function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolea
   }
   const token = ++loadToken;
   void ensureTrackUrl(id).then((url) => {
-    if (token !== loadToken || q().current !== id) return;
+    if (token !== loadToken || q().current?.key !== key) return;
     if (!url) {
       const folder = library.accessFor(id);
       if (folder && folder.access !== "granted" && folder.access !== "missing") {
@@ -151,7 +153,7 @@ function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolea
       } else fail(`«${track?.title ?? "La pista"}» ya no está en tu dispositivo.`);
       return;
     }
-    loadedId = id;
+    loadedId = key;
     engine.load(url, options.startAt, gainOf(id));
     if (options.autoplay) {
       library.markPlayed(id);
@@ -176,11 +178,11 @@ function advance(auto: boolean) {
 function fail(reason?: string) {
   const queue = q();
   if (queue.current === null) return;
-  library.markUnplayable(queue.current);
+  library.markUnplayable(queue.current.id);
   failuresInRow += 1;
-  const message = reason ?? `No se pudo reproducir «${trackOf(queue.current)?.title ?? "la pista"}».`;
+  const message = reason ?? `No se pudo reproducir «${trackOf(queue.current.id)?.title ?? "la pista"}».`;
   const next = nextInQueue({ ...queue, repeat: queue.repeat === "track" ? "off" : queue.repeat }, true);
-  if (failuresInRow >= MAX_FAILURES || next.current === null || next.current === queue.current) {
+  if (failuresInRow >= MAX_FAILURES || next.current === null || next.current.key === queue.current.key) {
     failuresInRow = 0;
     engine.pause();
     usePlayer.setState({ isPlaying: false, message });
@@ -197,7 +199,7 @@ function setAudio(change: Partial<AudioSettings>) {
   engine.setEq(eqChainOf(audio));
   engine.setBalance(audio.balance);
   engine.setSpeed(audio.speed);
-  engine.setTrackGain(gainOf(q().current));
+  engine.setTrackGain(gainOf(q().current?.id));
   void storage.set("audio", audio);
 }
 
@@ -208,22 +210,23 @@ export const player = {
   playContext(ids: string[], startId: string) {
     apply(replaceQueue(q(), ids, startId), { autoplay: true, restart: true });
   },
-  playNow(id: string) {
-    apply(playNow(q(), id), { autoplay: true, restart: true });
+  /** Reproduce ya una entrada de la cola (por su clave, no por la pista: puede haber copias). */
+  playEntry(key: string) {
+    apply(playEntry(q(), key), { autoplay: true, restart: true });
   },
   enqueue(id: string) {
     apply(enqueue(q(), id), { autoplay: false });
   },
-  /** "Reproducir a continuación": detrás de la actual, sin cortar lo que suena. */
-  playNext(id: string) {
-    apply(playNext(q(), id), { autoplay: false });
+  /** "Reproducir a continuación": detrás de la actual, sin cortar lo que suena. Con `key`, mueve esa entrada de la cola. */
+  playNext(id: string, key?: string) {
+    apply(playNext(q(), id, key), { autoplay: false });
   },
   /** Deshacer de las acciones de cola: vuelve a una cola guardada antes, sin tocar lo que suena si la actual no cambió. */
   restoreQueue(queue: QueueState) {
     apply(queue, { autoplay: usePlayer.getState().isPlaying });
   },
-  remove(id: string) {
-    apply(removeFromQueue(q(), id), { autoplay: usePlayer.getState().isPlaying });
+  remove(key: string) {
+    apply(removeFromQueue(q(), key), { autoplay: usePlayer.getState().isPlaying });
   },
   move(from: number, to: number) {
     usePlayer.setState({ queue: moveInQueue(q(), from, to) });
@@ -233,14 +236,14 @@ export const player = {
   },
   toggle() {
     if (q().current === null) return;
-    if (engine.paused || loadedId !== q().current) player.play();
+    if (engine.paused || loadedId !== q().current?.key) player.play();
     else player.pause();
   },
   play() {
     const { current } = q();
     if (current === null) return;
     // Sesión restaurada: el archivo se lee ahora, con el gesto del usuario (permiso de la carpeta si hace falta).
-    if (loadedId !== current) apply(q(), { autoplay: true, restart: true, startAt: usePlayer.getState().position });
+    if (loadedId !== current.key) apply(q(), { autoplay: true, restart: true, startAt: usePlayer.getState().position });
     else if (engine.paused) void engine.play(pauseFade()).catch(() => fail());
   },
   pause() {
@@ -252,7 +255,7 @@ export const player = {
   /** Pasados 3 s reinicia la pista; antes, va a la anterior. */
   previous() {
     const previous = previousInQueue(q());
-    if (engine.position > 3 || previous.current === q().current) {
+    if (engine.position > 3 || previous.current?.key === q().current?.key) {
       player.seek(0);
       return;
     }
@@ -306,11 +309,11 @@ audioSession.setHandlers({
 
 /** `immediate`: ficha sin portada ya, y la portada cuando esté lista. Sin él, solo se reaplica la ficha completa. */
 function publishTrack(immediate: boolean) {
-  const track = trackOf(q().current);
+  const track = trackOf(q().current?.id);
   const info = track && { title: track.title, artist: track.artist, album: track.album };
   if (immediate) audioSession.setTrack(info ?? null);
   void holdCover(track?.coverHash).then((artworkUrl) => {
-    if (info && q().current === track.id) audioSession.setTrack({ ...info, artworkUrl });
+    if (info && q().current?.id === track.id) audioSession.setTrack({ ...info, artworkUrl });
   });
 }
 
@@ -322,8 +325,8 @@ function republishSession() {
 }
 
 function syncSession(state: PlayerState, previous: PlayerState) {
-  const track = trackOf(state.queue.current);
-  if (state.queue.current !== previous.queue.current || !lastSessionTitle || lastSessionTitle !== track?.title) {
+  const track = trackOf(state.queue.current?.id);
+  if (state.queue.current?.key !== previous.queue.current?.key || !lastSessionTitle || lastSessionTitle !== track?.title) {
     lastSessionTitle = track?.title;
     publishTrack(true);
   }
@@ -357,7 +360,7 @@ function saveQueue() {
 function savePosition() {
   const { queue, position } = usePlayer.getState();
   lastPositionSave = Date.now();
-  void storage.set("position", { id: queue.current, position });
+  void storage.set("position", { id: queue.current?.key ?? null, position });
 }
 
 /** Restaura la sesión con las pistas disponibles. Se reintenta cuando llegan pistas nuevas. */
@@ -373,24 +376,25 @@ function restore() {
     usePlayer.setState({ queue });
     return;
   }
-  apply(queue, { autoplay: false, restart: true, startAt: queue.current === saved.queue.current ? saved.position : 0 });
+  apply(queue, { autoplay: false, restart: true, startAt: queue.current.key === saved.queue.current?.key ? saved.position : 0 });
   saved = undefined;
 }
 
 export async function initSession() {
-  const [audio, session, last] = await Promise.all([
+  const [audio, stored, last] = await Promise.all([
     storage.get<AudioSettings>("audio"),
     storage.get<SavedSession>("session"),
     storage.get<{ id: string | null; position: number }>("position"),
     library.init(),
   ]);
   setAudio(sanitizeAudioSettings(audio));
-  saved = session && last?.id === session.queue.current ? { ...session, position: last.position } : session;
+  const session = stored && { ...stored, queue: upgradeQueue(stored.queue) };
+  saved = session && last && last.id === session.queue.current?.key ? { ...session, position: last.position } : session;
   restore();
   useLibrary.subscribe((state, previous) => {
     if (state.tracks.length !== previous.tracks.length) restore();
     // Los metadatos llegan después de empezar a sonar: se actualiza la ficha del sistema y el ReplayGain.
-    const current = q().current;
+    const current = q().current?.id;
     if (current && state.tracks !== previous.tracks) {
       engine.setTrackGain(gainOf(current));
       syncSession(usePlayer.getState(), usePlayer.getState());

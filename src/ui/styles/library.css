@@ -24,11 +24,6 @@
   text-align: left;
 }
 
-.row-spacer {
-  flex: none;
-  width: var(--tap);
-}
-
 .row-cover {
   width: 48px;
 }

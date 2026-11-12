@@ -36,7 +36,7 @@ import { VirtualList } from "./VirtualList";
 
 export function useCurrentTrack(): Track | undefined {
   const current = usePlayer((state) => state.queue.current);
-  return useLibrary((state) => state.tracks.find((track) => track.id === current));
+  return useLibrary((state) => state.tracks.find((track) => track.id === current?.id));
 }
 
 function VolumeControl() {
@@ -258,11 +258,11 @@ export function NowPlaying({ backdrop, inert }: { backdrop: ReactNode; inert: bo
   );
 }
 
-function QueueRow({ track, index, first, last, isCurrent, isNext }: { track: Track; index: number; first: boolean; last: boolean; isCurrent: boolean; isNext: boolean }) {
+function QueueRow({ entryKey, track, index, first, last, isCurrent, isNext }: { entryKey: string; track: Track; index: number; first: boolean; last: boolean; isCurrent: boolean; isNext: boolean }) {
   const [sheet, setSheet] = useState(false);
   const id = track.id;
-  const playNext = { label: "Reproducir a continuación", icon: <ListStart {...iconSmall} />, run: () => queueAction("Sonará a continuación", () => player.playNext(id)) };
-  const remove = { label: "Quitar de la cola", icon: <Trash2 {...iconSmall} />, run: () => queueAction("Quitada de la cola", () => player.remove(id)) };
+  const playNext = { label: "Reproducir a continuación", icon: <ListStart {...iconSmall} />, run: () => queueAction("Sonará a continuación", () => player.playNext(id, entryKey)) };
+  const remove = { label: "Quitar de la cola", icon: <Trash2 {...iconSmall} />, run: () => queueAction("Quitada de la cola", () => player.remove(entryKey)) };
   return (
     <>
     <SwipeRow
@@ -272,7 +272,7 @@ function QueueRow({ track, index, first, last, isCurrent, isNext }: { track: Tra
       onMenu={() => setSheet(true)}
       right={isCurrent || isNext ? undefined : { ...playNext, label: "Siguiente" }}
     >
-      <button className="row-main" onClick={() => player.playNow(id)} type="button">
+      <button className="row-main" onClick={() => player.playEntry(entryKey)} type="button">
         <Cover className="row-cover" hash={track.coverHash} seed={track.album} />
         <span className="row-copy">
           <span className="title">
@@ -289,7 +289,7 @@ function QueueRow({ track, index, first, last, isCurrent, isNext }: { track: Tra
       <IconButton disabled={last} label={`Bajar ${track.title}`} onClick={() => player.move(index, index + 1)}>
         <ArrowDown {...iconSmall} />
       </IconButton>
-      <IconButton label={`Quitar ${track.title} de la cola`} onClick={() => player.remove(id)}>
+      <IconButton label={`Quitar ${track.title} de la cola`} onClick={() => player.remove(entryKey)}>
         <X {...iconSmall} />
       </IconButton>
     </SwipeRow>
@@ -297,7 +297,7 @@ function QueueRow({ track, index, first, last, isCurrent, isNext }: { track: Tra
     {sheet && (
       <ActionSheet
         actions={[
-          { label: "Reproducir ahora", icon: <Play {...iconSmall} fill="currentColor" />, run: () => player.playNow(id) },
+          { label: "Reproducir ahora", icon: <Play {...iconSmall} fill="currentColor" />, run: () => player.playEntry(entryKey) },
           ...(isCurrent || isNext ? [] : [playNext]),
           ...(isCurrent ? [] : [remove]),
         ]}
@@ -314,7 +314,7 @@ export function QueuePanel() {
   const current = usePlayer((state) => state.queue.current);
   const tracks = useLibrary((state) => state.tracks);
   const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
-  const currentAt = current === null ? -1 : order.indexOf(current);
+  const currentAt = current === null ? -1 : order.findIndex((item) => item.key === current.key);
   return (
     <aside aria-label="Cola de reproducción" className="queue-panel">
       <header className="queue-header">
@@ -333,11 +333,11 @@ export function QueuePanel() {
         <p className="queue-empty">La cola está vacía. Toca una canción para empezar.</p>
       ) : (
         <div className="queue-list">
-          <VirtualList className="queue-rows" getKey={(id) => id} items={order} label="Canciones en cola" ordered rowHeight={64}>
-            {(id, index) => {
-              const track = byId.get(id);
+          <VirtualList className="queue-rows" getKey={(item) => item.key} items={order} label="Canciones en cola" ordered rowHeight={64}>
+            {(item, index) => {
+              const track = byId.get(item.id);
               if (!track) return null;
-              return <QueueRow first={index === 0} isNext={index === currentAt + 1} last={index === order.length - 1} index={index} isCurrent={id === current} track={track} />;
+              return <QueueRow entryKey={item.key} first={index === 0} isNext={index === currentAt + 1} last={index === order.length - 1} index={index} isCurrent={item.key === current?.key} track={track} />;
             }}
           </VirtualList>
         </div>

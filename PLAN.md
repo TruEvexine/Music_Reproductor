@@ -675,6 +675,14 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
   (puerta de frecuencia: gestos y entradas ocasionales, sin animar lo frecuente; todo con reduced-motion); ui-ux-pro-max cargada
   (áreas ≥ 44 px, gesto con alternativa, foco), sin su buscador (no hay Python en esta máquina).
 
+### 11.1d Correcciones (2026-11-12)
+
+- **«A la cola» no admitía repetidas.** Causa: la cola eran ids de pista (`enqueue` descartaba la que ya estaba, la lista usaba
+  el id como `key`, quitar borraba todas las copias y la biblioteca ocultaba «A la cola» si ya estaba). Arreglo: cada entrada es
+  `{ key, id }` con clave propia; la actual, quitar, «a continuación» desde la cola y la lista van por `key`. Las sesiones
+  guardadas con ids sueltos se convierten al cargar (`upgradeQueue`). Prueba: `core/queue.test.ts` (repetidas, quitar una
+  copia, aleatorio, deshacer, la que suena no se quita) y `prueba-movil.mjs` (deslizar dos veces y quitar una copia).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

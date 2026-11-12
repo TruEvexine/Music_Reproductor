@@ -61,8 +61,8 @@ function follow(to: string) {
   };
 }
 
-export function TrackRow({ track, queued, number, onPlay }: { track: Track; queued: boolean; number?: number; onPlay: () => void }) {
-  const isCurrent = usePlayer((state) => state.queue.current === track.id);
+export function TrackRow({ track, number, onPlay }: { track: Track; number?: number; onPlay: () => void }) {
+  const isCurrent = usePlayer((state) => state.queue.current?.id === track.id);
   const isPlaying = usePlayer((state) => isCurrent && state.isPlaying);
   const blocked = track.unplayable || track.unsupported;
   const [sheet, setSheet] = useState(false);
@@ -73,7 +73,7 @@ export function TrackRow({ track, queued, number, onPlay }: { track: Track; queu
     <SwipeRow
       className="track-row"
       current={isCurrent}
-      left={queued ? undefined : { ...enqueue, label: "A la cola" }}
+      left={{ ...enqueue, label: "A la cola" }}
       onMenu={() => setSheet(true)}
       right={isCurrent ? undefined : { ...playNext, label: "Siguiente" }}
     >
@@ -104,14 +104,10 @@ export function TrackRow({ track, queued, number, onPlay }: { track: Track; queu
         </span>
         <span className="row-time time">{formatTime(track.duration)}</span>
       </button>
-      {/* Ya en la cola: no hay nada que ofrecer; el hueco mantiene la alineación. */}
-      {queued ? (
-        <span aria-hidden="true" className="row-spacer" />
-      ) : (
-        <IconButton label={`Añadir ${track.title} a la cola`} onClick={() => player.enqueue(track.id)}>
-          <ListPlus {...iconSmall} />
-        </IconButton>
-      )}
+      {/* Siempre disponible: una canción puede ir varias veces a la cola; el aviso confirma y deja deshacer. */}
+      <IconButton label={`Añadir ${track.title} a la cola`} onClick={enqueue.run}>
+        <ListPlus {...iconSmall} />
+      </IconButton>
     </SwipeRow>
     {/* Fuera de la fila: los toques dentro de la hoja no deben contar como gestos de la fila. */}
     {sheet && (
@@ -119,7 +115,7 @@ export function TrackRow({ track, queued, number, onPlay }: { track: Track; queu
         actions={[
           { label: "Reproducir", icon: <Play {...iconSmall} fill="currentColor" />, run: onPlay },
           ...(isCurrent ? [] : [playNext]),
-          ...(queued ? [] : [enqueue]),
+          enqueue,
         ]}
         onClose={() => setSheet(false)}
         track={track}
@@ -130,13 +126,11 @@ export function TrackRow({ track, queued, number, onPlay }: { track: Track; queu
 }
 
 function TrackList({ tracks, label, numbered = false }: { tracks: Track[]; label: string; numbered?: boolean }) {
-  const order = usePlayer((state) => state.queue.order);
-  const queued = useMemo(() => new Set(order), [order]);
   const ids = useMemo(() => tracks.map((track) => track.id), [tracks]);
   return (
     <VirtualList className="track-list" getKey={(track) => track.id} items={tracks} label={label} ordered={numbered} rowHeight={ROW}>
       {(track, index) => (
-        <TrackRow number={numbered ? index + 1 : undefined} onPlay={() => player.playContext(ids, track.id)} queued={queued.has(track.id)} track={track} />
+        <TrackRow number={numbered ? index + 1 : undefined} onPlay={() => player.playContext(ids, track.id)} track={track} />
       )}
     </VirtualList>
   );

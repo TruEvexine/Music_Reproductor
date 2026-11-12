@@ -85,11 +85,6 @@ check("Deshacer devuelve la cola de antes", JSON.stringify(titles) === JSON.stri
 await closeQueue();
 
 at = await center(row(1));
-await touch({ x: 260, y: at.y }, { x: 80, y: at.y });
-await page.waitForTimeout(250);
-check("deslizar a la izquierda sin acción (ya está en la cola): la fila no se mueve ni avisa", ["", "0px"].includes(await row(1).evaluate((el) => el.style.getPropertyValue("--dx"))) && (await count(".toast")) === 0);
-
-at = await center(row(1));
 await touch({ x: 80, y: at.y }, { x: 140, y: at.y }); // por debajo del umbral
 await page.waitForTimeout(300);
 const shortSwipeTitles = await queueTitles();
@@ -103,7 +98,7 @@ await page.waitForTimeout(400);
 check("pulsación larga abre la hoja de acciones con la pista", (await count("dialog.dialog[open]")) === 1 && (await page.locator("dialog.dialog[open] h2").innerText()) === N);
 check("y no reproduce la pista al soltar", (await nowTitle()) === A);
 const actions = await page.locator("dialog.dialog[open] .sheet-action").allInnerTexts();
-check("la hoja ofrece reproducir, a continuación y a la cola (la que ya está en la cola no)", actions.join("|") === "Reproducir|Reproducir a continuación", actions.join("|"));
+check("la hoja ofrece reproducir, a continuación y a la cola (también si ya está en la cola)", actions.join("|") === "Reproducir|Reproducir a continuación|Añadir a la cola", actions.join("|"));
 check("áreas táctiles de la hoja ≥ 44 px", await page.evaluate(() => [...document.querySelectorAll("dialog.dialog[open] button")].every((b) => b.getBoundingClientRect().height >= 44 && b.getBoundingClientRect().width >= 44)));
 // Arrastrar la cabecera hacia abajo cierra la hoja.
 const head = await center(page.locator("dialog.dialog[open] .dialog-header h2"));
@@ -173,6 +168,20 @@ await page.waitForTimeout(600);
 await page.locator('.now-header button[aria-label="Cerrar reproductor"]').tap();
 await page.waitForTimeout(400);
 check("alternativa sin gesto: el botón ⌄ también lo cierra", (await count(".now-playing")) === 0);
+
+// Una canción puede ir varias veces a la cola: cada copia es una entrada propia.
+at = await center(row(1));
+await touch({ x: 260, y: at.y }, { x: 80, y: at.y });
+await page.waitForTimeout(300);
+check("deslizar a la izquierda aunque ya esté en la cola: añade otra copia y avisa", (await toastText()).includes("Añadida a la cola"), await toastText());
+titles = await queueTitles();
+check("la misma canción queda dos veces en la cola", JSON.stringify(titles) === JSON.stringify([A, M, N, M]), titles.join(" | "));
+at = await center(page.locator(".queue-row").nth(3));
+await touch({ x: 300, y: at.y }, { x: 90, y: at.y });
+await page.waitForTimeout(300);
+titles = await page.locator(".queue-row .title").allInnerTexts();
+check("quitar una copia deja la otra y la que suena sigue", JSON.stringify(titles) === JSON.stringify([A, M, N]) && (await nowTitle()) === A, titles.join(" | "));
+await closeQueue();
 check("sin errores de página", errors.length === 0, errors.join(" | "));
 await context.close();
 
