@@ -682,6 +682,13 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
   `{ key, id }` con clave propia; la actual, quitar, «a continuación» desde la cola y la lista van por `key`. Las sesiones
   guardadas con ids sueltos se convierten al cargar (`upgradeQueue`). Prueba: `core/queue.test.ts` (repetidas, quitar una
   copia, aleatorio, deshacer, la que suena no se quita) y `prueba-movil.mjs` (deslizar dos veces y quitar una copia).
+- **La cola sobre el reproductor grande bloqueaba todo.** Causa: `App.tsx` pasaba `inert={queue}` a `NowPlaying`, y la cola no
+  tenía clic fuera, arrastre ni botón que alternara desde el reproductor. Arreglo: en ancho (≥ 1000 px) el reproductor ya no es
+  `inert` (en estrecho la cola lo tapa entero y sigue `inert` por accesibilidad); la cola se cierra con Escape, clic en zona
+  vacía de fuera (los controles de fuera funcionan sin cerrarla), su botón (ahora alterna también desde el reproductor) y
+  arrastrando la cabecera en móvil (con asa). Auditoría del resto: `Dialog` (hoja de acciones, letra, cuenta, biblioteca,
+  confirmaciones), menú ≡ y «Añadir ▾» ya cerraban con Escape y clic fuera (y arrastre en móvil); no había un fallo común en
+  `Dialog`. Prueba: `prueba-menu.mjs` (no inert, control usable, botón, clic fuera, arrastre en móvil).
 
 ### 11.2 Funciones nuevas (alcance)
 

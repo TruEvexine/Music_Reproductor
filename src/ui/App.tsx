@@ -82,7 +82,7 @@ function Shell() {
         </main>
         {queue && <QueuePanel />}
         <PlayerBar queueOpen={queue} />
-        {panel === "player" && <NowPlaying backdrop={<Backdrop />} inert={queue} />}
+        {panel === "player" && <NowPlaying backdrop={<Backdrop />} queueOpen={queue} />}
         {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
       </div>
     </PaletteContext.Provider>

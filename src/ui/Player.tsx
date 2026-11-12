@@ -201,7 +201,7 @@ function LyricsDialog({ lyrics, title, onClose }: { lyrics: Lyrics; title: strin
   );
 }
 
-export function NowPlaying({ backdrop, inert }: { backdrop: ReactNode; inert: boolean }) {
+export function NowPlaying({ backdrop, queueOpen }: { backdrop: ReactNode; queueOpen: boolean }) {
   const track = useCurrentTrack();
   const [lyrics, setLyrics] = useState(false);
   const sheet = useRef<HTMLElement>(null);
@@ -211,7 +211,9 @@ export function NowPlaying({ backdrop, inert }: { backdrop: ReactNode; inert: bo
     <section
       aria-label="Reproduciendo ahora"
       className="now-playing"
-      inert={inert}
+      // La cola no es modal: en ancho es un cajón al lado y el reproductor sigue usable. En estrecho lo tapa entero: inert para
+      // que Tab y el lector de pantalla no entren en lo oculto. shortcut: se evalúa al pintar; cambiar de ancho con la cola abierta no lo actualiza hasta el siguiente render.
+      inert={queueOpen && !matchMedia("(min-width: 1000px)").matches}
       {...drag}
       onPointerDown={(event) => !(event.target as HTMLElement).closest("dialog") && drag.onPointerDown(event)} // la letra tiene su propio scroll
       ref={sheet}
@@ -228,7 +230,12 @@ export function NowPlaying({ backdrop, inert }: { backdrop: ReactNode; inert: bo
               <MicVocal {...icon} />
             </IconButton>
           )}
-          <IconButton label="Cola de reproducción" onClick={() => openPanel("queue")}>
+          <IconButton
+            aria-expanded={queueOpen}
+            className={queueOpen ? "is-on" : ""}
+            label="Cola de reproducción"
+            onClick={() => (queueOpen ? closePanel() : openPanel("queue"))}
+          >
             <ListMusic {...icon} />
           </IconButton>
           <MenuButton />
@@ -315,9 +322,21 @@ export function QueuePanel() {
   const tracks = useLibrary((state) => state.tracks);
   const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
   const currentAt = current === null ? -1 : order.findIndex((item) => item.key === current.key);
+  const panel = useRef<HTMLElement>(null);
+  const drag = useDragDismiss(panel, closePanel, { touchOnly: true }); // móvil: arrastrar la cabecera hacia abajo la cierra
+  // Panel no modal: un clic en una zona vacía de fuera lo cierra; los controles de fuera funcionan sin cerrarlo.
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      const target = event.target as Element;
+      if (!panel.current?.contains(target) && !target.closest("button, input, select, textarea, a, label, dialog")) closePanel();
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, []);
   return (
-    <aside aria-label="Cola de reproducción" className="queue-panel">
-      <header className="queue-header">
+    <aside aria-label="Cola de reproducción" className="queue-panel" ref={panel}>
+      <span aria-hidden="true" className="now-grabber" />
+      <header className="queue-header" {...drag}>
         <h2>Cola</h2>
         <span className="subtitle">
           {order.length} {order.length === 1 ? "canción" : "canciones"}

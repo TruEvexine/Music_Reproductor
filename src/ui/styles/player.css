@@ -316,6 +316,10 @@
   padding: var(--s2) 0 var(--s2) var(--s2);
 }
 
+.queue-header {
+  touch-action: none; /* en móvil es el asa de la hoja: el navegador no debe desplazar al arrastrarla */
+}
+
 .queue-header .subtitle {
   flex: 1;
 }
@@ -420,6 +424,7 @@
   margin-left: -18px;
   border-radius: 2px;
   background: color-mix(in oklch, var(--ink) 35%, transparent);
+  pointer-events: none; /* el toque pasa a la cabecera de debajo, que es la que arrastra (en la cola) */
 }
 
 @keyframes sheet-up {

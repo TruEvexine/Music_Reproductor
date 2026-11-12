@@ -169,6 +169,20 @@ const smallTargets = (page) =>
     return document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)?.closest(".queue-panel") !== null;
   }));
   await page.screenshot({ path: join(shots, "cola-sobre-reproductor-390x844.png") });
+  // Arrastrar la cabecera de la cola hacia abajo la cierra (dedo real por CDP), sin cerrar el reproductor.
+  const cdp = await context.newCDPSession(page);
+  const grip = await page.locator(".queue-header h2").boundingBox();
+  const [gx, gy] = [grip.x + grip.width / 2, grip.y + grip.height / 2];
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: gx, y: gy }] });
+  for (let i = 1; i <= 8; i++) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: gx, y: gy + i * 40 }] });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(600);
+  check("móvil: arrastrar la cabecera de la cola hacia abajo la cierra y deja el reproductor", (await count(".queue-panel")) === 0 && (await count(".now-playing")) === 1 && !page.url().includes("queue=1"), page.url());
+  await page.locator('.now-header button[aria-label="Cola de reproducción"]').click();
+  await page.waitForTimeout(400);
   await page.goBack();
   await page.waitForTimeout(300);
   check("móvil: atrás cierra primero la cola y deja el reproductor", (await count(".queue-panel")) === 0 && (await count(".now-playing")) === 1);
@@ -305,6 +319,23 @@ const smallTargets = (page) =>
   });
   check("escritorio: la cola es un cajón visible encima del reproductor grande", (await count(".now-playing")) === 1 && onTop && drawer.x > 0 && drawer.x + drawer.width <= 1440, JSON.stringify(drawer));
   await page.screenshot({ path: join(shots, "cola-sobre-reproductor-1440x900.png") });
+  // No modal: el reproductor sigue usable con la cola abierta, y la cola se cierra con su botón, con un clic fuera o con Escape.
+  const queueButton = page.locator('.now-header button[aria-label="Cola de reproducción"]');
+  check("escritorio: con la cola abierta el reproductor no queda inert", !(await page.locator(".now-playing").evaluate((el) => el.inert)));
+  await page.locator(".now-controls").getByRole("button", { name: "Siguiente canción" }).click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  check("escritorio: un control del reproductor funciona sin cerrar la cola", (await count(".queue-panel")) === 1 && (await page.locator('.queue-row[aria-current="true"] .title').innerText()) === "Marea de Fase");
+  await queueButton.click({ timeout: 3000 }).catch(() => {});
+  await page.waitForTimeout(400);
+  check("escritorio: volver a pulsar el botón de la cola la cierra", (await count(".queue-panel")) === 0 && (await count(".now-playing")) === 1);
+  await queueButton.click();
+  await page.waitForTimeout(400);
+  const art = await page.locator(".now-art").boundingBox();
+  await page.mouse.click(art.x + 8, art.y + 8); // zona vacía del reproductor, fuera del cajón
+  await page.waitForTimeout(400);
+  check("escritorio: un clic fuera de la cola la cierra", (await count(".queue-panel")) === 0 && (await count(".now-playing")) === 1);
+  await queueButton.click();
+  await page.waitForTimeout(400);
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
   check("escritorio: Escape cierra primero la cola y deja el reproductor", (await count(".queue-panel")) === 0 && (await count(".now-playing")) === 1);
