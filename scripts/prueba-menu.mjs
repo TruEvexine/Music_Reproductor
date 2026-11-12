@@ -323,6 +323,19 @@ const smallTargets = (page) =>
   // No modal: el reproductor sigue usable con la cola abierta, y la cola se cierra con su botón, con un clic fuera o con Escape.
   const queueButton = page.locator('.now-header button[aria-label="Cola de reproducción"]');
   check("escritorio: con la cola abierta el reproductor no queda inert", !(await page.locator(".now-playing").evaluate((el) => el.inert)));
+  // Cambiar de ancho con la cola abierta: en estrecho (< 1000 px) la cola tapa el reproductor y este pasa a inert; al volver a ancho, ya no.
+  const inert = () => page.locator(".now-playing").evaluate((el) => el.inert);
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.waitForTimeout(300);
+  const covering = await page.locator(".queue-panel").boundingBox();
+  check("escritorio→estrecho con la cola abierta: la cola tapa el reproductor y este queda inert", (await inert()) && covering.width >= 599, JSON.stringify(covering));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(300);
+  check("estrecho→escritorio con la cola abierta: el reproductor deja de ser inert", !(await inert()));
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.waitForTimeout(300);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(300);
   await page.locator(".now-controls").getByRole("button", { name: "Siguiente canción" }).click({ timeout: 3000 }).catch(() => {});
   await page.waitForTimeout(400);
   check("escritorio: un control del reproductor funciona sin cerrar la cola", (await count(".queue-panel")) === 1 && (await page.locator('.queue-row[aria-current="true"] .title').innerText()) === "Marea de Fase");

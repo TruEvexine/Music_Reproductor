@@ -29,6 +29,7 @@ import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
 import { ActionSheet } from "./ActionSheet";
 import { SwipeRow, useDragDismiss } from "./gestures";
+import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
 import { queueAction } from "./toast";
@@ -206,6 +207,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
   const [lyrics, setLyrics] = useState(false);
   const sheet = useRef<HTMLElement>(null);
   const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
+  const wide = useMedia("(min-width: 1000px)");
   if (!track) return null;
   return (
     <section
@@ -213,8 +215,8 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
       className="now-playing"
       data-closing={closing}
       // La cola no es modal: en ancho es un cajón al lado y el reproductor sigue usable. En estrecho lo tapa entero: inert para
-      // que Tab y el lector de pantalla no entren en lo oculto. shortcut: se evalúa al pintar; cambiar de ancho con la cola abierta no lo actualiza hasta el siguiente render.
-      inert={closing || (queueOpen && !matchMedia("(min-width: 1000px)").matches)}
+      // que Tab y el lector de pantalla no entren en lo oculto. `wide` se recalcula al rotar o redimensionar con la cola abierta.
+      inert={closing || (queueOpen && !wide)}
       {...drag}
       onPointerDown={(event) => !(event.target as HTMLElement).closest("dialog") && drag.onPointerDown(event)} // la letra tiene su propio scroll
       ref={sheet}
