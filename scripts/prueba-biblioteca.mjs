@@ -328,7 +328,7 @@ if (!quick) {
   await page.getByRole("searchbox").fill("amanecer en la");
   await row(page, "Amanecer en La").click();
   await page.getByRole("searchbox").fill("");
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(3000); // la posición se guarda cada 2 s (player.ts): con 2 s justos a veces aún no hay ninguna > 0
   const playing = await title(page);
   await page.reload();
   await page.waitForFunction((expected) => document.querySelector(".bar-track .title")?.textContent === expected && document.querySelectorAll(".track-row").length > 5 && Number(document.querySelector(".bar-center .seek input")?.value) > 0, playing, { timeout: 10_000 });
