@@ -121,6 +121,15 @@ async function closeWith(page, selector, close) {
   check("la cola sobre el reproductor sale con exit-fade en --exit y se desmonta", out.during?.closing === "true" && out.during.name === "exit-fade" && out.gone, JSON.stringify(out.during));
   out = await closeWith(page, ".now-playing", () => page.getByRole("button", { name: "Cerrar reproductor" }).click());
   check("el reproductor grande sale con exit-fade en --exit y se desmonta", out.during?.closing === "true" && out.during.name === "exit-fade" && Math.round(out.during.duration) === 140 && out.gone, JSON.stringify(out.during));
+  // Dos Escape seguidos: el primero cierra el menú (que tarda --exit en salir) y el segundo no se pierde: cierra el reproductor.
+  await page.locator(".bar-track").click();
+  await wait(page, 500);
+  await page.locator('.now-header button[aria-label="Menú del reproductor"]').click();
+  await wait(page, 300);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Escape");
+  await wait(page, 600);
+  check("dos Escape seguidos cierran el menú y el reproductor (el menú que sale no se traga el segundo)", (await present(page, "dialog.menu")) === 0 && (await present(page, ".now-playing")) === 0);
   check("sin errores de página (escritorio)", errors.length === 0, errors.join(" | "));
   await context.close();
 }

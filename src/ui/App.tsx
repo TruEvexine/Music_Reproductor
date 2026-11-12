@@ -54,8 +54,8 @@ function Shell() {
   // Escape cierra el panel abierto (alternativa de teclado al botón atrás).
   useEffect(() => {
     if (!panel) return;
-    // Con un diálogo o menú abierto, Escape es suyo: no debe cerrar también el panel de detrás.
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && !document.querySelector("dialog[open]") && closePanel();
+    // Con un diálogo o menú abierto, Escape es suyo: no debe cerrar también el panel de detrás (uno que ya está saliendo no cuenta).
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && !document.querySelector("dialog[open]:not([data-closing])") && closePanel();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [panel]);
