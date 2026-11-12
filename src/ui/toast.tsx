@@ -1,5 +1,7 @@
+import { useRef } from "react";
 import { create } from "zustand";
 import { player, usePlayer } from "../state/player";
+import { usePresence } from "./motion";
 
 // Aviso breve con "Deshacer" para las acciones de cola (gestos y hoja de acciones). Un solo aviso a la vez.
 interface Toast {
@@ -35,16 +37,21 @@ export function queueAction(message: string, run: () => void) {
 
 export function Toaster() {
   const current = useToast((state) => state.current);
+  // Al descartarse, el aviso sigue pintándose mientras sale (--exit).
+  const last = useRef(current);
+  if (current) last.current = current;
+  const { mounted, closing } = usePresence(current !== null);
+  const shown = current ?? last.current;
   return (
     <div className="toaster" role="status">
-      {current && (
-        <p className="toast" key={current.id}>
-          <span>{current.message}</span>
-          {current.undo && (
+      {mounted && shown && (
+        <p className="toast" data-closing={closing} inert={closing} key={shown.id}>
+          <span>{shown.message}</span>
+          {shown.undo && (
             <button
               className="link"
               onClick={() => {
-                current.undo?.();
+                shown.undo?.();
                 dismiss();
               }}
               type="button"

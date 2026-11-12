@@ -36,11 +36,16 @@
   --tap: 44px;
   --tap-l: 56px;
 
-  /* Movimiento: solo transform y opacity. */
-  --fast: 120ms;
-  --base: 220ms;
-  --slow: 280ms;
-  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Movimiento: un conjunto cerrado (ver DESIGN.md §3). Solo transform y opacity. Nada se anima en lo frecuente ni por teclado. */
+  --fast: 120ms; /* respuesta al tacto: pulsar, popovers */
+  --base: 220ms; /* entrada de hojas, diálogos, paneles y avisos */
+  --slow: 280ms; /* abrir el reproductor */
+  --exit: 140ms; /* toda salida: más rápida que su entrada */
+  --page: 560ms; /* solo landing y primer uso */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* entradas, salidas y pulsación: decelera */
+  --ease-move: cubic-bezier(0.65, 0, 0.35, 1); /* de una posición a otra ya en pantalla: cambio de página, fila que vuelve */
+  --press: 0.96; /* controles compactos al pulsar (nunca por debajo de 0.95) */
+  --press-wide: 0.985; /* filas y superficies anchas */
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);

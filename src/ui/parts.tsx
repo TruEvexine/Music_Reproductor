@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useCover } from "../state/covers";
 import type { CoverSize } from "../state/covers";
 import { useDragDismiss } from "./gestures";
+import { useExit } from "./motion";
 
 /** Tamaño y trazo únicos para todos los iconos (Lucide). */
 export const icon = { size: 22, strokeWidth: 1.75, "aria-hidden": true } as const;
@@ -45,7 +46,8 @@ export function Cover({ hash, size = "small", seed, className = "" }: { hash?: s
 /** Diálogo modal nativo: atrapa el foco, cierra con Escape y con clic fuera. En móvil es una hoja inferior. */
 export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const drag = useDragDismiss(ref, onClose, { touchOnly: true }); // hoja inferior: arrastrar la cabecera la cierra
+  const drag = useDragDismiss(ref, onClose, { touchOnly: true }); // hoja inferior: arrastrar la cabecera la cierra (el arrastre ya animó la salida)
+  const { closing, request } = useExit(onClose);
   useEffect(() => {
     ref.current?.showModal();
   }, []);
@@ -53,14 +55,19 @@ export function Dialog({ title, onClose, children }: { title: string; onClose: (
     <dialog
       aria-label={title}
       className="dialog"
-      onClick={(event) => event.target === ref.current && onClose()}
+      data-closing={closing}
+      onCancel={(event) => {
+        event.preventDefault(); // Escape: primero la salida, luego el cierre
+        request();
+      }}
+      onClick={(event) => event.target === ref.current && request()}
       onClose={onClose}
       ref={ref}
     >
       <div className="dialog-body">
         <header className="dialog-header" {...drag}>
           <h2>{title}</h2>
-          <IconButton label="Cerrar" onClick={onClose}>
+          <IconButton label="Cerrar" onClick={request}>
             <X {...icon} />
           </IconButton>
         </header>

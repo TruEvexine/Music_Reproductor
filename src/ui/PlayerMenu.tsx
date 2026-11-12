@@ -8,7 +8,8 @@ import type { BackgroundMode, PaletteSource } from "../core/background";
 import type { RepeatMode } from "../core/queue";
 import { background, useBackground } from "../state/background";
 import { player, usePlayer } from "../state/player";
-import { Backdrop, useReducedMotion } from "./Backdrop";
+import { Backdrop } from "./Backdrop";
+import { useExit, useReducedMotion } from "./motion";
 import { useDragDismiss } from "./gestures";
 import { icon, IconButton, iconSmall } from "./parts";
 
@@ -535,7 +536,8 @@ function MenuPanel({ anchor, onClose }: { anchor: RefObject<HTMLButtonElement | 
     setDirection("back");
     setStack((pages) => pages.slice(0, -1));
   };
-  const close = () => dialog.current?.close(); // el evento "close" desmonta y devuelve el foco al icono
+  const hardClose = () => dialog.current?.close(); // el evento "close" desmonta y devuelve el foco al icono
+  const { closing, request: close } = useExit(hardClose);
 
   // Teclado: Tab da la vuelta; ↑/↓ recorren los controles (salvo los deslizadores verticales del ecualizador, que usan sus flechas);
   // ←/→ cambian de opción dentro de un grupo de opciones.
@@ -566,13 +568,18 @@ function MenuPanel({ anchor, onClose }: { anchor: RefObject<HTMLButtonElement | 
   }
 
   // Hoja inferior: arrastrar la cabecera hacia abajo la cierra. Quien no puede arrastrar usa Escape o el botón cerrar.
-  const drag = useDragDismiss(dialog, close, { enabled: !wide });
+  const drag = useDragDismiss(dialog, hardClose, { enabled: !wide }); // el arrastre ya animó la salida
 
   return (
     <dialog
       aria-label="Menú del reproductor"
       className="menu"
+      data-closing={closing}
       data-presentation={wide ? "popover" : "sheet"}
+      onCancel={(event) => {
+        event.preventDefault(); // Escape: primero la salida, luego el cierre
+        close();
+      }}
       onClick={(event) => event.target === dialog.current && close()}
       onClose={onClose}
       onKeyDown={onKeyDown}

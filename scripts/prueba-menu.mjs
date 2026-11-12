@@ -144,6 +144,7 @@ const smallTargets = (page) =>
   await page.waitForTimeout(400);
   check("móvil: un arrastre corto no la cierra", (await menu(page).count()) === 1);
   await page.keyboard.press("Escape");
+  await page.waitForTimeout(300); // la salida dura --exit (140 ms) antes de desmontar
   check("móvil: Escape cierra", (await menu(page).count()) === 0);
 
   // Desde el reproductor expandido.

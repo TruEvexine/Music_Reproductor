@@ -1,4 +1,4 @@
-import { useContext, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Device } from "../core/quality";
 import { backgroundColors, gradientCss, isAnimated } from "../core/background";
 import type { BackgroundSettings, HdrLook } from "../core/background";
@@ -10,23 +10,12 @@ import { useBackground } from "../state/background";
 import { player } from "../state/player";
 import { APP_BASE, createRenderer } from "./backdropRenderer";
 import { useHdrLook } from "./hdr";
+import { useReducedMotion } from "./motion";
 import { PaletteContext } from "./usePalette";
 
 // Fondo del reproductor. Portada / Ritmo / HDR: lienzo WebGL animado. Estático: degradado CSS fijo. AMOLED: nada (negro).
 // Respaldo CSS (mismo aspecto, sin movimiento) si no hay WebGL, se pierde el contexto o el sistema pide menos movimiento.
 // El lienzo solo existe mientras este componente está montado: con el reproductor colapsado no hay bucle ni contexto.
-
-const reducedQuery = "(prefers-reduced-motion: reduce)";
-export function useReducedMotion(): boolean {
-  return useSyncExternalStore(
-    (listener) => {
-      const media = window.matchMedia(reducedQuery);
-      media.addEventListener("change", listener);
-      return () => media.removeEventListener("change", listener);
-    },
-    () => window.matchMedia(reducedQuery).matches,
-  );
-}
 
 const BLACK: Rgb = [0, 0, 0];
 

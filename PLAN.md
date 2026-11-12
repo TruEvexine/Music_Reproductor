@@ -717,6 +717,14 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
    en SDR. La política vive en `tokens.css` bajo `@media (color-gamut: p3)` y `(dynamic-range: high)`; CSS y WebGL leen las mismas `--hdr-*`. Probado con
    `scripts/prueba-hdr.mjs` (CDP para el gamut, `--force-color-profile=hdr10` para el rango alto) y tests de `core/`. **Solo en pantalla real:** el aspecto en OLED/P3/HDR.
 
+3. **Movimiento consistente.** Conjunto cerrado de tokens (`--fast/--base/--slow/--exit/--page`, `--ease/--ease-move`, `--press/--press-wide`) y tabla de estados en
+   `DESIGN.md` §3. Auditoría previa: la entrada de `.dialog` no existía, había cuatro nombres de keyframes para lo mismo (`rise`, `sheet-in`, `sheet-up`, `pop-in`,
+   `toast-in`), la escala al pulsar era 0.94 en botones y 0.98 en filas, ninguna salida se animaba (DESIGN.md la prometía) y el transporte se hundía al pulsar. Ahora:
+   tres entradas y tres salidas compartidas (`base.css`), `ui/motion.ts` (`useExit`, `usePresence`) para que diálogos, menú, reproductor grande, cola y avisos salgan en
+   `--exit`, pulsar a 0.96 salvo transporte y teclado. Pruebas: `ui/styles/motion.test.ts` (solo transform/opacity, solo tokens, solo dos curvas, todo `:hover` en
+   `@media (hover: hover)`, mutación comprobada), `scripts/prueba-movimiento.mjs` (estilos calculados en Chromium, escritorio, móvil y movimiento reducido). `prueba-menu.mjs`
+   ahora espera la salida de 140 ms tras Escape.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

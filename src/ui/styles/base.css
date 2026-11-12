@@ -188,9 +188,14 @@ a {
     opacity var(--fast) var(--ease);
 }
 
-.icon-button:active:not(:disabled),
-.button:active:not(:disabled) {
-  transform: scale(0.94);
+/* Pulsar: los controles compactos se hunden a --press y las filas anchas a --press-wide. No se anima el transporte (se usa cientos
+   de veces) ni nada que se active con el teclado. */
+html:not([data-input="key"]) :is(.icon-button, .button, .chip):not(:is(.transport, .bar-mini) *):active:not(:disabled) {
+  transform: scale(var(--press));
+}
+
+html:not([data-input="key"]) .menu-row:active:not(:disabled) {
+  transform: scale(var(--press-wide));
 }
 
 .icon-button.is-on {
@@ -278,6 +283,69 @@ a {
   background: oklch(0 0 0 / 0.6);
 }
 
+/* Entradas y salidas (ver DESIGN.md §3): tres movimientos con la misma curva. La entrada dura --fast/--base/--slow según el recorrido;
+   la salida dura siempre --exit y la marca el componente con [data-closing] (ui/motion.ts), que espera a que termine para desmontar. */
+@keyframes enter-sheet {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes enter-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@keyframes enter-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--rise, 8px));
+  }
+}
+
+@keyframes enter-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes exit-sheet {
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes exit-pop {
+  to {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+@keyframes exit-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+.dialog {
+  animation: enter-sheet var(--base) var(--ease);
+}
+
+.dialog::backdrop {
+  animation: enter-fade var(--base) var(--ease);
+}
+
+.dialog[data-closing] {
+  animation: exit-sheet var(--exit) var(--ease) forwards;
+}
+
+.dialog[data-closing]::backdrop {
+  animation: exit-fade var(--exit) var(--ease) forwards;
+}
+
 .dialog-body {
   display: grid;
   gap: var(--s4);
@@ -300,6 +368,10 @@ a {
     width: min(440px, 100% - 2 * var(--s5));
     margin: auto;
     border-radius: var(--radius-m);
+    animation-name: enter-pop;
+  }
+  .dialog[data-closing] {
+    animation-name: exit-pop;
   }
   .dialog-body {
     padding: var(--s5);
@@ -424,14 +496,11 @@ a {
   box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
   font-weight: 550;
   pointer-events: auto;
-  animation: toast-in var(--base) var(--ease);
+  animation: enter-rise var(--base) var(--ease);
 }
 
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
+.toast[data-closing] {
+  animation: exit-fade var(--exit) var(--ease) forwards;
 }
 
 @media (min-width: 1000px) {

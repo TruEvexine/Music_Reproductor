@@ -516,7 +516,7 @@ ol.track-list .row-album {
   position: relative;
   touch-action: pan-y; /* el scroll vertical es del navegador; el horizontal, nuestro */
   transform: translateX(var(--dx, 0px));
-  transition: transform var(--base) var(--ease);
+  transition: transform var(--base) var(--ease-move);
 }
 
 .swipe[data-dragging] {

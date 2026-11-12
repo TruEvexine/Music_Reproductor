@@ -166,7 +166,7 @@ body:has(.landing) {
 
 /* Entrada del hero: título, frase, botón y captura suben uno tras otro. Una sola vez; sin script, el contenido ya está. */
 .landing [data-rise] {
-  animation: landing-rise 560ms var(--ease) both;
+  animation: landing-rise var(--page) var(--ease) both;
   animation-delay: calc(var(--i, 0) * 80ms);
 }
 
@@ -182,8 +182,8 @@ body:has(.landing) {
   opacity: 0;
   transform: translateY(24px);
   transition:
-    opacity 600ms var(--ease),
-    transform 600ms var(--ease);
+    opacity var(--page) var(--ease),
+    transform var(--page) var(--ease);
   transition-delay: calc(var(--i, 0) * 80ms);
 }
 

@@ -16,11 +16,20 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-height: min(26rem, 60dvh);
-  animation: sheet-in var(--base) var(--ease);
+  animation: enter-sheet var(--base) var(--ease);
+}
+
+.menu[data-closing] {
+  animation: exit-sheet var(--exit) var(--ease) forwards;
 }
 
 .menu[data-presentation="sheet"]::backdrop {
   background: oklch(0 0 0 / 0.6);
+  animation: enter-fade var(--base) var(--ease);
+}
+
+.menu[data-closing]::backdrop {
+  animation: exit-fade var(--exit) var(--ease) forwards;
 }
 
 /* Lo único que flota en la app: lleva sombra. La posición la calcula el componente desde el icono. */
@@ -30,24 +39,15 @@
   min-height: 0;
   border-radius: var(--radius-m);
   box-shadow: 0 16px 48px oklch(0 0 0 / 0.55);
-  animation: pop-in var(--fast) var(--ease);
+  animation: enter-pop var(--fast) var(--ease);
+}
+
+.menu[data-presentation="popover"][data-closing] {
+  animation: exit-pop var(--exit) var(--ease) forwards;
 }
 
 .menu[data-presentation="popover"]::backdrop {
   background: transparent;
-}
-
-@keyframes sheet-in {
-  from {
-    transform: translateY(100%);
-  }
-}
-
-@keyframes pop-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px) scale(0.98);
-  }
 }
 
 .menu-head {
@@ -93,7 +93,7 @@
 .menu-page {
   display: grid;
   gap: var(--s4);
-  animation: page-in var(--base) var(--ease) both;
+  animation: page-in var(--base) var(--ease-move) both;
 }
 
 .menu-page[data-direction="back"] {
@@ -132,10 +132,6 @@
   background: var(--surface-2);
   text-align: left;
   transition: transform var(--fast) var(--ease);
-}
-
-.menu-row:active:not(:disabled) {
-  transform: scale(0.98);
 }
 
 .menu-label {
@@ -232,6 +228,7 @@
   border-radius: 999px;
   font-size: var(--text-s);
   font-weight: 600;
+  transition: transform var(--fast) var(--ease);
 }
 
 .segment {

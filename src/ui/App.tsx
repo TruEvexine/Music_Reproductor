@@ -14,6 +14,7 @@ import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
 import { PlaylistsView } from "./PlaylistsView";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
+import { usePresence } from "./motion";
 import { PaletteContext, usePalette } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
@@ -36,6 +37,10 @@ function Shell() {
   const [account, setAccount] = useState(false);
   const track = useCurrentTrack();
   const palette = usePalette(useCover(track?.coverHash, "small"));
+  // Los paneles salen con animación (--exit): se mantienen montados mientras salen. La cola en columna fija (escritorio, sin
+  // reproductor grande) no se anima, así que se desmonta al instante.
+  const playerPanel = usePresence(panel === "player");
+  const queuePanel = usePresence(queue, panel === "player" || !matchMedia("(min-width: 1000px)").matches);
   useShortcuts(queue);
   const userId = auth.session?.user.id ?? null;
   useEffect(() => setSyncUser(userId), [userId]);
@@ -80,9 +85,9 @@ function Shell() {
         <main className="main" inert={panel === "player"}>
           {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView path={path} />}
         </main>
-        {queue && <QueuePanel />}
+        {queuePanel.mounted && <QueuePanel closing={queuePanel.closing} />}
         <PlayerBar queueOpen={queue} />
-        {panel === "player" && <NowPlaying backdrop={<Backdrop />} queueOpen={queue} />}
+        {playerPanel.mounted && <NowPlaying backdrop={<Backdrop />} closing={playerPanel.closing} queueOpen={queue} />}
         {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
       </div>
     </PaletteContext.Provider>

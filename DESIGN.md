@@ -66,9 +66,33 @@ Sin mayúsculas espaciadas, sin etiquetas "eyebrow", sin monoespaciada, sin segu
 
 ### Movimiento
 
-Solo `transform` y `opacity`. `--fast` 120 ms (respuesta al pulsar: escala 0.94), `--base` 220 ms (hojas, cola), `--slow` 280 ms (abrir reproductor), curva `--ease`. Salidas más rápidas que entradas. Cambio de pista: fundido de portada y paleta 700–900 ms (Fase 4). `prefers-reduced-motion`: todo instantáneo.
+Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba `ui/styles/motion.test.ts`; ningún valor suelto: todo sale de un token).
 
-Puerta de frecuencia: transporte, teclado y navegación entre pestañas → sin animación. Abrir reproductor/cola → sí. Primer uso y estados vacíos → se permite algo más expresivo.
+| Token | Valor | Para qué |
+|---|---|---|
+| `--fast` | 120 ms | Respuesta al tacto: pulsar, popovers |
+| `--base` | 220 ms | Entrada de hojas, diálogos, paneles y avisos |
+| `--slow` | 280 ms | Abrir el reproductor |
+| `--exit` | 140 ms | **Toda salida** (≈ 60 % de su entrada) |
+| `--page` | 560 ms | Solo landing y primer uso |
+| `--ease` | `cubic-bezier(0.2, 0.8, 0.2, 1)` | Entradas, salidas y pulsación (decelera) |
+| `--ease-move` | `cubic-bezier(0.65, 0, 0.35, 1)` | Moverse entre dos posiciones ya en pantalla (cambio de página del menú, fila que vuelve) |
+| `--press` / `--press-wide` | 0.96 / 0.985 | Escala al pulsar controles compactos / filas anchas (nunca por debajo de 0.95) |
+
+**Estados** (iguales en botones, filas, paneles y diálogos):
+
+| Estado | Tratamiento | Se anima |
+|---|---|---|
+| Hover (solo `@media (hover: hover)`) | Un paso de tono (`--surface-2` → `-3`, tinta secundaria → plena) | No: es de lo más frecuente |
+| Activo (pulsar) | `scale(--press)` en botones, iconos y opciones; `--press-wide` en filas del menú | `--fast`. No en transporte, pestañas ni filas de lista, ni por teclado |
+| Foco | Aro de tinta con halo de acento (`:focus-visible`), solo si lo último fue una tecla | No |
+| Entrada | Hoja: `enter-sheet`; diálogo ancho y popover: `enter-pop`; paneles y avisos: `enter-rise` | `--fast` / `--base` / `--slow` según el recorrido |
+| Salida | `exit-sheet` (hojas), `exit-pop` (diálogos anchos, popover), `exit-fade` (paneles y avisos). El componente marca `[data-closing]`, espera `--exit` y se desmonta (`ui/motion.ts`) | `--exit`. Un arrastre que ya animó la salida, o la cola en columna fija, cierran al instante |
+| Deshabilitado | Opacidad 0.38, sin hover ni pulsación | No |
+
+`prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista: fundido de portada y paleta 700–900 ms (Fase 4).
+
+Puerta de frecuencia: transporte, teclado, pestañas y filas de lista → sin animación. Abrir y cerrar reproductor, cola, menú y diálogos → sí. Primer uso y estados vacíos → se permite algo más expresivo (`--page`).
 
 ### Iconos
 
