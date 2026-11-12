@@ -580,3 +580,73 @@ ol.track-list .row-album {
     background: var(--surface-2);
   }
 }
+
+/* Cola: la jerarquía sale del tono y del texto, no de líneas de color. Sonando = una pastilla de tono (--surface-3) con el estado escrito;
+   ya sonaron = tinta terciaria; las acciones aparecen con el puntero o el foco, y en táctil son un solo «⋯» (la hoja de acciones). */
+.row-coverbox {
+  position: relative;
+  width: 48px;
+}
+
+.row-sub {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.row-sub .marquee {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-status {
+  display: inline-grid;
+  flex: none;
+  color: var(--ink-2);
+}
+
+.queue-row[aria-current="true"] > .row-main {
+  box-shadow: none;
+  background: var(--surface-3);
+}
+
+.row-main[data-state="current"] .row-status {
+  color: var(--accent);
+}
+
+.row-main[data-state="played"] .title,
+.row-main[data-state="played"] .subtitle {
+  color: var(--ink-3);
+}
+
+.row-tools,
+.row-more {
+  display: none;
+}
+
+@media (hover: hover) {
+  .row-tools {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding-left: var(--s2);
+    border-radius: var(--radius-s);
+    background: var(--surface-3);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .queue-row:hover .row-tools,
+  .queue-row:focus-within .row-tools {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (hover: none) {
+  .row-more {
+    display: inline-grid;
+  }
+}

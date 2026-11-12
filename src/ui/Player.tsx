@@ -3,7 +3,9 @@ import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  AudioLines,
   ChevronDown,
+  Ellipsis,
   ListMusic,
   ListStart,
   MicVocal,
@@ -268,9 +270,20 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
   );
 }
 
-function QueueRow({ entryKey, track, index, first, last, isCurrent, isNext }: { entryKey: string; track: Track; index: number; first: boolean; last: boolean; isCurrent: boolean; isNext: boolean }) {
+type RowState = "played" | "current" | "next" | "later";
+
+function QueueRow({ entryKey, track, index, first, last, state, repeated }: { entryKey: string; track: Track; index: number; first: boolean; last: boolean; state: RowState; repeated: boolean }) {
   const [sheet, setSheet] = useState(false);
   const id = track.id;
+  const isCurrent = state === "current";
+  const isNext = state === "next";
+  const status = isCurrent
+    ? repeated
+      ? { text: "Sonando · se repite", icon: <Repeat1 {...iconSmall} size={14} /> }
+      : { text: "Sonando", icon: <AudioLines {...iconSmall} size={14} /> }
+    : isNext
+      ? { text: "A continuación", icon: <ListStart {...iconSmall} size={14} /> }
+      : null;
   const playNext = { label: "Reproducir a continuación", icon: <ListStart {...iconSmall} />, run: () => queueAction("Sonará a continuación", () => player.playNext(id, entryKey)) };
   const remove = { label: "Quitar de la cola", icon: <Trash2 {...iconSmall} />, run: () => queueAction("Quitada de la cola", () => player.remove(entryKey)) };
   return (
@@ -282,25 +295,33 @@ function QueueRow({ entryKey, track, index, first, last, isCurrent, isNext }: { 
       onMenu={() => setSheet(true)}
       right={isCurrent || isNext ? undefined : { ...playNext, label: "Siguiente" }}
     >
-      <button className="row-main" onClick={() => player.playEntry(entryKey)} type="button">
-        <Cover className="row-cover" hash={track.coverHash} seed={track.album} />
+      <button className="row-main" data-state={state} onClick={() => player.playEntry(entryKey)} type="button">
+        <span className="row-coverbox">
+          <Cover className="row-cover" hash={track.coverHash} seed={track.album} />
+        </span>
         <span className="row-copy">
           <span className="title">
             <Marquee>{track.title}</Marquee>
           </span>
-          <span className="subtitle">
-            <Marquee>{isCurrent ? "Sonando" : isNext ? "A continuación" : track.artist}</Marquee>
+          <span className="subtitle row-sub">
+            {status && <span className="row-status">{status.icon}</span>}
+            <Marquee>{status ? `${status.text} · ${track.artist}` : `${track.artist} · ${formatTime(track.duration)}`}</Marquee>
           </span>
         </span>
       </button>
-      <IconButton disabled={first} label={`Subir ${track.title}`} onClick={() => player.move(index, index - 1)}>
-        <ArrowUp {...iconSmall} />
-      </IconButton>
-      <IconButton disabled={last} label={`Bajar ${track.title}`} onClick={() => player.move(index, index + 1)}>
-        <ArrowDown {...iconSmall} />
-      </IconButton>
-      <IconButton label={`Quitar ${track.title} de la cola`} onClick={() => player.remove(entryKey)}>
-        <X {...iconSmall} />
+      <span className="row-tools">
+        <IconButton disabled={first} label={`Subir ${track.title}`} onClick={() => player.move(index, index - 1)}>
+          <ArrowUp {...iconSmall} />
+        </IconButton>
+        <IconButton disabled={last} label={`Bajar ${track.title}`} onClick={() => player.move(index, index + 1)}>
+          <ArrowDown {...iconSmall} />
+        </IconButton>
+        <IconButton label={`Quitar ${track.title} de la cola`} onClick={() => player.remove(entryKey)}>
+          <X {...iconSmall} />
+        </IconButton>
+      </span>
+      <IconButton className="row-more" label={`Acciones de ${track.title}`} onClick={() => setSheet(true)}>
+        <Ellipsis {...iconSmall} />
       </IconButton>
     </SwipeRow>
     {/* Fuera de la fila: los toques dentro de la hoja no deben contar como gestos de la fila. */}
@@ -309,6 +330,8 @@ function QueueRow({ entryKey, track, index, first, last, isCurrent, isNext }: { 
         actions={[
           { label: "Reproducir ahora", icon: <Play {...iconSmall} fill="currentColor" />, run: () => player.playEntry(entryKey) },
           ...(isCurrent || isNext ? [] : [playNext]),
+          ...(first ? [] : [{ label: "Subir", icon: <ArrowUp {...iconSmall} />, run: () => player.move(index, index - 1) }]),
+          ...(last ? [] : [{ label: "Bajar", icon: <ArrowDown {...iconSmall} />, run: () => player.move(index, index + 1) }]),
           ...(isCurrent ? [] : [remove]),
         ]}
         onClose={() => setSheet(false)}
@@ -324,6 +347,7 @@ export function QueuePanel({ closing }: { closing?: true }) {
   const current = usePlayer((state) => state.queue.current);
   const tracks = useLibrary((state) => state.tracks);
   const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
+  const repeat = usePlayer((state) => state.queue.repeat);
   const currentAt = current === null ? -1 : order.findIndex((item) => item.key === current.key);
   const panel = useRef<HTMLElement>(null);
   const drag = useDragDismiss(panel, closePanel, { touchOnly: true }); // móvil: arrastrar la cabecera hacia abajo la cierra
@@ -359,7 +383,8 @@ export function QueuePanel({ closing }: { closing?: true }) {
             {(item, index) => {
               const track = byId.get(item.id);
               if (!track) return null;
-              return <QueueRow entryKey={item.key} first={index === 0} isNext={index === currentAt + 1} last={index === order.length - 1} index={index} isCurrent={item.key === current?.key} track={track} />;
+              const state = index === currentAt ? "current" : index === currentAt + 1 ? "next" : index < currentAt ? "played" : "later";
+              return <QueueRow entryKey={item.key} first={index === 0} last={index === order.length - 1} index={index} repeated={repeat === "track"} state={state} track={track} />;
             }}
           </VirtualList>
         </div>
