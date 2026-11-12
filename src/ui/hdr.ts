@@ -22,18 +22,30 @@ export function readHdrLook(): HdrLook {
 
 const key = (look: HdrLook) => `${look.gamut}/${look.chroma}/${look.contrast}/${look.glint}`;
 let cached = { key: "", look: sdr };
+// getSnapshot corre en cada render: solo se vuelve a leer el CSS si cambió el modo (<html data-bg>) o saltó una media query.
+let dirty = true;
+let seenMode: string | undefined;
 
 /** Se actualiza si la pantalla cambia de gama o rango (por ejemplo, al arrastrar la ventana a otro monitor). */
 export function useHdrLook(): HdrLook {
   return useSyncExternalStore(
     (listener) => {
       const lists = queries.map((query) => matchMedia(query));
-      lists.forEach((list) => list.addEventListener("change", listener));
-      return () => lists.forEach((list) => list.removeEventListener("change", listener));
+      const onChange = () => {
+        dirty = true;
+        listener();
+      };
+      lists.forEach((list) => list.addEventListener("change", onChange));
+      return () => lists.forEach((list) => list.removeEventListener("change", onChange));
     },
     () => {
-      const look = readHdrLook();
-      if (key(look) !== cached.key) cached = { key: key(look), look };
+      const mode = document.documentElement.dataset.bg;
+      if (dirty || mode !== seenMode) {
+        dirty = false;
+        seenMode = mode;
+        const look = readHdrLook();
+        if (key(look) !== cached.key) cached = { key: key(look), look };
+      }
       return cached.look; // misma referencia mientras no cambie: useSyncExternalStore lo exige
     },
   );
