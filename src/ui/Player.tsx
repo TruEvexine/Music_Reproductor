@@ -35,6 +35,7 @@ import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
 import { queueAction } from "./toast";
+import { motionReduced } from "./motion";
 import { VirtualList } from "./VirtualList";
 
 export function useCurrentTrack(): Track | undefined {
@@ -186,7 +187,7 @@ function LyricsDialog({ lyrics, title, onClose }: { lyrics: Lyrics; title: strin
   const current = lyrics.synced ? lineAt(lyrics.synced, position) : -1;
   const active = useRef<HTMLParagraphElement>(null);
   useEffect(() => {
-    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = motionReduced();
     active.current?.scrollIntoView({ block: "center", behavior: reduce ? "auto" : "smooth" });
   }, [current]);
   return (

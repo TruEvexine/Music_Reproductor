@@ -33,3 +33,9 @@ export function openDatabase(name = DB_NAME, list: Migration[] = migrations): Pr
     },
   });
 }
+
+/** Vacía todos los almacenes en una sola transacción (Ajustes → Datos locales → Borrar). No toca el esquema. */
+export async function clearDatabase(db: IDBPDatabase): Promise<void> {
+  const tx = db.transaction([...db.objectStoreNames], "readwrite");
+  await Promise.all([...[...db.objectStoreNames].map((name) => tx.objectStore(name).clear()), tx.done]);
+}

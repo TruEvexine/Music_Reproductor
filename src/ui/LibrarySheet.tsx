@@ -33,53 +33,19 @@ function accessText(root: RootView) {
   return `${root.count} ${root.count === 1 ? "canción" : "canciones"}`;
 }
 
-export function LibrarySheet({ onClose }: { onClose: () => void }) {
+/** Carpetas de música: reconectar, buscar cambios y quitar. La comparten la hoja de la biblioteca y Ajustes. */
+export function FoldersSection() {
   const roots = useLibrary((state) => state.roots);
   const scanning = useLibrary((state) => state.scan !== null);
   const [space, setSpace] = useState<{ usage: number; quota: number }>();
   const [removing, setRemoving] = useState<RootView | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const file = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     void library.space().then(setSpace);
   }, [roots]);
 
-  function exportBackup() {
-    const backup = buildBackup(visiblePlaylists(usePlaylists.getState().all, playlists.user), {
-      audio: usePlayer.getState().audio,
-      background: useBackground.getState(),
-    });
-    const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `reproductor-copia-${backup.exportedAt.slice(0, 10)}.json`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setStatus("Copia descargada.");
-  }
-
-  async function importBackup(chosen: File | undefined) {
-    if (!chosen) return;
-    if (chosen.size > MAX_BACKUP_BYTES) {
-      setStatus("El archivo es demasiado grande para ser una copia de seguridad.");
-      return;
-    }
-    const result = parseBackup(await chosen.text());
-    if ("error" in result) {
-      setStatus(result.error);
-      return;
-    }
-    const { playlists: items, settings } = result.backup;
-    await playlists.importMany(items);
-    // Los ajustes pasan por los mismos saneadores que los guardados: un archivo manipulado no rompe nada.
-    if (settings.audio) player.setAudio(settings.audio as Partial<AudioSettings>);
-    if (settings.background) background.set(settings.background as Partial<BackgroundSettings>);
-    setStatus(`Copia importada: ${items.length} ${items.length === 1 ? "playlist" : "playlists"}${settings.audio || settings.background ? " y ajustes" : ""}.`);
-  }
-
   return (
-    <Dialog onClose={onClose} title="Tu biblioteca">
+    <>
       <section className="sheet-section">
         <h3>Carpetas</h3>
         {roots.length === 0 ? (
@@ -118,37 +84,6 @@ export function LibrarySheet({ onClose }: { onClose: () => void }) {
           </p>
         )}
       </section>
-      <section className="sheet-section">
-        <h3>Copia de seguridad</h3>
-        <p className="subtitle">Tus playlists y ajustes en un archivo JSON. La música no se incluye.</p>
-        <div className="dialog-actions">
-          <button className="button" onClick={exportBackup} type="button">
-            <Download {...iconSmall} />
-            Exportar
-          </button>
-          <button className="button" onClick={() => file.current?.click()} type="button">
-            <Upload {...iconSmall} />
-            Importar
-          </button>
-        </div>
-        <input
-          accept="application/json,.json"
-          aria-label="Elegir copia de seguridad"
-          className="visually-hidden"
-          onChange={(event) => {
-            void importBackup(event.currentTarget.files?.[0]);
-            event.currentTarget.value = "";
-          }}
-          ref={file}
-          tabIndex={-1}
-          type="file"
-        />
-        {status && (
-          <p className="subtitle" role="status">
-            {status}
-          </p>
-        )}
-      </section>
       {removing && (
         <ConfirmDialog
           confirmLabel="Quitar"
@@ -162,6 +97,88 @@ export function LibrarySheet({ onClose }: { onClose: () => void }) {
           title="¿Quitar de la biblioteca?"
         />
       )}
+    </>
+  );
+}
+
+/** Copia de seguridad (exportar e importar JSON). La comparten la hoja de la biblioteca y Ajustes → Datos locales. */
+export function BackupSection() {
+  const [status, setStatus] = useState<string | null>(null);
+  const file = useRef<HTMLInputElement>(null);
+
+  function exportBackup() {
+    const backup = buildBackup(visiblePlaylists(usePlaylists.getState().all, playlists.user), {
+      audio: usePlayer.getState().audio,
+      background: useBackground.getState(),
+    });
+    const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reproductor-copia-${backup.exportedAt.slice(0, 10)}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setStatus("Copia descargada.");
+  }
+
+  async function importBackup(chosen: File | undefined) {
+    if (!chosen) return;
+    if (chosen.size > MAX_BACKUP_BYTES) {
+      setStatus("El archivo es demasiado grande para ser una copia de seguridad.");
+      return;
+    }
+    const result = parseBackup(await chosen.text());
+    if ("error" in result) {
+      setStatus(result.error);
+      return;
+    }
+    const { playlists: items, settings } = result.backup;
+    await playlists.importMany(items);
+    // Los ajustes pasan por los mismos saneadores que los guardados: un archivo manipulado no rompe nada.
+    if (settings.audio) player.setAudio(settings.audio as Partial<AudioSettings>);
+    if (settings.background) background.set(settings.background as Partial<BackgroundSettings>);
+    setStatus(`Copia importada: ${items.length} ${items.length === 1 ? "playlist" : "playlists"}${settings.audio || settings.background ? " y ajustes" : ""}.`);
+  }
+
+  return (
+    <section className="sheet-section">
+      <h3>Copia de seguridad</h3>
+      <p className="subtitle">Tus playlists y ajustes en un archivo JSON. La música no se incluye.</p>
+      <div className="dialog-actions">
+        <button className="button" onClick={exportBackup} type="button">
+          <Download {...iconSmall} />
+          Exportar
+        </button>
+        <button className="button" onClick={() => file.current?.click()} type="button">
+          <Upload {...iconSmall} />
+          Importar
+        </button>
+      </div>
+      <input
+        accept="application/json,.json"
+        aria-label="Elegir copia de seguridad"
+        className="visually-hidden"
+        onChange={(event) => {
+          void importBackup(event.currentTarget.files?.[0]);
+          event.currentTarget.value = "";
+        }}
+        ref={file}
+        tabIndex={-1}
+        type="file"
+      />
+      {status && (
+        <p className="subtitle" role="status">
+          {status}
+        </p>
+      )}
+    </section>
+  );
+}
+
+export function LibrarySheet({ onClose }: { onClose: () => void }) {
+  return (
+    <Dialog onClose={onClose} title="Tu biblioteca">
+      <FoldersSection />
+      <BackupSection />
     </Dialog>
   );
 }

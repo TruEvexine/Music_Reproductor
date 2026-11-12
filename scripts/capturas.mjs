@@ -130,6 +130,9 @@ for (const name of matrix) {
   await page.getByRole("button", { name: /Entrar|Cuenta/ }).first().click();
   await check("08-cuenta");
 
+  await page.goto(`${base}/app/ajustes`);
+  await check("10-ajustes");
+
   await page.goto(`${base}/`);
   await check("09-landing");
   await context.close();

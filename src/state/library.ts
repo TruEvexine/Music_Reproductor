@@ -455,6 +455,11 @@ export const library = {
     await Promise.all([flush(), storage.write("roots", [], [rootId]), localLibrary.forget(root)]);
     publishRoots();
   },
+  /** Ajustes → Datos locales → Borrar: quita todas las carpetas (y las copias privadas) y vacía el almacenamiento local. La UI recarga después. */
+  async wipeAll() {
+    for (const root of [...roots.values()]) await library.removeRoot(root.id);
+    await storage.clear();
+  },
   space: () => localLibrary.space(),
   /** Permiso de la carpeta de una pista (para explicar por qué no suena). */
   accessFor(id: string): { access: FolderAccess; name: string } | undefined {

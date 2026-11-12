@@ -461,6 +461,14 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   }
 }
 
+/* Lo mismo con el interruptor de Ajustes → Accesibilidad (state/background.ts pone <html data-motion="reduce">). */
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
 .dialog-actions {
   display: flex;
   flex-wrap: wrap;

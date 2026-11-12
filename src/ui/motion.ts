@@ -1,24 +1,32 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useBackground } from "../state/background";
 
 // Entradas y salidas de paneles, hojas y diálogos. Los valores salen de tokens.css (`--exit`), el CSS anima `[data-closing]`
 // y aquí solo se espera a que termine para desmontar. Con movimiento reducido no se espera nada.
 
 const reducedQuery = "(prefers-reduced-motion: reduce)";
 
+/** Movimiento reducido: lo pide el sistema o el interruptor de Ajustes (state/background.ts lo refleja en <html data-motion>). */
+export const motionReduced = () => window.matchMedia(reducedQuery).matches || document.documentElement.dataset.motion === "reduce";
+
 export function useReducedMotion(): boolean {
   return useSyncExternalStore(
     (listener) => {
       const media = window.matchMedia(reducedQuery);
       media.addEventListener("change", listener);
-      return () => media.removeEventListener("change", listener);
+      const stop = useBackground.subscribe((state, before) => state.reduceMotion !== before.reduceMotion && listener());
+      return () => {
+        media.removeEventListener("change", listener);
+        stop();
+      };
     },
-    () => window.matchMedia(reducedQuery).matches,
+    motionReduced,
   );
 }
 
 /** Duración de toda salida (`--exit`) en ms; 0 con movimiento reducido. */
 function exitMs(): number {
-  if (window.matchMedia(reducedQuery).matches) return 0;
+  if (motionReduced()) return 0;
   return parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--exit")) || 0;
 }
 

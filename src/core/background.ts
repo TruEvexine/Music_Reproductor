@@ -21,6 +21,8 @@ export interface BackgroundSettings {
    * techo de brillo. No es HDR real: la web no lo garantiza. Un solo interruptor; degrada a SDR según la pantalla.
    */
   hdr: boolean;
+  /** Ajustes → Accesibilidad: movimiento reducido aunque el sistema no lo pida (el del sistema se respeta siempre). */
+  reduceMotion: boolean;
   /** 0–1: fuerza del color. */
   intensity: number;
   /** Velocidad de la deriva (0,25–2×). */
@@ -36,6 +38,7 @@ export interface BackgroundSettings {
 export const defaultBackground: BackgroundSettings = {
   mode: "cover",
   hdr: false,
+  reduceMotion: false,
   intensity: 0.6,
   speed: 1,
   palette: "cover",
@@ -57,6 +60,7 @@ export function sanitizeBackground(saved: Partial<BackgroundSettings> | undefine
   return {
     mode: modes.includes(s.mode) ? s.mode : defaultBackground.mode,
     hdr: typeof saved?.hdr === "boolean" ? saved.hdr : legacyHdr,
+    reduceMotion: typeof s.reduceMotion === "boolean" ? s.reduceMotion : defaultBackground.reduceMotion,
     intensity: clamp(s.intensity, 0, 1),
     speed: clamp(s.speed, SPEED_LIMITS.min, SPEED_LIMITS.max),
     palette: sources.includes(s.palette) ? s.palette : defaultBackground.palette,

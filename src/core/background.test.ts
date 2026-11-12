@@ -22,7 +22,7 @@ describe("ajustes del fondo", () => {
   });
 
   it("conserva ajustes válidos", () => {
-    const ok = { mode: "rhythm", hdr: true, intensity: 0.3, speed: 1.5, palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
+    const ok = { mode: "rhythm", hdr: true, reduceMotion: true, intensity: 0.3, speed: 1.5, palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
     expect(sanitizeBackground(ok)).toEqual(ok);
   });
 
@@ -34,6 +34,11 @@ describe("ajustes del fondo", () => {
     expect(sanitizeBackground({ mode: "hdr" } as never)).toMatchObject({ mode: "cover", hdr: true });
     expect(sanitizeBackground({ mode: "static" })).toMatchObject({ mode: "static", hdr: false });
     expect(sanitizeBackground({ hdr: "sí" } as never).hdr).toBe(false);
+  });
+
+  it("reduceMotion solo acepta booleanos y por defecto está apagado", () => {
+    expect(sanitizeBackground({ reduceMotion: "sí" } as never).reduceMotion).toBe(false);
+    expect(sanitizeBackground({}).reduceMotion).toBe(false);
   });
 });
 

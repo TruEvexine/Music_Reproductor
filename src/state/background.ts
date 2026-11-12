@@ -15,10 +15,13 @@ export const background = {
 };
 
 export async function initBackground() {
-  // AMOLED y HDR cambian el negro y los colores de toda la app: viven en <html> (data-bg, data-hdr) para que los vea el CSS (tokens.css).
-  const reflect = ({ mode, hdr }: BackgroundSettings) => {
-    document.documentElement.dataset.bg = mode;
-    document.documentElement.toggleAttribute("data-hdr", hdr);
+  // AMOLED, HDR y movimiento reducido cambian toda la app: viven en <html> (data-bg, data-hdr, data-motion) para que los vea el CSS.
+  const reflect = ({ mode, hdr, reduceMotion }: BackgroundSettings) => {
+    const root = document.documentElement;
+    root.dataset.bg = mode;
+    root.toggleAttribute("data-hdr", hdr);
+    if (reduceMotion) root.dataset.motion = "reduce";
+    else delete root.dataset.motion;
   };
   useBackground.subscribe(reflect);
   useBackground.setState(sanitizeBackground(await storage.get<BackgroundSettings>("background")));

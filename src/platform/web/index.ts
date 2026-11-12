@@ -1,5 +1,5 @@
 import type { AudioSession, Connectivity, Storage, Table } from "../types";
-import { openDatabase } from "./db";
+import { clearDatabase, openDatabase } from "./db";
 
 export { localLibrary } from "./library";
 
@@ -50,6 +50,13 @@ export const storage: Storage = {
       await Promise.all([...put.map((value) => tx.store.put(value)), ...remove.map((key) => tx.store.delete(key)), tx.done]);
     } catch {
       // Sin almacenamiento: la biblioteca vive solo en memoria durante esta sesión.
+    }
+  },
+  async clear() {
+    try {
+      await clearDatabase(await db());
+    } catch {
+      // Sin almacenamiento no hay nada que borrar.
     }
   },
   async append(table, value) {

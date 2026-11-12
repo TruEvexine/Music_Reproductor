@@ -736,6 +736,26 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
    frecuencia, salidas más cortas que entradas, reduced-motion); impeccable (leída; sin su lanzador de contexto); make-interfaces-feel-better (existe y se aplicó: 0.96 al
    pulsar, sin `transition: all`, un solo conjunto de curvas, sin animar lo frecuente); anti-slop (revisión manual de patrones: no hay Python para sus scripts).
 
+### 11.1f Cola, HDR global y Ajustes (2026-11-12)
+
+1. **`useHdrLook`.** `getSnapshot` corre en cada render y llamaba a `getComputedStyle` siempre. Ahora guarda la lectura y solo la repite si cambia `<html data-hdr>` o salta
+   `color-gamut`/`dynamic-range`. Medido en Chromium con el mismo recorrido: llamadas desde `hdr.ts` en la carga 37 → 2; en HDR durante el recorrido 41 → 1. Cada llamada ya costaba ~0,006 ms
+   (el estilo estaba limpio): la mejora es de cantidad, no de milisegundos visibles.
+
+2. **Filas de la cola.** La cola solo contiene canciones (`QueueEntry` = clave + id de pista): no hay tarjetas de playlist ni de álbum, así que se rediseñó la fila de canción. Dos propuestas
+   capturadas en los 9 tamaños: **A** (la que suena en pastilla de tono `--surface-3` con el estado escrito junto al artista; ya sonaron en tinta terciaria) y **B** (estado como velo con icono sobre la
+   portada y duración a la derecha). Se eligió A: B tapa la portada (principio 1 de `DESIGN.md`), deja el estado solo en un icono y aprieta el título contra «Siguiente»; A separa por tono (principio 3), mantiene la
+   portada limpia y nombra el estado. Acciones: con puntero, subir/bajar/quitar aparecen al pasar o enfocar; en táctil, un «⋯» que abre la hoja (ahora con Subir y Bajar). Gestos sin cambios.
+
+3. **HDR global.** Deja de ser un modo del fondo: interruptor `hdr` (`data-hdr`) que realza fondo, acentos, `--glow`, portadas (filtro estático) y respaldo, con topes de croma y luminosidad y
+   desactivado por `prefers-contrast: more`. Detalle y límites en `docs/DISENO_HDR.md`. Pruebas: `core/hdr.test.ts` (peor caso de todos los tonos), `scripts/prueba-hdr.mjs`. **Solo en pantalla real:** cómo luce en OLED/P3/HDR.
+
+4. **Ajustes** (`/app/ajustes`, `ui/SettingsView.tsx`): reúne los controles que ya existían (fondo y HDR, sonido, ecualizador, carpetas, copia de seguridad) sin duplicarlos
+   (`PlayerMenu` y `LibrarySheet` los exportan). Nuevos y reales: «Reducir movimiento» (`data-motion` en `<html>`, lo leen CSS, `useReducedMotion` y `motionReduced()`) y «Borrar datos locales»
+   (`library.wipeAll` + `storage.clear`). **No hay** ajuste de tema (solo existe el oscuro) ni de idioma (solo español): no se inventaron. Prueba: `scripts/prueba-ajustes.mjs`.
+   Skills aplicadas: ponytail; make-interfaces-feel-better, design-motion-principles, design-taste-frontend, ui-ux-pro-max e impeccable (cargadas y aplicadas a criterio; no se ejecutaron su buscador, su lanzador
+   de contexto ni `inspect.mjs`: no hay Python y es una pantalla de app, no una página).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

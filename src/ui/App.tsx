@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
-import { CircleUser, Library, ListMusic } from "lucide-react";
+import { CircleUser, Library, ListMusic, Settings } from "lucide-react";
 import { isNative } from "../platform";
 import { useCover } from "../state/covers";
 import { setSyncUser } from "../sync/playlistSync";
@@ -12,6 +12,7 @@ import { LibraryView } from "./LibraryView";
 import { icon } from "./parts";
 import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
 import { PlaylistsView } from "./PlaylistsView";
+import { SettingsView } from "./SettingsView";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
 import { usePresence } from "./motion";
@@ -69,7 +70,7 @@ function Shell() {
         <Toaster /> {/* fijo en pantalla; va antes que las vistas para no ser el último role=status del DOM */}
         <nav aria-label="Secciones" className="nav">
           <span className="brand">Reproductor</span>
-          <NavLink active={path !== "/app/playlists"} to="/app">
+          <NavLink active={path !== "/app/playlists" && path !== "/app/ajustes"} to="/app">
             <Library {...icon} />
             <span>Biblioteca</span>
           </NavLink>
@@ -77,13 +78,17 @@ function Shell() {
             <ListMusic {...icon} />
             <span>Playlists</span>
           </NavLink>
+          <NavLink active={path === "/app/ajustes"} to="/app/ajustes">
+            <Settings {...icon} />
+            <span>Ajustes</span>
+          </NavLink>
           <button className="nav-link" onClick={() => setAccount(true)} type="button">
             <CircleUser {...icon} />
             <span>{auth.session ? "Cuenta" : "Entrar"}</span>
           </button>
         </nav>
         <main className="main" inert={panel === "player"}>
-          {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : <LibraryView path={path} />}
+          {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : path === "/app/ajustes" ? <SettingsView /> : <LibraryView path={path} />}
         </main>
         {queuePanel.mounted && <QueuePanel closing={queuePanel.closing} />}
         <PlayerBar queueOpen={queue} />

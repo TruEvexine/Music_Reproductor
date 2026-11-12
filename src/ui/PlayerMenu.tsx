@@ -107,7 +107,7 @@ function Segmented<T extends string>({
   );
 }
 
-function SwitchRow({
+export function SwitchRow({
   label,
   checked,
   onChange,
@@ -216,6 +216,16 @@ function SoundPage({ go }: { go: (page: PageId) => void }) {
           <SlidersHorizontal {...icon} />
         </NavRow>
       </section>
+      <SoundControls />
+    </>
+  );
+}
+
+/** ReplayGain, fundidos y velocidad: los comparten el menú del reproductor y Ajustes. */
+export function SoundControls() {
+  const audio = usePlayer((state) => state.audio);
+  return (
+    <>
       <section className="menu-group">
         <Segmented label="Nivelar volumen (ReplayGain)" onChange={(replayGain) => player.setAudio({ replayGain })} options={replayOptions} value={audio.replayGain} />
         <p className="hint">Solo actúa en canciones que traen esa información en sus etiquetas.</p>
@@ -253,7 +263,7 @@ function SoundPage({ go }: { go: (page: PageId) => void }) {
   );
 }
 
-function EqPage() {
+export function EqPage() {
   const audio = usePlayer((state) => state.audio);
   const preset = presetNameOf(audio.eqGains);
   const off = !audio.eqEnabled;
@@ -354,7 +364,7 @@ const fpsOptions: { value: "30" | "60" | "auto"; label: string }[] = [
 
 const percent = (value: number) => `${Math.round(value * 100)} %`;
 
-function BackgroundPage() {
+export function BackgroundPage() {
   const settings = useBackground();
   const reduced = useReducedMotion();
   const mode = modes.find((option) => option.value === settings.mode)!;

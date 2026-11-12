@@ -650,3 +650,31 @@ ol.track-list .row-album {
     display: inline-grid;
   }
 }
+
+/* Ajustes: los controles son los del menú del reproductor (menu.css); aquí solo el marco de la página. Se separa por espacio, no por líneas. */
+.settings {
+  max-width: 42rem;
+}
+
+.settings-section {
+  display: grid;
+  gap: var(--s3);
+  margin-top: var(--s4);
+}
+
+.settings-stack {
+  display: grid;
+  gap: var(--s4);
+}
+
+.settings-sub {
+  margin: var(--s2) 0 calc(var(--s2) * -1);
+  padding: 0 var(--s1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.settings .hint {
+  padding: 0 var(--s1);
+}

@@ -1,6 +1,6 @@
 import "fake-indexeddb/auto";
 import { describe, expect, it } from "vitest";
-import { migrations, openDatabase } from "./db";
+import { clearDatabase, migrations, openDatabase } from "./db";
 import type { Migration } from "./db";
 
 describe("esquema local versionado", () => {
@@ -44,5 +44,17 @@ describe("esquema local versionado", () => {
     expect(await v2.getAllFromIndex("tracks", "rootId", "r")).toEqual([{ id: "a", rootId: "r" }]);
     expect(await v2.add("outbox", { op: 1 })).toBe(1);
     v2.close();
+  });
+
+  it("clearDatabase vacía todos los almacenes y conserva el esquema", async () => {
+    const db = await openDatabase("test-clear");
+    await db.put("kv", { volume: 0.5 }, "settings");
+    await db.put("tracks", { id: "a", rootId: "r" });
+    await db.put("playlists", { id: "p" });
+    await db.add("outbox", { op: 1 });
+    await clearDatabase(db);
+    for (const name of ["kv", "tracks", "playlists", "outbox", "roots", "covers"]) expect(await db.count(name)).toBe(0);
+    expect(db.version).toBe(migrations.length);
+    db.close();
   });
 });

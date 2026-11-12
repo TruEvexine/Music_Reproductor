@@ -16,6 +16,8 @@ export interface Storage {
   write(table: Table, put: unknown[], remove?: IDBValidKey[]): Promise<void>;
   /** Añade con clave autoincremental (outbox) y la devuelve. */
   append(table: Table, value: unknown): Promise<number | undefined>;
+  /** Vacía todo lo local (ajustes, biblioteca, playlists, outbox) conservando el esquema. */
+  clear(): Promise<void>;
 }
 
 /**

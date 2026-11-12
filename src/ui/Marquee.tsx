@@ -1,12 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useReducedMotion } from "./motion";
 
 const SPEED = 30; // px por segundo, constante
 const HOLD = 1500; // ms quieto en cada extremo
 
 /**
  * Texto de una línea: si cabe, se queda quieto; si desborda, va y vuelve a velocidad constante con pausas en los extremos.
- * Con prefers-reduced-motion (o sin desborde) queda el recorte con «…» de siempre.
- * shortcut: lee reduced-motion al medir, no al cambiar el ajuste en caliente; basta recargar.
+ * Con movimiento reducido (del sistema o de Ajustes) o sin desborde queda el recorte con «…» de siempre.
  */
 export function Marquee({ children }: { children: string }) {
   const box = useRef<HTMLSpanElement>(null);
@@ -22,7 +22,8 @@ export function Marquee({ children }: { children: string }) {
     return () => observer.disconnect();
   }, [children]);
 
-  const animate = shift > 0 && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const reduced = useReducedMotion();
+  const animate = shift > 0 && !reduced;
   useEffect(() => {
     if (!animate) return;
     const travel = (shift / SPEED) * 1000;

@@ -139,6 +139,8 @@ Unidades: `dvh` (nunca `100vh`), `env(safe-area-inset-*)` en barra, pestañas, r
 | Soltar archivos | Contorno discontinuo en acento sobre el contenido con «Suelta para añadir a tu biblioteca»; sin animación |
 | Letra | `<dialog>` (hoja en móvil). Verso activo en `--ink` y peso 700, el resto en `--ink-3`; se centra solo (sin suavizado con movimiento reducido) |
 | Estado activo (shuffle, repetir) | Color de acento **y** punto bajo el icono; `aria-pressed` |
+| Fila de cola | Como la fila de pista, con el estado escrito junto al artista («Sonando», «A continuación», «se repite») y no en una barra de color. La que suena lleva una pastilla de `--surface-3`; las ya sonadas, `--ink-3`. Acciones: con puntero aparecen al pasar o enfocar; en táctil, un «⋯» que abre la hoja de acciones |
+| Ajustes | Página `/app/ajustes` con sección por tema (apariencia y luces, reproducción, biblioteca, accesibilidad, datos locales). Solo reúne controles que existen en otro sitio (menú ≡, hoja de biblioteca) más «Reducir movimiento» y «Borrar datos»; sin ajustes sin efecto |
 | Estado vacío | Un título, una frase y una acción. Sin ilustraciones ni cajas punteadas |
 | Errores | Junto a lo que falló, en lenguaje del usuario, sin jerga técnica (ni "Supabase", ni mensajes crudos del servidor) |
 
