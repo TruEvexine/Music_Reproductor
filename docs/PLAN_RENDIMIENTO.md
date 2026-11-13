@@ -64,6 +64,7 @@ Cada fase es un commit, con `npm run typecheck`, `npm test` y `npm run build` en
 - **Riesgo:** esconder una regresión real de la recarga tras importar. Se mitiga porque la cifra se sigue imprimiendo en cada ejecución.
 - **Se mide con:** `node scripts/prueba-biblioteca.mjs` 5 veces seguidas.
 - **Hecho:** 5 de 5 en verde, con la restauración por debajo de 1 s y las dos cifras en la salida.
+- **Estado (2026-11-12): hecha.** 10 pasadas de la parte 3: pestaña nueva 451–491 ms (10 de 10 < 1 s); recarga justo tras importar 391–494 ms, y una vez 3 322 ms (1 de 10 > 1 s), solo informativa.
 
 ### Fase 2: sacar Supabase y la landing del chunk de entrada (H3)
 - **Cambio:** cargar `@supabase/supabase-js` con `import()` en `src/sync/supabaseClient.ts`, la primera vez que se usa (sesión, login, sync), y `React.lazy` para `Landing` y para la app desde `src/ui/App.tsx`. Sin dependencias nuevas.
