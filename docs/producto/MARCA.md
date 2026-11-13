@@ -157,11 +157,16 @@ Texto para la página «Nosotros» o para el pie de la landing. Escrito para un 
 >   anunciamos.
 > - **La cuenta es opcional.** Sin cuenta lo tienes todo; la cuenta solo sincroniza tus playlists.
 > - **Accesible por defecto.** Se usa con teclado, respeta «reducir movimiento» y cada botón se puede tocar con el pulgar.
-> - **Una persona, sin prisas falsas.** Lo hace [nombre o seudónimo] en México. El plan está publicado; no prometo fechas que no
+> - **Una persona, sin prisas falsas.** Lo hace una persona en México. El plan está publicado; no prometo fechas que no
 >   pueda cumplir.
 
-**[Decides tú]** cuánto contar de ti: nombre real o seudónimo, ciudad, foto. El aviso de privacidad ya obliga a publicar la identidad
-del responsable, pero eso no exige ponerla en «Nosotros».
+**Decidido el 2026-11-12:** en «Nosotros» no aparece tu nombre real ni foto ni la universidad: solo «una persona en México». El aviso de
+privacidad sí publica al responsable, pero eso no exige ponerlo aquí. **Tono: cercano** (de tú, directo), el de los textos actuales y el de
+`FAQ.md`. **Sin historia personal:** el texto se queda en visión, misión y principios, que se comprueban contra el código.
+
+- **[Pendiente: seudónimo]** si prefieres firmar con un seudónimo en lugar de «una persona»; no se dio ninguno.
+- **[Pendiente: redes o contacto públicos]** no se indicó ninguno. Hasta entonces «Nosotros» no enlaza redes; el contacto de la FAQ y del aviso
+  es `{{CORREO_PRIVACIDAD}}` (temporal).
 
 ## 5. Lo omitido y los riesgos
 

@@ -109,3 +109,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Decidido:** nombre visible vacío por defecto; foto local y, con cuenta, en bucket privado; solo nombre y foto como datos de perfil; recaps compartidos como imagen generada en el dispositivo (sin enlace público).
 - **Por reconciliar:** `useAuthController.signUp` recibe `displayName` y lo guarda como `display_name` al registrarse, así que con cuenta el nombre **no** nace vacío. Decidir al implementar: dejar ese campo opcional en el registro, o aceptar que el nombre del registro sea el nombre del perfil.
 - **Sin decidir todavía:** retención del historial (24 meses propuestos), si `hours` se sube a la nube, D19 de `docs/DISENO_ESTADISTICAS.md`.
+
+### D26 — «Nosotros» y FAQ (2026-11-12)
+- **Decidido:** presentación anónima («una persona en México»), sin universidad, sin historia personal, tono cercano.
+- **Pendiente:** seudónimo (si lo quiere), redes o contacto públicos, y la historia en sus palabras si más adelante quiere añadirla (no se redacta por el usuario).
+- **Efecto en la FAQ:** el texto ya está en tono cercano; solo falta el nombre (D22) y completar `{{CORREO_PRIVACIDAD}}` (D20) para publicarla.

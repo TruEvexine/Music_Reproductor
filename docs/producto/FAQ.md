@@ -4,7 +4,7 @@ Regla, igual que en `docs/COPY_LANDING.md`: cada respuesta se comprueba en el c�
 **Comprobado en** es para el mantenimiento y no se publica. Si una función cambia, se cambia la respuesta. Donde la respuesta es «todavía
 no», se dice así.
 
-«[Nombre]» se sustituye por el nombre elegido (`MARCA.md`).
+«[Nombre]» se sustituye por el nombre elegido (`MARCA.md`; **[Pendiente: elegir nombre]**). Tono decidido el 2026-11-12: cercano, de tú.
 
 ---
 
