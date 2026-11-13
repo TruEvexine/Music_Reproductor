@@ -6,6 +6,17 @@ están marcadas **[Decides tú]**.
 
 Principio que ordena todo: **se calcula y se guarda en el dispositivo**. La cuenta solo añade sincronización, y es opcional.
 
+## 0. Decisiones del 2026-11-12
+
+| Tema | Decisión |
+|---|---|
+| **Nombre visible por defecto** | **Vacío** hasta que la persona lo escriba. No se toma del correo ni se inventa. El recap saluda sin nombre si está vacío |
+| **Foto** | **Sí.** Local en el dispositivo; con cuenta, además en un bucket **privado** de Supabase Storage (§1.2). Sin URL pública |
+| **Datos opcionales** | **Solo nombre y foto.** Ningún otro dato (ni ubicación, cumpleaños, bio ni redes) |
+| **Recaps** | Se comparten como **imagen generada en el dispositivo** (§3.6), con los dos interruptores previos. Sin enlace público ni servidor |
+
+Sigue sin decidir (**[Decides tú]** más abajo): plazo de retención del historial, si `hours` se sube a la nube, y si algún día habrá perfil público o enlace público.
+
 ## 1. Perfil
 
 ### 1.1 Qué existe
@@ -18,7 +29,7 @@ Principio que ordena todo: **se calcula y se guarda en el dispositivo**. La cuen
 
 | Dato | Sin cuenta | Con cuenta | Notas |
 |---|---|---|---|
-| **Nombre** | Opcional, en `kv` (`profile.name`). Solo se usa para el saludo del recap | `profiles.display_name` | Máx. 60 caracteres, se pinta como texto (`AGENTS.md` §5) |
+| **Nombre** | Opcional y **vacío por defecto**, en `kv` (`profile.name`). Solo se usa para el saludo del recap | `profiles.display_name` | Máx. 60 caracteres, se pinta como texto (`AGENTS.md` §5). **[Pendiente: comprobar al implementar si el registro, que hoy rellena `display_name`, debe dejarlo vacío para cumplir «vacío por defecto»]** |
 | **Foto** | Opcional, en `kv` (`profile.avatar`, un blob) | Además, en un bucket **privado** de Supabase Storage, `mp-avatars/<uid>/avatar.jpg` | Ver abajo |
 
 **Foto, con privacidad primero:**
@@ -217,7 +228,7 @@ real del chunk en `npm run build`.
   permite). Las portadas son URLs `blob:` del mismo origen, así que el canvas no queda bloqueado. Sin librerías de captura de HTML.
 - **Web Share API** con archivos: si `navigator.canShare({ files })` es verdadero, se abre el menú de compartir del sistema. Si no,
   se descarga la imagen (`<a download>`).
-- **Antes de compartir**, dos interruptores: «Ocultar títulos de canciones» y «Ocultar portadas». Es lo que alguien puede no querer
+- **Decidido 2026-11-12:** la imagen es la única forma de compartir. **Antes de compartir**, dos interruptores: «Ocultar títulos de canciones» y «Ocultar portadas». Es lo que alguien puede no querer
   enseñar.
 - **Sin enlace público.** Un enlace exigiría guardar el recap en un servidor, con su aviso de privacidad y su moderación. Fuera de
   alcance. **[Decides tú]** si algún día se quiere.

@@ -104,3 +104,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Decidido:** antes de abrir registros, los cuatro: eliminar cuenta, exportar datos de la cuenta, recuperar contraseña y SMTP propio. No se abre a la UE por ahora; el inglés queda para después.
 - **Dependencia que bloquea:** el SMTP propio y el correo de privacidad en dominio propio necesitan **dominio**, y este necesita **nombre** (D22). Hasta entonces los registros no se deben abrir al público.
 - **Sin decidir todavía:** edad mínima (L5), plazo de borrado tras eliminar la cuenta (L4), tribunales (L7) y si las playlists locales se conservan al eliminar la cuenta (`AJUSTES_PRIVACIDAD.md` §2.3).
+
+### D25 — Perfil y recaps: decisiones y un punto por reconciliar (2026-11-12)
+- **Decidido:** nombre visible vacío por defecto; foto local y, con cuenta, en bucket privado; solo nombre y foto como datos de perfil; recaps compartidos como imagen generada en el dispositivo (sin enlace público).
+- **Por reconciliar:** `useAuthController.signUp` recibe `displayName` y lo guarda como `display_name` al registrarse, así que con cuenta el nombre **no** nace vacío. Decidir al implementar: dejar ese campo opcional en el registro, o aceptar que el nombre del registro sea el nombre del perfil.
+- **Sin decidir todavía:** retención del historial (24 meses propuestos), si `hours` se sube a la nube, D19 de `docs/DISENO_ESTADISTICAS.md`.
