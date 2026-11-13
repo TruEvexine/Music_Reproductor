@@ -78,6 +78,7 @@ Cada fase es un commit, con `npm run typecheck`, `npm test` y `npm run build` en
 - **Riesgo:** casi ninguno. Si la imagen LCP se pusiera en diferido, el LCP empeoraría.
 - **Se mide con:** Lighthouse (bytes iniciales y LCP) y la pestaña Red (las imágenes de abajo no se piden hasta hacer scroll).
 - **Hecho:** el LCP no empeora y las imágenes de abajo dejan de pedirse en la carga inicial.
+- **Estado (2026-11-12): hecha, con efecto parcial.** `loading="lazy"` y `decoding="async"` en las 3 capturas bajo el pliegue; el hero sigue en carga normal. En `vite preview` el LCP no cambia (148–168 ms antes y después). Firefox deja de pedirlas: en 390×844 pasa de 4 imágenes a 1 en la carga inicial, y en 1440×900 de 4 a 3. **Chromium las sigue pidiendo todas:** la landing entera cabe en su margen de carga diferida (≥ 1 250 px). En WebKit (Windows) no se pudo medir.
 
 ### Fase 4: letras fuera de la tabla de pistas (H2). **Solo si la Fase 0 o la medición de abajo lo justifican**
 - **Medir primero:** generar 5 000 pistas sintéticas con un `.lrc` de ~3 KB cada una y medir `getAll("tracks")`. Si el tiempo crece más del doble frente a los ~140 ms actuales, se hace.

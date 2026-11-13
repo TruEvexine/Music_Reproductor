@@ -72,13 +72,13 @@ export function Landing() {
             </p>
           </div>
           <div className="landing-phones">
-            <img alt="El reproductor en pantalla completa en un móvil, con la portada de un nocturno de Chopin" data-reveal height={1688} src={playerPhone} style={rise(2)} width={780} />
-            <img alt="La página del ecualizador en un móvil, con el ajuste Graves aplicado a las diez bandas" data-reveal height={1688} src={equalizerPhone} style={rise(3)} width={780} />
+            <img alt="El reproductor en pantalla completa en un móvil, con la portada de un nocturno de Chopin" data-reveal decoding="async" height={1688} loading="lazy" src={playerPhone} style={rise(2)} width={780} />
+            <img alt="La página del ecualizador en un móvil, con el ajuste Graves aplicado a las diez bandas" data-reveal decoding="async" height={1688} loading="lazy" src={equalizerPhone} style={rise(3)} width={780} />
           </div>
         </section>
 
         <section className="landing-quality">
-          <img alt="El reproductor grande en escritorio, con la portada, el formato del archivo, el progreso y los controles" data-reveal height={900} src={playerDesktop} width={1440} />
+          <img alt="El reproductor grande en escritorio, con la portada, el formato del archivo, el progreso y los controles" data-reveal decoding="async" height={900} loading="lazy" src={playerDesktop} width={1440} />
           <div className="landing-copy">
             <h2 data-reveal style={rise(1)}>Formato y calidad de cada pista</h2>
             <p data-reveal style={rise(2)}>
