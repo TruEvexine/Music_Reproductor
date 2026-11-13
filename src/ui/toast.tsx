@@ -21,7 +21,9 @@ function dismiss() {
 
 export function toast(message: string, undo?: () => void) {
   clearTimeout(timer);
-  useToast.setState({ current: { id: ++serial, message, undo } });
+  // Un aviso sin «Deshacer» que ya está a la vista se reescribe en su sitio: pulsar X o P varias veces no repite la entrada.
+  const current = useToast.getState().current;
+  useToast.setState({ current: { id: current && !current.undo && !undo ? current.id : ++serial, message, undo } });
   timer = setTimeout(dismiss, undo ? 6000 : 3500);
 }
 

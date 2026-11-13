@@ -68,23 +68,23 @@ check("al terminar avanza sola a la siguiente", (await title()) === "tono-sin-me
 // 4. Repetir pista: la pista de 2 s se repite sin cambiar de canción.
 await row("tono-corto").click();
 await idle();
-await page.keyboard.press("r");
-await page.keyboard.press("r"); // off → cola → pista
+await page.keyboard.press("p");
+await page.keyboard.press("p"); // off → cola → pista
 await page.waitForTimeout(4500);
 check("repetir pista vuelve a empezar la misma canción", (await title()) === "tono-corto" && (await playing()), await title());
-await page.keyboard.press("r"); // vuelve a off
+await page.keyboard.press("p"); // vuelve a off
 
 // 5. Siguiente / anterior con teclado.
 await row("Marea").click();
 await idle();
 await page.waitForTimeout(300);
 const t0 = await title();
-await page.keyboard.press("Shift+ArrowRight");
+await page.keyboard.press("ArrowRight");
 await page.waitForTimeout(400);
-check("Mayús+→ salta a la siguiente", (await title()) === "tono-corto", await title());
-await page.keyboard.press("Shift+ArrowLeft");
+check("→ salta a la siguiente", (await title()) === "tono-corto", await title());
+await page.keyboard.press("ArrowLeft");
 await page.waitForTimeout(400);
-check("Mayús+← vuelve a la anterior", (await title()) === t0, await title());
+check("← vuelve a la anterior", (await title()) === t0, await title());
 
 // 6. Seek con la barra.
 await row("amanecer").click();

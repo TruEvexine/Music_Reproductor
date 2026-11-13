@@ -363,6 +363,50 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   white-space: normal;
 }
 
+/* Hoja de atajos: etiqueta a la izquierda, teclas a la derecha. Las teclas se separan por tono, sin bordes. */
+.shortcuts {
+  display: grid;
+  gap: var(--s1);
+  margin: 0;
+}
+
+.shortcuts > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 40px;
+}
+
+.shortcuts dt {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.shortcuts dd {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--s1);
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+
+.shortcuts kbd {
+  display: inline-grid;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 var(--s2);
+  place-items: center;
+  border-radius: var(--radius-s);
+  background: var(--surface-3);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
 @media (min-width: 600px) {
   .dialog {
     width: min(440px, 100% - 2 * var(--s5));

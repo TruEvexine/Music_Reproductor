@@ -23,6 +23,8 @@ export interface BackgroundSettings {
   hdr: boolean;
   /** Ajustes → Accesibilidad: movimiento reducido aunque el sistema no lo pida (el del sistema se respeta siempre). */
   reduceMotion: boolean;
+  /** Ajustes → Accesibilidad: atajos de una sola tecla (WCAG 2.1.4: tienen que poder apagarse). */
+  shortcuts: boolean;
   /** 0–1: fuerza del color. */
   intensity: number;
   /** Velocidad de la deriva (0,25–2×). */
@@ -39,6 +41,7 @@ export const defaultBackground: BackgroundSettings = {
   mode: "cover",
   hdr: false,
   reduceMotion: false,
+  shortcuts: true,
   intensity: 0.6,
   speed: 1,
   palette: "cover",
@@ -61,6 +64,7 @@ export function sanitizeBackground(saved: Partial<BackgroundSettings> | undefine
     mode: modes.includes(s.mode) ? s.mode : defaultBackground.mode,
     hdr: typeof saved?.hdr === "boolean" ? saved.hdr : legacyHdr,
     reduceMotion: typeof s.reduceMotion === "boolean" ? s.reduceMotion : defaultBackground.reduceMotion,
+    shortcuts: typeof s.shortcuts === "boolean" ? s.shortcuts : defaultBackground.shortcuts,
     intensity: clamp(s.intensity, 0, 1),
     speed: clamp(s.speed, SPEED_LIMITS.min, SPEED_LIMITS.max),
     palette: sources.includes(s.palette) ? s.palette : defaultBackground.palette,

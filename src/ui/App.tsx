@@ -13,6 +13,7 @@ import { icon } from "./parts";
 import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
 import { PlaylistsView } from "./PlaylistsView";
 import { SettingsView } from "./SettingsView";
+import { ShortcutsHelp } from "./ShortcutsHelp";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
 import { usePresence } from "./motion";
@@ -94,6 +95,7 @@ function Shell() {
         <PlayerBar queueOpen={queue} />
         {playerPanel.mounted && <NowPlaying backdrop={<Backdrop />} closing={playerPanel.closing} queueOpen={queue} />}
         {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
+        <ShortcutsHelp />
       </div>
     </PaletteContext.Provider>
   );

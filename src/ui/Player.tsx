@@ -66,7 +66,7 @@ function VolumeControl() {
   );
 }
 
-const repeatLabel = { off: "Repetición desactivada", queue: "Repitiendo la cola", track: "Repitiendo la canción" };
+export const repeatLabel = { off: "Repetición desactivada", queue: "Repitiendo la cola", track: "Repitiendo la canción" };
 
 function Transport({ large = false }: { large?: boolean }) {
   const isPlaying = usePlayer((state) => state.isPlaying);

@@ -3,6 +3,7 @@ import { library } from "../state/library";
 import { useBackground, background } from "../state/background";
 import { ConfirmDialog } from "./dialogs";
 import { BackupSection, FoldersSection } from "./LibrarySheet";
+import { openShortcutHelp } from "./ShortcutsHelp";
 import { useReducedMotion } from "./motion";
 import { BackgroundPage, EqPage, SoundControls, SwitchRow } from "./PlayerMenu";
 
@@ -11,6 +12,7 @@ import { BackgroundPage, EqPage, SoundControls, SwitchRow } from "./PlayerMenu";
 // No hay tema claro ni más idiomas que el español: por eso no hay ajustes de tema ni de idioma.
 export function SettingsView() {
   const reduceMotion = useBackground((state) => state.reduceMotion);
+  const shortcuts = useBackground((state) => state.shortcuts);
   const reduced = useReducedMotion();
   const [wiping, setWiping] = useState(false);
   return (
@@ -48,6 +50,13 @@ export function SettingsView() {
               Quita animaciones y transiciones y deja el fondo quieto.
               {reduced && !reduceMotion ? " Tu sistema ya pide menos movimiento: se respeta aunque esto esté apagado." : " Si tu sistema lo pide, se respeta siempre."}
             </p>
+          </section>
+          <section className="menu-group">
+            <SwitchRow checked={shortcuts} label="Atajos de teclado" onChange={(next) => background.set({ shortcuts: next })} />
+            <p className="hint">Espacio, flechas, X, P y más. Apágalos si chocan con tu dictado por voz o tu lector de pantalla.</p>
+            <button className="link" onClick={openShortcutHelp} type="button">
+              Ver la lista de atajos
+            </button>
           </section>
         </div>
       </section>

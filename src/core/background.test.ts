@@ -16,13 +16,14 @@ describe("ajustes del fondo", () => {
       hue: -30,
       fps: 144 as never,
       batterySaver: "sí" as never,
+      shortcuts: "no" as never,
     });
     expect(fixed).toEqual({ ...defaultBackground, intensity: 1, speed: 0.25, hue: 330, fps: "auto" });
     expect(sanitizeBackground({ intensity: NaN, hue: 725 })).toMatchObject({ intensity: 0, hue: 5 });
   });
 
   it("conserva ajustes válidos", () => {
-    const ok = { mode: "rhythm", hdr: true, reduceMotion: true, intensity: 0.3, speed: 1.5, palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
+    const ok = { mode: "rhythm", hdr: true, reduceMotion: true, shortcuts: false, intensity: 0.3, speed: 1.5, palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
     expect(sanitizeBackground(ok)).toEqual(ok);
   });
 

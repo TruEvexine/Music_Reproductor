@@ -284,7 +284,7 @@ Shimmer suave que se apaga con `prefers-reduced-motion`. Además: **estados vac�
 ### 4.5 Gestos y atajos
 
 - **Gestos:** portada ← → cambia pista; deslizar arriba el mini player abre el expandido; abajo lo cierra; mantener presionada una fila abre menú contextual; deslizar una fila de la cola la quita (con deshacer); arrastrar el asa reordena; tocar el tiempo alterna restante/total.
-- **Teclado:** `Espacio` play/pausa · `←/→` ±5 s · `Shift+←/→` anterior/siguiente · `↑/↓` volumen · `M` silencio · `S` shuffle · `R` repetición · `Q` cola · `/` buscar · `E` ecualizador · `?` ayuda.
+- **Teclado:** `Espacio` play/pausa · `←/→` anterior/siguiente · `Shift+←/→` ∓5 s · `↑/↓` volumen · `M` silencio · `X` aleatorio · `P` repetición (off → cola → canción) · `Q` cola · `?` ayuda. Se apagan en Ajustes → Accesibilidad. Mapa y reglas de foco en `core/shortcuts.ts`.
 
 ---
 
@@ -410,7 +410,7 @@ Límites conocidos de la Fase 1 (se resuelven en la fase indicada):
 - [x] Media Session (frontera `AudioSession`, `src/platform/web`): metadatos, portada, estado y posición, play/pausa/anterior/siguiente/seek — 2026-11-10
 - [x] ReplayGain por pista o álbum leído de las etiquetas; sin etiqueta no se toca — 2026-11-10
 - [x] Temporizador de apagado (15/30/60 min o al terminar la canción) con fundido final de 5 s — 2026-11-10
-- [x] Atajos: Espacio, ←/→ ±5 s, Mayús+←/→ anterior/siguiente, ↑/↓ volumen, M, S, R, Q. No actúan con diálogos o campos de texto enfocados — 2026-11-10
+- [x] Atajos: Espacio, ←/→ ±5 s, Mayús+←/→ anterior/siguiente, ↑/↓ volumen, M, S, R, Q. No actúan con diálogos o campos de texto enfocados — 2026-11-10 *(mapa cambiado el 2026-11-12, ver §11.1g)*
 - [x] Ecualizador con preajustes y bandas editables, ajustes de audio persistentes en IndexedDB — 2026-11-10
 
 Verificado con `node scripts/prueba-audio.mjs` (19 comprobaciones en Chromium con tonos sintéticos): reproducir, avance real del tiempo, pausa/reanudar, fin de pista, repetir pista, anterior/siguiente, seek, volumen, silencio, EQ y crossfade persistentes, crossfade efectivo, archivo corrupto, temporizador y restauración de sesión. 47 tests unitarios en `core`.
@@ -424,7 +424,7 @@ Límites conocidos de la Fase 2:
 - **Gapless exacto no se promete:** con dos `<audio>` el hueco depende del navegador (documentado en §3.3).
 - **Modo Ritmo:** el analizador existe (`player.analyser()`) pero aún no hay fondo que lo use (Fase 4).
 - Audio en segundo plano con la pantalla apagada en móvil: en la web depende del navegador; la garantía real llega con la app nativa (Fase 11).
-- Sin ayuda de atajos visible (`?`); entra en la Fase 5.
+- ~~Sin ayuda de atajos visible (`?`)~~: hecha el 2026-11-12 (§11.1g).
 
 ### Fase 3 — Biblioteca local
 - [x] Abrir carpetas: File System Access (handle recordado) en Chromium; `<input webkitdirectory>` y arrastrar (handles en Chromium, `webkitGetAsEntry` en el resto) con copia a OPFS — 2026-11-11
@@ -490,7 +490,8 @@ Skills aplicadas: ponytail (WebGL directo en vez de `ogl`, sin librería de visu
 - [ ] Favoritos, historial y estadísticas locales
 - [ ] Multiselección en listas (agregar a cola/playlist en lote)
 - [ ] Ajustes completos (audio, fondo, densidad, formato de tiempo, idioma)
-- [ ] Onboarding de 1 paso y pantalla de ayuda de atajos
+- [ ] Onboarding de 1 paso
+- [x] Pantalla de ayuda de atajos (`?` y Ajustes) — 2026-11-12
 - [ ] Auditoría de accesibilidad (teclado, lector de pantalla, contraste)
 
 ### Fase 6 — PWA
@@ -753,6 +754,17 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
    (`library.wipeAll` + `storage.clear`). **No hay** ajuste de tema (solo existe el oscuro) ni de idioma (solo español): no se inventaron. Prueba: `scripts/prueba-ajustes.mjs`.
    Skills aplicadas: ponytail; make-interfaces-feel-better, design-motion-principles, design-taste-frontend, ui-ux-pro-max e impeccable (cargadas y aplicadas a criterio; no se ejecutaron su buscador, su lanzador
    de contexto ni `inspect.mjs`: no hay Python y es una pantalla de app, no una página).
+
+### 11.1g Atajos, calidad de portada y portada generativa (2026-11-12)
+
+1. **Atajos.** Mapa nuevo: `Espacio` play/pausa · `←/→` anterior/siguiente · `Mayús+←/→` ∓5 s (antes las flechas solas buscaban) · `X` aleatorio · `P` repetición
+   (`off` → `queue` → `track` → `off`, el `cycleRepeat` del núcleo, sin tocar) · `↑/↓` volumen · `M` · `Q` · `?` ayuda. **Se quitaron `S` y `R`.** Puro y con test en
+   `core/shortcuts.ts`; `ui/useShortcuts.ts` solo lo adapta al DOM. Regla de foco por tecla: cada elemento se queda con las teclas que ya usa (campo de texto: todas; deslizador y
+   grupos de opciones: las flechas; botón, enlace e interruptor: Espacio), así nunca hay doble acción y X/P siguen vivos tras arrastrar la barra. Con Ctrl/Alt/Meta o un diálogo abierto no actúan;
+   mantener pulsada la tecla solo repite buscar y volumen. Se apagan con `BackgroundSettings.shortcuts` (Ajustes → Accesibilidad; WCAG 2.1.4). Avisos «Aleatorio activado» y estado de repetición
+   por `toast` (`role=status`; un aviso sin «Deshacer» ya visible se reescribe sin repetir la entrada, DESIGN: nada se anima por teclado). Hoja de ayuda: `ui/ShortcutsHelp.tsx`.
+   Pruebas: `core/shortcuts.test.ts` y `scripts/prueba-atajos.mjs` (foco en cuerpo, campo, deslizadores, botones, enlace, Ctrl/Alt/Meta, apagar y persistir).
+   Skills aplicadas: ponytail; make-interfaces-feel-better, design-motion-principles, design-taste-frontend, ui-ux-pro-max e impeccable (cargadas y aplicadas a criterio; sin buscador ni lanzador de contexto: no hay Python y `PRODUCT.md` no existe).
 
 ### 11.2 Funciones nuevas (alcance)
 

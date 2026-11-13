@@ -121,10 +121,11 @@ busca letras en internet.
 Comprobado en: `src/core/lyrics.ts`, CSP sin dominios de letras.
 
 ### ¿Tiene atajos de teclado?
-Sí: **Espacio** reproduce o pausa; **← / →** retroceden o avanzan 5 segundos; **Mayús + ← / →** cambian de canción; **↑ / ↓** suben o
-bajan el volumen; **M** silencia; **S** activa el orden aleatorio; **R** cambia la repetición; **Q** abre o cierra la cola.
+Sí: **Espacio** reproduce o pausa; **← / →** cambian de canción; **Mayús + ← / →** retroceden o avanzan 5 segundos; **↑ / ↓** suben o
+bajan el volumen; **M** silencia; **X** activa el orden aleatorio; **P** cambia la repetición (desactivada, cola, canción); **Q** abre o cierra la cola;
+**?** muestra la lista. No actúan al escribir; un deslizador, botón o enlace enfocado conserva sus propias teclas, y puedes apagarlos en Ajustes → Accesibilidad.
 
-Comprobado en: `src/ui/useShortcuts.ts`.
+Comprobado en: `src/core/shortcuts.ts`, `src/ui/useShortcuts.ts`.
 
 ### ¿Funciona con los controles de la pantalla de bloqueo y los auriculares?
 La app los usa a través del navegador (Media Session): reproducir, pausar, siguiente, anterior y avanzar o retroceder. Está probado en
