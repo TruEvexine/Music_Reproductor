@@ -90,6 +90,7 @@ Cada fase es un commit, con `npm run typecheck`, `npm test` y `npm run build` en
 - **Cambio:** `npm uninstall @tokenizer/http`.
 - **Riesgo:** ninguno en ejecución. Se verifica con typecheck, test y build.
 - **Hecho:** desaparece de `package.json` y `package-lock.json` y todo sigue en verde.
+- **Estado (2026-11-12): hecha.** Nada la importaba: solo aparecía en un comentario de ejemplo de `file-type` y ningún paquete del lockfile la pedía.
 
 ## 5. Los 31 puntos de la lista
 
