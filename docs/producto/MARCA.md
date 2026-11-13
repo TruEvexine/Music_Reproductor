@@ -1,5 +1,10 @@
 # Marca: nombre, logo y «Nosotros»
 
+> **Actualizado el 2026-11-13: nombre, logo y animación de carga decididos.** Nombre **Satin**; logo **Trama al bies** (satén de 5
+> lizos girado 45°, oro arena sobre negro cálido, «satin» en Instrument Serif); animación de carga solo CSS que aparece a partir de
+> 300 ms. Todo el detalle, los archivos y lo que falta verificar están en [`docs/marca/MARCA_DEFINITIVA.md`](../marca/MARCA_DEFINITIVA.md),
+> que manda sobre §0–§3 de este documento. Las secciones §2 y §3 quedan como historial.
+
 `PLAN.md` §6 ya lo dice: «Music Reproductor» es genérico, no se puede registrar como marca y no se puede posicionar. Hay que elegir
 nombre y dominio antes de invertir en SEO, tiendas o redes.
 
@@ -10,10 +15,10 @@ nombre y dominio antes de invertir en SEO, tiendas o redes.
 
 | Tema | Estado |
 |---|---|
-| **Nombre** | **[Pendiente: elegir nombre]**. Se decide más adelante. Criterio dado: **simple y en inglés**; **nada tan común ni «tonto» como Surco o Aguja**, que quedan descartadas. Hasta elegir, se conserva «Music Reproductor» como nombre de trabajo |
-| **Ambiente del logo** | **[Pendiente: ambiente]**. Se elegirá más adelante con ayuda de una skill de diseño (por ejemplo `impeccable`), no ahora. Hasta entonces la dirección de §3 es solo un punto de partida |
-| **Colores a evitar** | **[Pendiente: colores a evitar]** (no se ha pensado) |
-| **Referencias que gustan y que no** | **[Pendiente: referencias]** (todavía no hay ninguna) |
+| **Nombre** | **Satin** (decidido el 2026-11-13, entre las finalistas Legato, Satin y Overtone; `docs/marca/NOMBRE.md`). **Pendiente:** IMPI y abogado (`MARCA_DEFINITIVA.md` §6). Hasta registrarlo, los textos de la app siguen diciendo «Music Reproductor» |
+| **Ambiente del logo** | **Decidido el 2026-11-13:** Trama al bies, elegida entre tres rutas con la skill `logo-design` (`docs/marca/MARCA_DEFINITIVA.md` §2) |
+| **Colores a evitar** | **Verde** (2026-11-13). Color del logo: oro arena `#e6c686` sobre negro cálido `#0b0a08` |
+| **Referencias que gustan y que no** | No se dieron; el usuario descartó las rutas Pliegue y Brillo por «meh» (2026-11-13) |
 
 Consecuencia: la lista de §2 se redactó con el criterio «español primero». **El criterio nuevo (inglés, simple) la deja desfasada**:
 Tocata, Atril y Brasa no están descartadas, pero tampoco cumplen claramente el criterio de inglés; Surco y Aguja sí se descartan. Antes de
@@ -78,7 +83,7 @@ acento dorado, luces que siguen la portada) y con la idea de escuchar a gusto, e
 
 ### Recomendación
 
-~~Verificar primero Surco y luego Brasa.~~ **Superada el 2026-11-12:** Surco queda descartada (§0) y el criterio pasó a ser un nombre simple en inglés. **[Pendiente: elegir nombre]**.
+~~Verificar primero Surco y luego Brasa.~~ **Superada el 2026-11-12:** Surco queda descartada (§0) y el criterio pasó a ser un nombre simple en inglés. **Resuelta el 2026-11-13: Satin.**
 
 ### Lista de verificación para el nombre elegido
 
@@ -94,6 +99,10 @@ acento dorado, luces que siguen la portada) y con la idea de escuchar a gusto, e
 6. **Connotaciones**: preguntar a hablantes de Argentina, España y Colombia si el nombre tiene un sentido que no conoces.
 
 ## 3. Dirección de logo
+
+> **Superada el 2026-11-13.** El anillo abierto con punto no se usó; el logo aprobado es Trama al bies
+> (`docs/marca/MARCA_DEFINITIVA.md` §2). Se conserva como historial; los requisitos de tamaños pequeños, PWA, Android e iOS de abajo
+> sí se cumplieron en el kit.
 
 ### Concepto
 
@@ -170,7 +179,8 @@ privacidad sí publica al responsable, pero eso no exige ponerlo aquí. **Tono: 
 
 ## 5. Lo omitido y los riesgos
 
-- No hice una búsqueda previa de marcas ni de dominios: cualquiera de los cinco puede estar ocupado.
-- No diseñé el logo; esto es la dirección para quien lo dibuje (o para una siguiente tarea).
+- ~~No hice una búsqueda previa de marcas ni de dominios.~~ El 2026-11-13 se comprobaron dominios y usuarios de Satin (RDAP, DNS,
+  GitHub, YouTube, Bluesky); la búsqueda de marcas en el IMPI sigue pendiente.
+- ~~No diseñé el logo.~~ Diseñado y aprobado el 2026-11-13 (`docs/marca/`).
 - El cambio de nombre toca la landing, el `<title>`, el manifest de la PWA, `docs/COPY_LANDING.md`, el repositorio y el proyecto de
   Vercel. Conviene hacerlo de una vez, cuando el nombre ya esté registrado o solicitado.

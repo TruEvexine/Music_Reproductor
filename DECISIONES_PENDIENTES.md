@@ -94,6 +94,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Qué:** el nombre se elegirá más adelante. Criterio del usuario: simple y en inglés; nada común ni «tonto» como Surco o Aguja (descartadas). El ambiente del logo se elegirá después con una skill de diseño; colores a evitar y referencias, sin pensar aún.
 - **Bloquea:** Fase 2 del ROADMAP (nombre, dominio, landing, logo), el correo de privacidad en dominio propio (D20) y las cuentas en redes. Hasta entonces la app sigue como «Music Reproductor».
 - **Siguiente paso:** una lista nueva de nombres con el criterio en inglés (la de `MARCA.md` §2 quedó desfasada), y la verificación en IMPI, dominios y redes del elegido.
+- **Avance 2026-11-13:** nombre **Satin**, logo «Trama al bies» y animación de carga decididos (`docs/marca/MARCA_DEFINITIVA.md`). **Sigue pendiente (usuario):** IMPI, abogado, redes sin verificar, dominio (`MARCA_DEFINITIVA.md` §6).
 
 ### D23 — Licencia del código: completar y revisar (L6, 2026-11-12)
 - **Decidido:** repositorio público bajo **PolyForm Noncommercial 1.0.0** (texto oficial 1.0.0, descargado de `polyformproject/polyform-licenses`). Archivo `LICENSE` añadido con la línea `Required Notice: Copyright {{RESPONSABLE}}`.

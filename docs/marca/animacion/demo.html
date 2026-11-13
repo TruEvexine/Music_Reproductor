@@ -1,0 +1,23 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Satin · carga</title>
+<style>html{background:#0b0a08}
+.satin-carga{position:fixed;inset:0;display:grid;place-items:center;opacity:0;animation:satin-aparece .24s ease-out .3s forwards}
+.satin-carga svg{width:clamp(88px,24vmin,136px);height:auto;fill:#e6c686}
+.satin-carga g{opacity:.38;animation:satin-brillo 1.5s ease-in-out calc(.3s + var(--i) * .11s) infinite}
+@keyframes satin-aparece{to{opacity:1}}
+@keyframes satin-brillo{0%,100%{opacity:.38}35%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.satin-carga{animation:satin-aparece 1ms steps(1) .3s forwards}.satin-carga g{animation:none;opacity:1}}
+body{margin:0;font:14px system-ui,sans-serif;color:#f4f1ed}
+.panel{position:fixed;left:12px;right:12px;bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;z-index:2}
+.panel button{min-height:44px;padding:0 14px;border-radius:10px;border:0;background:#151312;color:#f4f1ed;font:inherit}
+.panel output{color:#bab7b2;font-variant-numeric:tabular-nums}
+.app{position:fixed;inset:0;display:grid;place-items:center;color:#bab7b2}
+</style></head><body>
+<div id="root"><div class="satin-carga" role="status" aria-label="Cargando Satin"><svg viewBox="0 0 256 256" aria-hidden="true"><g style="--i:0"><path d="M4.26 117.39L28.44 141.58A12 12 0 0 0 45.41 124.61L21.23 100.42A12 12 0 0 0 4.26 117.39Z"/><path d="M53.9 167.03L138.61 251.74A12 12 0 0 0 155.58 234.77L70.87 150.06A12 12 0 0 0 53.9 167.03Z"/></g><g style="--i:1"><path d="M28.3 93.35L82.75 147.8A12 12 0 0 0 99.72 130.83L45.27 76.38A12 12 0 0 0 28.3 93.35Z"/><path d="M108.2 173.25L162.65 227.7A12 12 0 0 0 179.62 210.73L125.17 156.28A12 12 0 0 0 108.2 173.25Z"/></g><g style="--i:2"><path d="M52.34 69.31L137.05 154.02A12 12 0 0 0 154.02 137.05L69.31 52.34A12 12 0 0 0 52.34 69.31Z"/><path d="M162.51 179.48L186.69 203.66A12 12 0 0 0 203.66 186.69L179.48 162.51A12 12 0 0 0 162.51 179.48Z"/></g><g style="--i:3"><path d="M76.38 45.27L115.7 84.58A12 12 0 0 0 132.67 67.61L93.35 28.3A12 12 0 0 0 76.38 45.27Z"/><path d="M141.15 110.04L210.73 179.62A12 12 0 0 0 227.7 162.65L158.12 93.07A12 12 0 0 0 141.15 110.04Z"/></g><g style="--i:4"><path d="M100.42 21.23L170 90.81A12 12 0 0 0 186.97 73.84L117.39 4.26A12 12 0 0 0 100.42 21.23Z"/><path d="M195.46 116.26L234.77 155.58A12 12 0 0 0 251.74 138.61L212.43 99.29A12 12 0 0 0 195.46 116.26Z"/></g></svg></div></div>
+<div class="panel"><button data-ms="150">Carga de 150 ms</button><button data-ms="900">900 ms</button><button data-ms="3000">3 s</button><output id="t">Cargando…</output></div>
+<script>
+const root = document.getElementById('root'), plantilla = root.innerHTML, t = document.getElementById('t');
+function cargar(ms) { root.innerHTML = plantilla; t.textContent = 'Cargando ' + ms + ' ms…'; const t0 = performance.now();
+  setTimeout(() => { root.innerHTML = location.search.includes('limpio') ? '' : '<div class="app">App montada en ' + Math.round(performance.now() - t0) + ' ms</div>'; t.textContent = ms < 300 ? 'Menos de 300 ms: no se vio nada' : 'Se vio la animación'; }, ms); }
+document.querySelectorAll('[data-ms]').forEach(b => b.onclick = () => cargar(+b.dataset.ms));
+const qs = new URLSearchParams(location.search), q = qs.get('ms'); if (qs.has('limpio')) document.querySelector('.panel').style.display = 'none'; if (q) cargar(+q);
+</script></body></html>
