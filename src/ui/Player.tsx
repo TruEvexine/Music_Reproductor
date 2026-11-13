@@ -40,6 +40,7 @@ import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
 import { queueAction } from "./toast";
+import { Range } from "./Range";
 import { motionReduced } from "./motion";
 import { VirtualList } from "./VirtualList";
 
@@ -56,17 +57,7 @@ function VolumeControl() {
       <IconButton label={muted ? "Activar sonido" : "Silenciar"} onClick={player.toggleMute}>
         {muted || volume === 0 ? <VolumeX {...icon} /> : <Volume2 {...icon} />}
       </IconButton>
-      <input
-        aria-label="Volumen"
-        aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)} %`}
-        max={1}
-        min={0}
-        onChange={(event) => player.setVolume(Number(event.currentTarget.value))}
-        step={0.01}
-        style={{ "--progress": `${(muted ? 0 : volume) * 100}%` } as CSSProperties}
-        type="range"
-        value={muted ? 0 : volume}
-      />
+      <Range format={(value) => `${Math.round(value * 100)} %`} label="Volumen" max={1} min={0} onChange={player.setVolume} step={0.01} value={muted ? 0 : volume} />
     </div>
   );
 }
@@ -114,20 +105,18 @@ function Seek() {
   const position = usePlayer((state) => state.position);
   const duration = usePlayer((state) => state.duration);
   const empty = usePlayer((state) => state.queue.current === null);
-  const progress = duration > 0 ? (position / duration) * 100 : 0;
   return (
     <div className="seek">
-      <input
-        aria-label="Posición de reproducción"
-        aria-valuetext={`${formatTime(position)} de ${formatTime(duration)}`}
+      <Range
         disabled={empty || duration === 0}
+        format={formatTime}
+        label="Posición de reproducción"
         max={duration || 0}
         min={0}
-        onChange={(event) => player.seek(Number(event.currentTarget.value))}
+        onChange={player.seek}
         step={1}
-        style={{ "--progress": `${progress}%` } as CSSProperties}
-        type="range"
         value={Math.min(position, duration || 0)}
+        valueText={`${formatTime(position)} de ${formatTime(duration)}`}
       />
       <span className="time">{formatTime(empty ? undefined : position)}</span>
       <span className="time">{duration > 0 ? `-${formatTime(duration - position)}` : "--:--"}</span>
@@ -411,7 +400,7 @@ export function QueuePanel({ closing }: { closing?: true }) {
   useEffect(() => {
     const outside = (event: PointerEvent) => {
       const target = event.target as Element;
-      if (!panel.current?.contains(target) && !target.closest("button, input, select, textarea, a, label, dialog")) closePanel();
+      if (!panel.current?.contains(target) && !target.closest("button, input, select, textarea, a, label, dialog, .range")) closePanel();
     };
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);

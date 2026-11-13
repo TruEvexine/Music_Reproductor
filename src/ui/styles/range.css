@@ -1,0 +1,176 @@
+/* Deslizador único (ui/Range.tsx). Zona de toque de 44 px; la barra mide 4 px y al pulsar se engrosa a 8 (escala, no altura) y aparece el
+   tirador. La parte llena lleva el acento de la portada y una difuminación suave del mismo color. El <input> nativo queda encima,
+   invisible y sin puntero: aporta teclado, foco y semántica; el aro de foco se dibuja en la barra. */
+.range {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--tap);
+  cursor: pointer;
+  touch-action: pan-y; /* empezar en vertical desplaza la página; una vez arrastrando, alejarse en vertical es el ajuste fino */
+  -webkit-tap-highlight-color: transparent;
+}
+
+.range[data-vertical] {
+  width: var(--tap);
+  height: 120px;
+  touch-action: pan-x;
+}
+
+.range input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.range-rail {
+  position: absolute;
+  inset-inline: 0;
+  top: 50%;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 4px;
+  background: color-mix(in oklch, var(--ink) 18%, transparent); /* tinta translúcida: se lee sobre la superficie y sobre el fondo de la portada */
+  transform: scaleY(0.5);
+  transition: transform var(--fast) var(--ease);
+}
+
+.range[data-vertical] .range-rail {
+  inset: 0 auto;
+  left: 50%;
+  width: 8px;
+  height: auto;
+  margin: 0 0 0 -4px;
+  transform: scaleX(0.5);
+}
+
+.range[data-active] .range-rail {
+  transform: none;
+}
+
+.range-fill,
+.range-glow {
+  position: absolute;
+  inset-block: 0;
+  left: var(--from);
+  right: calc(100% - var(--to));
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.range[data-vertical] :is(.range-fill, .range-glow) {
+  inset: auto 0;
+  top: calc(100% - var(--to));
+  bottom: var(--from);
+}
+
+.range-glow {
+  filter: blur(6px);
+  opacity: 0.45;
+  transition: opacity var(--fast) var(--ease);
+}
+
+.range[data-active] .range-glow {
+  opacity: 0.85;
+}
+
+/* Origen de los controles con signo (balance, ganancias, velocidad): una marca fina donde el relleno nace. */
+.range-origin {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: var(--origin);
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--ink-3);
+}
+
+.range[data-vertical] .range-origin {
+  inset: auto -4px;
+  bottom: var(--origin);
+  width: auto;
+  height: 2px;
+  margin: 0 0 -1px;
+}
+
+.range-thumb {
+  position: absolute;
+  top: 50%;
+  left: var(--at);
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 50%;
+  background: var(--ink);
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+  pointer-events: none;
+}
+
+.range[data-vertical] .range-thumb {
+  top: auto;
+  bottom: var(--at);
+  left: 50%;
+  margin: 0 0 -9px -9px;
+}
+
+.range:is([data-active], :has(input:focus-visible)) .range-thumb {
+  opacity: 1;
+  transform: none;
+}
+
+.range:has(input:focus-visible) .range-rail {
+  outline: 2px solid color-mix(in oklch, var(--ink) 80%, transparent);
+  outline-offset: 4px;
+}
+
+/* Valor durante el ajuste fino: encima del tirador, sin salirse de la barra por los extremos. */
+.range-value {
+  position: absolute;
+  bottom: calc(50% + 18px);
+  left: var(--at);
+  padding: 2px var(--s2);
+  border-radius: var(--radius-s);
+  background: var(--surface-3);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(calc(var(--at) * -1));
+  pointer-events: none;
+}
+
+.range[data-vertical] .range-value {
+  right: calc(50% + 18px);
+  bottom: var(--at);
+  left: auto;
+  transform: translateY(50%);
+}
+
+.range[data-disabled] {
+  cursor: default;
+  opacity: 0.38;
+}
+
+/* Tono elegido: la barra muestra el arco de tonos (en OKLCH, con la luminosidad de las manchas); sin relleno. */
+.range.hue .range-rail {
+  background: linear-gradient(to right, oklch(0.46 0.12 0), oklch(0.46 0.12 60), oklch(0.46 0.12 120), oklch(0.46 0.12 180), oklch(0.46 0.12 240), oklch(0.46 0.12 300), oklch(0.46 0.12 360));
+}
+
+.range.hue :is(.range-fill, .range-glow) {
+  display: none;
+}
+
+@media (prefers-contrast: more) {
+  .range-glow {
+    display: none;
+  }
+}

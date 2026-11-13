@@ -12,6 +12,7 @@ import { Backdrop } from "./Backdrop";
 import { useExit, useReducedMotion } from "./motion";
 import { useDragDismiss } from "./gestures";
 import { icon, IconButton, iconSmall } from "./parts";
+import { Range } from "./Range";
 
 // Menú del reproductor (≡). Móvil: hoja inferior con arrastre. Escritorio: popover anclado al icono.
 // Los submenús se navegan en profundidad dentro del mismo panel (flecha de volver), nunca con menús anidados.
@@ -22,12 +23,6 @@ type PageId = "root" | "sound" | "eq" | "timer" | "background";
 const titles: Record<PageId, string> = { root: "Menú", sound: "Sonido", eq: "Ecualizador", timer: "Temporizador", background: "Fondo" };
 
 // --- Controles reutilizados por las páginas ---
-
-/** Relleno del deslizador: desde `origin` hasta el valor (variables CSS --from y --to, en %). */
-function fill(value: number, min: number, max: number, origin: number): CSSProperties {
-  const at = (v: number) => `${((v - min) / (max - min)) * 100}%`;
-  return { "--from": at(Math.min(value, origin)), "--to": at(Math.max(value, origin)) } as CSSProperties;
-}
 
 function Slider({
   label,
@@ -59,17 +54,7 @@ function Slider({
         <span>{label}</span>
         <span className="time">{format(value)}</span>
       </span>
-      <input
-        aria-valuetext={format(value)}
-        disabled={disabled}
-        max={max}
-        min={min}
-        onChange={(event) => onChange(Number(event.currentTarget.value))}
-        step={step}
-        style={fill(value, min, max, origin)}
-        type="range"
-        value={value}
-      />
+      <Range className={className} disabled={disabled} format={format} max={max} min={min} onChange={onChange} origin={origin} step={step} value={value} />
     </label>
   );
 }
@@ -294,23 +279,21 @@ export function EqPage() {
       <section aria-label="Bandas del ecualizador" className="menu-group eq" role="group">
         {EQ_BANDS.map((frequency, index) => (
           <label className="eq-band" key={frequency}>
-            <input
-              aria-label={hz(frequency)}
-              aria-orientation="vertical"
-              aria-valuetext={db(audio.eqGains[index])}
-              data-vertical="true"
+            <Range
               disabled={off}
+              format={db}
+              label={hz(frequency)}
               max={EQ_LIMIT_DB}
               min={-EQ_LIMIT_DB}
-              onChange={(event) => {
-                const eqGains = [...audio.eqGains];
-                eqGains[index] = Number(event.currentTarget.value);
+              onChange={(gain) => {
+                const eqGains = [...usePlayer.getState().audio.eqGains]; // del store: varios cambios por arrastre pueden llegar antes del siguiente render
+                eqGains[index] = gain;
                 player.setAudio({ eqGains });
               }}
+              origin={0}
               step={1}
-              style={fill(audio.eqGains[index], -EQ_LIMIT_DB, EQ_LIMIT_DB, 0)}
-              type="range"
               value={audio.eqGains[index]}
+              vertical
             />
             <span className="time">{hz(frequency)}</span>
             <span className="time">{audio.eqGains[index] > 0 ? "+" : ""}{audio.eqGains[index]}</span>
@@ -566,7 +549,7 @@ function MenuPanel({ anchor, onClose }: { anchor: RefObject<HTMLButtonElement | 
         (event.shiftKey ? items.at(-1) : items[0])?.focus();
       }
     } else if (event.key === "ArrowUp" || event.key === "ArrowDown") {
-      if (target.dataset.vertical) return;
+      if (target.getAttribute("aria-orientation") === "vertical") return;
       const items = [...event.currentTarget.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled)")];
       const down = event.key === "ArrowDown";
       const index = items.indexOf(target);

@@ -8,6 +8,7 @@ import { playlists } from "./state/playlists";
 import App from "./ui/App";
 import "./ui/styles/tokens.css";
 import "./ui/styles/base.css";
+import "./ui/styles/range.css";
 import "./ui/styles/shell.css";
 import "./ui/styles/library.css";
 import "./ui/styles/player.css";

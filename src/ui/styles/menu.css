@@ -259,7 +259,7 @@
   color: var(--accent);
 }
 
-/* Deslizadores: relleno desde el origen (el centro en los controles con signo). */
+/* Deslizadores: rótulo y valor encima; el control es ui/Range.tsx (range.css). */
 .menu-slider {
   display: grid;
   padding: 0 var(--s1);
@@ -274,57 +274,6 @@
   font-weight: 600;
 }
 
-.menu-slider input,
-.eq-band input {
-  appearance: none;
-  margin: 0;
-  background: none;
-  cursor: pointer;
-}
-
-.menu-slider input {
-  width: 100%;
-  height: var(--tap);
-}
-
-.menu-slider input::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to right, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
-}
-
-.menu-slider input::-moz-range-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to right, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
-}
-
-.menu-slider input::-webkit-slider-thumb,
-.eq-band input::-webkit-slider-thumb {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  margin-top: -6px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ink);
-}
-
-.menu-slider input::-moz-range-thumb,
-.eq-band input::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ink);
-}
-
-.menu-slider input:disabled,
-.eq-band input:disabled {
-  cursor: default;
-  opacity: 0.4;
-}
-
 /* Ecualizador: 10 bandas en dos filas de 5 para que cada columna sea tocable (≥ 44 px) desde 320 px de ancho. */
 .eq {
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -335,30 +284,6 @@
   display: grid;
   justify-items: center;
   gap: 0;
-}
-
-.eq-band input {
-  width: var(--tap);
-  height: 120px;
-  writing-mode: vertical-lr;
-  direction: rtl;
-}
-
-.eq-band input::-webkit-slider-runnable-track {
-  width: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to top, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
-}
-
-.eq-band input::-moz-range-track {
-  width: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to top, var(--surface-3) 0 var(--from), var(--accent) var(--from) var(--to), var(--surface-3) var(--to) 100%);
-}
-
-.eq-band input::-webkit-slider-thumb {
-  margin-top: 0;
-  margin-left: -6px;
 }
 
 .menu .hint,
@@ -373,13 +298,4 @@
 
 .menu-reset {
   justify-self: start;
-}
-
-/* Tono elegido: la pista muestra el arco de tonos (en OKLCH, con la luminosidad de las manchas). */
-.menu-slider.hue input::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, oklch(0.46 0.12 0), oklch(0.46 0.12 60), oklch(0.46 0.12 120), oklch(0.46 0.12 180), oklch(0.46 0.12 240), oklch(0.46 0.12 300), oklch(0.46 0.12 360));
-}
-
-.menu-slider.hue input::-moz-range-track {
-  background: linear-gradient(to right, oklch(0.46 0.12 0), oklch(0.46 0.12 60), oklch(0.46 0.12 120), oklch(0.46 0.12 180), oklch(0.46 0.12 240), oklch(0.46 0.12 300), oklch(0.46 0.12 360));
 }

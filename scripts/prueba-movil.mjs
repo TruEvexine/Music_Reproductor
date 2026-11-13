@@ -177,6 +177,42 @@ await touch({ x: seek.x - 60, y: seek.y }, { x: seek.x + 60, y: seek.y + 120 }, 
 await page.waitForTimeout(400);
 check("arrastrar el control de posición no cierra el reproductor", (await count(".now-playing")) === 1);
 
+// ───────────── Deslizador: al pulsar se engrosa; alejarse en vertical es el ajuste fino ─────────────
+{
+  const range = page.locator(".now-controls .seek .range");
+  const box = (await range.boundingBox());
+  const y = box.y + box.height / 2;
+  const x0 = box.x + box.width * 0.1;
+  const value = async () => Number(await page.locator(".now-controls .seek input").inputValue());
+  const move = (x, yy) => cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x, y: yy }] });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: x0, y }] });
+  await move(x0 + 12, y);
+  await page.waitForTimeout(250); // tras la transición (--fast)
+  const pressed = await range.evaluate((el) => ({ active: el.hasAttribute("data-active"), rail: getComputedStyle(el.querySelector(".range-rail")).transform, thumb: getComputedStyle(el.querySelector(".range-thumb")).opacity }));
+  const start = await value();
+  for (let i = 1; i <= 6; i++) await move(x0 + 12, y - i * 20); // se aleja 120 px hacia arriba: ¼ de velocidad
+  for (let i = 1; i <= 9; i++) {
+    await move(x0 + 12 + i * 20, y - 120);
+    await page.waitForTimeout(16);
+  }
+  const fine = await value();
+  const bubble = await page.locator(".now-controls .range-value").innerText().catch(() => "");
+  if (process.env.CAPTURA_DESLIZADOR) await page.screenshot({ path: process.env.CAPTURA_DESLIZADOR });
+  for (let i = 1; i <= 6; i++) await move(x0 + 192, y - 120 + i * 20); // vuelve a la barra: velocidad normal
+  for (let i = 1; i <= 9; i++) {
+    await move(x0 + 192 + i * 10, y);
+    await page.waitForTimeout(16);
+  }
+  const normal = await value();
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(300);
+  const expectedNormal = (90 / box.width) * (await page.locator(".now-controls .seek input").getAttribute("max"));
+  check("deslizador: al pulsar se engrosa la barra y aparece el tirador", pressed.active && pressed.rail === "none" && pressed.thumb === "1", JSON.stringify(pressed));
+  check("deslizador: alejarse 120 px en vertical ajusta a ¼ de velocidad y muestra el valor", fine - start <= 1.5 && bubble.includes("fino ¼"), `${start} → ${fine} s en 180 px · «${bubble}»`);
+  check("deslizador: de vuelta en la barra, velocidad normal", normal - fine >= expectedNormal - 1.5, `${fine} → ${normal} s en 90 px (esperado ≈ ${expectedNormal.toFixed(1)})`);
+  check("deslizador: al soltar vuelve a su grosor y el reproductor sigue abierto", !(await range.evaluate((el) => el.hasAttribute("data-active"))) && (await count(".now-playing")) === 1);
+}
+
 // ───────────── Carrusel de portadas ─────────────
 const nowPlayingTitle = () => page.locator(".now-title").innerText();
 const railOffset = () => page.locator(".now-track").evaluate((el) => el.style.getPropertyValue("--dx"));

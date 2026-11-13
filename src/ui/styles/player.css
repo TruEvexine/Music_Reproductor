@@ -51,55 +51,8 @@
   text-align: right;
 }
 
-/* El trazo es fino, pero la zona de toque mide 44 px de alto. */
-.seek input {
+.seek .range {
   grid-column: 1 / -1;
-  width: 100%;
-  height: var(--tap);
-  margin: 0;
-  appearance: none;
-  background: none;
-  cursor: pointer;
-  touch-action: none;
-}
-
-.seek input::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to right, var(--accent) var(--progress, 0%), var(--surface-3) var(--progress, 0%));
-}
-
-.seek input::-moz-range-track {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--surface-3);
-}
-
-.seek input::-moz-range-progress {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
-.seek input::-webkit-slider-thumb {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  margin-top: -6px;
-  border-radius: 50%;
-  background: var(--ink);
-}
-
-.seek input::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ink);
-}
-
-.seek input:disabled {
-  opacity: 0.4;
 }
 
 /* Barra persistente. Móvil: mini reproductor (portada, título, play, siguiente). */
@@ -179,7 +132,7 @@
     align-items: center;
     column-gap: var(--s3);
   }
-  .bar-center .seek input {
+  .bar-center .seek .range {
     grid-column: 2;
     grid-row: 1;
   }
@@ -395,51 +348,8 @@
   align-items: center;
 }
 
-.volume input {
-  appearance: none;
-  background: none;
-  cursor: pointer;
-}
-
-.volume input {
+.volume .range {
   width: 96px;
-  height: var(--tap);
-  margin: 0;
-}
-
-.volume input::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(to right, var(--ink-2) var(--progress, 0%), var(--surface-3) var(--progress, 0%));
-}
-
-.volume input::-moz-range-track {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--surface-3);
-}
-
-.volume input::-moz-range-progress {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ink-2);
-}
-
-.volume input::-webkit-slider-thumb {
-  appearance: none;
-  width: 16px;
-  height: 16px;
-  margin-top: -6px;
-  border-radius: 50%;
-  background: var(--ink);
-}
-
-.volume input::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--ink);
 }
 
 /* Móvil: el reproductor grande sube desde abajo como una hoja y se cierra arrastrando hacia abajo (ver gestures.tsx). */

@@ -28,7 +28,7 @@ export function useDragDismiss(target: RefObject<HTMLElement | null>, onDismiss:
   };
   return {
     onPointerDown(event: PointerEvent<HTMLElement>) {
-      if (!enabled || (touchOnly && event.pointerType === "mouse") || (event.target as HTMLElement).closest("button, input, a")) return;
+      if (!enabled || (touchOnly && event.pointerType === "mouse") || (event.target as HTMLElement).closest("button, input, a, .range")) return; // un deslizador es suyo
       drag.current = { startX: event.clientX, startY: event.clientY, startTime: event.timeStamp, dy: 0, locked: false };
     },
     onPointerMove(event: PointerEvent<HTMLElement>) {
