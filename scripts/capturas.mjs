@@ -90,6 +90,9 @@ for (const name of matrix) {
   await menu.getByRole("button", { name: /^Ecualizador/ }).click();
   await check("03c-menu-ecualizador");
   await page.keyboard.press("Escape");
+  // Hasta desmontarse tras la salida, un clic en ≡ no reabre (el menú sigue "abierto" en React): se espera al <dialog>, no a [open],
+  // que se quita un instante antes del desmontaje.
+  await page.locator("dialog.menu").waitFor({ state: "detached" });
   await page.locator('.player-bar button[aria-label="Menú del reproductor"]:visible').click();
   await menu.getByRole("button", { name: /^Fondo/ }).click();
   await page.waitForTimeout(400);
