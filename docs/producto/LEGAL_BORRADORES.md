@@ -166,8 +166,9 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 >
 > **4. Licencia de uso.** Te damos permiso personal, gratuito y no exclusivo para usar la app. No puedes usarla para ofrecer un
 > servicio a terceros ni intentar saltarte sus límites técnicos.
-> **[Decides tú]** El repositorio es público en GitHub sin licencia declarada. Si publicas el código con licencia abierta, esta
-> cláusula cambia.
+> El código fuente se publica bajo la **PolyForm Noncommercial License 1.0.0** (archivo `LICENSE` del repositorio): se puede leer,
+> usar y modificar sin fines comerciales; usarlo para vender o lucrar requiere permiso del titular. **[Abogado]** si esta cláusula y
+> la licencia son coherentes entre sí y qué cuenta como «no comercial» (por ejemplo, un uso interno en una empresa).
 >
 > **5. Disponibilidad.** La app se ofrece tal como está, sin garantía de que funcione en todos los navegadores o dispositivos ni de
 > que esté siempre disponible. Lo que guardas en tu navegador depende de él: si borras sus datos o el navegador libera espacio,
@@ -252,7 +253,7 @@ Y en la app: un botón "Eliminar cuenta" y una exportación de los datos de la c
 | L3 | **Resuelta en parte 2026-11-12:** `{{CORREO_PRIVACIDAD}}` es un correo temporal de Gmail. **[Pendiente: correo en el dominio propio, cuando exista]** | Medio ARCO |
 | L4 | Plazo de borrado tras eliminar la cuenta | Aviso, sección "Cuánto tiempo" |
 | L5 | Edad mínima | Términos, cláusula 3 |
-| L6 | Licencia del código | Términos, cláusula 4 |
+| L6 | **Resuelta 2026-11-12:** PolyForm Noncommercial 1.0.0, repositorio público; archivo `LICENSE` añadido con `{{RESPONSABLE}}` como titular. **[Pendiente: completar el titular al publicar; revisión del abogado]** | Términos, cláusula 4 |
 | L7 | Tribunales competentes | Términos, cláusula 9 |
 | L8 | Si se dirige a la UE | Decide si se aplica la sección 6 |
 | L9 | Si se implementa "Eliminar cuenta" antes de abrir registros | Sin él, cada baja es manual desde el panel de Supabase |

@@ -94,3 +94,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Qué:** el nombre se elegirá más adelante. Criterio del usuario: simple y en inglés; nada común ni «tonto» como Surco o Aguja (descartadas). El ambiente del logo se elegirá después con una skill de diseño; colores a evitar y referencias, sin pensar aún.
 - **Bloquea:** Fase 2 del ROADMAP (nombre, dominio, landing, logo), el correo de privacidad en dominio propio (D20) y las cuentas en redes. Hasta entonces la app sigue como «Music Reproductor».
 - **Siguiente paso:** una lista nueva de nombres con el criterio en inglés (la de `MARCA.md` §2 quedó desfasada), y la verificación en IMPI, dominios y redes del elegido.
+
+### D23 — Licencia del código: completar y revisar (L6, 2026-11-12)
+- **Decidido:** repositorio público bajo **PolyForm Noncommercial 1.0.0** (texto oficial 1.0.0, descargado de `polyformproject/polyform-licenses`). Archivo `LICENSE` añadido con la línea `Required Notice: Copyright {{RESPONSABLE}}`.
+- **Pendiente:** sustituir `{{RESPONSABLE}}` por el titular al publicar (D20); que un abogado revise el alcance de «no comercial» y la cláusula 4 de los términos. Falta decidir si se añade el campo `license` de `package.json` (hoy solo `"private": true`; no se tocó porque esta tanda no cambia código) y una línea en el README (tiene cambios sin commitear del usuario; no se tocó).
+- **Implicación:** no es «código abierto» según la OSI. Las dependencias conservan sus propias licencias; no se comprobó la compatibilidad de ninguna.

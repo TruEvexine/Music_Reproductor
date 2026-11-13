@@ -187,7 +187,7 @@ paneles.
 | **Comunidades** | Presentarlo una vez, con capturas y sin exagerar, en foros de audio y de música local en español e inglés. Responder preguntas; no repetir el anuncio | Tras la Fase 3 |
 | **Recaps compartidos** | La imagen del recap lleva el nombre de la app en pequeño en una esquina. Es el único bucle de crecimiento que no depende de ti | Fase 5 |
 | **Google Play** | La ficha de la tienda es un canal de búsqueda por sí misma | Fase 7 |
-| **Código abierto** | Si eliges una licencia abierta, el repositorio público atrae a desarrolladores y genera confianza en la promesa de privacidad («el código lo demuestra») | **[Decides tú]** (L6) |
+| **Código disponible** | El repositorio público (PolyForm Noncommercial: se puede leer y usar sin fines comerciales, no es «código abierto» en sentido estricto) genera confianza en la promesa de privacidad («el código lo demuestra»). Atrae menos colaboradores que una licencia abierta | Decidido (L6, 2026-11-12) |
 
 ### 4.2 Cómo se mide
 
