@@ -10,6 +10,9 @@ import type { EqChain } from "../core/audio";
 // Dos decks: uno suena y el otro precarga la siguiente pista (salto casi sin hueco) o entra en crossfade.
 // El gapless es aproximado: depende de lo rápido que el navegador arranque el segundo <audio>.
 
+const VOLUME_RAMP = 0.015; // s: cambiar el volumen sin escalón audible
+const PAUSE_MARGIN = 0.02; // s tras la rampa antes de pausar el <audio>
+
 export interface EngineEvents {
   onPlaying(playing: boolean): void;
   /** El audio activo ya suena de verdad (evento `playing`, no solo `play`): el sistema ya lo reconoce como fuente. */
@@ -44,6 +47,9 @@ export class PlayerEngine {
   private speed = 1;
   private fadeTimer?: ReturnType<typeof setTimeout>;
   private pauseTimer?: ReturnType<typeof setTimeout>;
+  /** Cambia en cada play/pause: una reanudación que espera a `audio.play()` no pisa una pausa pedida mientras tanto. */
+  private turn = 0;
+  private ramp = { from: 1, to: 1, start: 0, end: 0 };
   /** Para el fondo "Ritmo" y visualizadores. Existe tras la primera reproducción. */
   analyser?: AnalyserNode;
 
@@ -130,9 +136,25 @@ export class PlayerEngine {
 
   private applyVolume() {
     if (this.master) {
-      this.master.gain.cancelScheduledValues(0);
-      this.master.gain.value = this.volume;
+      if (this.pauseTimer === undefined) this.rampMaster(this.volume, VOLUME_RAMP); // en pleno fundido de pausa manda la rampa a 0
     } else for (const deck of this.decks) deck.audio.volume = this.volume;
+  }
+
+  /**
+   * Rampa lineal del volumen general desde el valor que tiene ahora mismo, también a mitad de otra rampa (alternar rápido).
+   * El valor se calcula de la última rampa: `gain.value` llega con retraso y `cancelAndHoldAtTime` no ancla si no hay rampa en curso
+   * (la nueva interpolaría desde el evento anterior: escalón). Lineal porque una exponencial no llega a 0. Devuelve el fin, en reloj de audio.
+   */
+  private rampMaster(target: number, seconds: number): number {
+    const gain = this.master!.gain;
+    const now = this.context!.currentTime;
+    const { from, to, start, end } = this.ramp;
+    const value = now >= end ? to : from + ((to - from) * (now - start)) / (end - start);
+    gain.cancelScheduledValues(now);
+    gain.setValueAtTime(value, now);
+    gain.linearRampToValueAtTime(target, now + seconds);
+    this.ramp = { from: value, to: target, start: now, end: now + seconds };
+    return now + seconds;
   }
 
   private applyEq() {
@@ -241,24 +263,24 @@ export class PlayerEngine {
     return true;
   }
 
-  /** Rampa del volumen general (no toca los fundidos de cada deck). */
-  private rampMaster(target: number, seconds: number, from = this.master?.gain.value ?? 0) {
-    if (!this.master || !this.context) return;
-    const now = this.context.currentTime;
-    this.master.gain.cancelScheduledValues(0);
-    this.master.gain.setValueAtTime(from, now);
-    this.master.gain.linearRampToValueAtTime(target, now + seconds);
-  }
-
   /** Rechaza con el error del navegador (salvo AbortError: otra carga interrumpió esta). `fade`: segundos de entrada. */
   async play(fade = 0): Promise<void> {
+    const turn = ++this.turn;
     try {
       clearTimeout(this.pauseTimer);
       this.pauseTimer = undefined;
-      await this.graph()?.resume();
-      if (fade > 0 && this.master) this.rampMaster(this.volume, fade, this.current.audio.paused ? 0 : undefined);
-      else this.applyVolume();
-      await this.current.audio.play();
+      const context = this.graph();
+      await context?.resume();
+      const master = this.master;
+      if (!context || !master || fade <= 0) {
+        this.applyVolume();
+        await this.current.audio.play();
+      } else if (this.current.audio.paused) {
+        // Desde silencio, la subida empieza cuando el <audio> ya entrega muestras: antes arrancaba a media rampa (escalón).
+        this.rampMaster(0, 0);
+        await this.current.audio.play();
+        if (turn === this.turn) this.rampMaster(this.volume, fade);
+      } else this.rampMaster(this.volume, fade); // a mitad de un fundido de pausa: sube desde donde iba
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       throw error;
@@ -267,18 +289,25 @@ export class PlayerEngine {
 
   /** `fade` > 0: baja el volumen y pausa al terminar (pausa suave y temporizador de apagado). Sin Web Audio, pausa al instante. */
   pause(fade = 0) {
+    this.turn += 1;
     clearTimeout(this.pauseTimer);
     this.pauseTimer = undefined;
+    const context = this.context;
+    const master = this.master;
+    // El volumen se queda donde lo dejó la rampa (0): el <audio> aún entrega unos milisegundos tras pause(), y play() lo vuelve a subir.
     const hardPause = () => {
       this.pauseTimer = undefined;
       this.cancelFade();
       this.idle.audio.pause();
       this.current.audio.pause();
-      this.applyVolume();
     };
-    if (fade > 0 && this.master && !this.current.audio.paused) {
-      this.rampMaster(0, fade);
-      this.pauseTimer = setTimeout(hardPause, fade * 1000);
+    if (fade > 0 && context && master && !this.current.audio.paused) {
+      const end = this.rampMaster(0, fade) + PAUSE_MARGIN;
+      // Reloj de audio, no el de JS: el <audio> se para solo cuando la rampa ya se calculó entera.
+      const wait = () => {
+        this.pauseTimer = context.state !== "running" || context.currentTime >= end ? void hardPause() : setTimeout(wait, 10);
+      };
+      this.pauseTimer = setTimeout(wait, fade * 1000);
     } else hardPause();
   }
 
