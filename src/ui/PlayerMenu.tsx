@@ -5,6 +5,7 @@ import { EQ_BANDS, EQ_LIMIT_DB, EQ_PRESETS, MAX_CROSSFADE, presetNameOf, SPEED_R
 import type { ReplayGainMode } from "../core/audio";
 import { isAnimated, SPEED_LIMITS } from "../core/background";
 import type { BackgroundMode, PaletteSource } from "../core/background";
+import type { Sensitivity } from "../core/rhythm";
 import type { RepeatMode } from "../core/queue";
 import { background, useBackground } from "../state/background";
 import { player, usePlayer } from "../state/player";
@@ -328,7 +329,7 @@ export function EqPage() {
 
 const modes: { value: BackgroundMode; label: string; hint: string }[] = [
   { value: "cover", label: "Portada", hint: "Degradado animado con los colores de la portada." },
-  { value: "rhythm", label: "Ritmo", hint: "Los graves hinchan las manchas, los golpes las hacen latir y la energía de la música acelera el giro, sin parpadeos bruscos." },
+  { value: "rhythm", label: "Ritmo", hint: "Los graves hinchan las manchas, los golpes las hacen latir y los platos aceleran el giro, ajustado a cada canción y sin parpadeos bruscos." },
   { value: "static", label: "Estático", hint: "Degradado fijo de dos colores de la portada." },
   { value: "amoled", label: "AMOLED", hint: "Negro puro en toda la app: ahorra batería en pantallas OLED." },
 ];
@@ -343,6 +344,12 @@ const fpsOptions: { value: "30" | "60" | "auto"; label: string }[] = [
   { value: "30", label: "30" },
   { value: "60", label: "60" },
   { value: "auto", label: "Auto" },
+];
+
+const sensitivityOptions: { value: Sensitivity; label: string }[] = [
+  { value: "low", label: "Baja" },
+  { value: "auto", label: "Auto" },
+  { value: "high", label: "Alta" },
 ];
 
 const percent = (value: number) => `${Math.round(value * 100)} %`;
@@ -397,6 +404,12 @@ export function BackgroundPage() {
               step={0.05}
               value={settings.speed}
             />
+          )}
+          {settings.mode === "rhythm" && (
+            <>
+              <Segmented label="Sensibilidad" onChange={(sensitivity) => background.set({ sensitivity })} options={sensitivityOptions} value={settings.sensitivity} />
+              <p className="hint">Las luces se ajustan solas al volumen y la dinámica de cada canción. Baja reacciona solo a los golpes más marcados; Alta, también a los suaves.</p>
+            </>
           )}
         </section>
       )}

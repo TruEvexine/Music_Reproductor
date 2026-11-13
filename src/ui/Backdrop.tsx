@@ -5,7 +5,7 @@ import type { BackgroundSettings, HdrLook } from "../core/background";
 import type { Palette, Rgb } from "../core/palette";
 import type { Bands } from "../core/rhythm";
 import { createGovernor, fpsCap, QUALITY_LEVELS, startLevel } from "../core/quality";
-import { bandEnergies, createBeatDetector, createLight, follow } from "../core/rhythm";
+import { createAnalysis, createLight, follow } from "../core/rhythm";
 import { useBackground } from "../state/background";
 import { player } from "../state/player";
 import { APP_BASE, createRenderer } from "./backdropRenderer";
@@ -51,7 +51,7 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   const device = (): Device => ({ cores: nav.hardwareConcurrency, memoryGb: nav.deviceMemory, saveData: nav.connection?.saveData });
   const governor = createGovernor(startLevel(device(), live.current.settings.batterySaver));
   const buffer = new Uint8Array(1024);
-  const detector = createBeatDetector();
+  const analysis = createAnalysis();
   const light = createLight();
   const shown = live.current.colors.map((color) => [...color] as Rgb); // colores en pantalla: se acercan a los objetivos al cambiar de pista
   const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0, rate: 1, swell: 0 };
@@ -81,18 +81,15 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     const analyser = player.analyser();
     let bands: Bands | null = null;
     let beat = false;
+    let pace = 0;
     if (settings.mode === "rhythm") {
       bands = { bass: 0, mid: 0, treble: 0 };
       if (analyser) {
         analyser.getByteFrequencyData(buffer);
-        const rate = analyser.context.sampleRate;
-        const raw = bandEnergies(buffer, rate, analyser.fftSize);
-        // Los agudos y medios traen mucha menos energía que los graves en la escala del analizador: se compensan.
-        bands = { bass: Math.min(1, raw.bass * 1.15), mid: Math.min(1, raw.mid * 1.8), treble: Math.min(1, raw.treble * 3) };
-        beat = detector.push(buffer, rate, analyser.fftSize, now).beat;
+        ({ bands, beat, pace } = analysis.push(buffer, analyser.context.sampleRate, analyser.fftSize, now, settings.sensitivity));
       }
     }
-    const frame = light.push({ bands, beat, dtMs: dt, now, speed: settings.speed });
+    const frame = light.push({ bands, beat, pace, dtMs: dt, now, speed: settings.speed });
     time += (dt / 1000) * settings.speed;
     shownIntensity = follow(shownIntensity, settings.intensity, dt, 120, 400); // el control de intensidad no da saltos
 

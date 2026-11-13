@@ -1,5 +1,6 @@
 import { dbToGain, EQ_BANDS } from "../core/audio";
 import type { EqChain } from "../core/audio";
+import { ANALYSER_DB } from "../core/rhythm";
 
 // Motor de audio: único dueño de los <audio> y del grafo Web Audio. No conoce React, la cola ni la biblioteca.
 //
@@ -121,6 +122,8 @@ export class PlayerEngine {
     this.analyser = context.createAnalyser();
     this.analyser.fftSize = 2048;
     this.analyser.smoothingTimeConstant = 0.4; // poco suavizado: los golpes del fondo "Ritmo" necesitan flancos nítidos
+    this.analyser.minDecibels = ANALYSER_DB.min;
+    this.analyser.maxDecibels = ANALYSER_DB.max;
     const chain: AudioNode[] = [this.preamp, ...this.filters, this.bass, this.treble, this.panner, this.master, limiter, this.analyser, context.destination];
     chain.reduce((from, to) => (from.connect(to), to));
     for (const deck of this.decks) {

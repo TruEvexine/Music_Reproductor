@@ -1,64 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { bandEnergies, createBeatDetector, createLight, follow } from "./rhythm";
-import type { Bands } from "./rhythm";
+import { bandEnergies, createAnalysis, createLight, follow } from "./rhythm";
+import type { Bands, Sensitivity } from "./rhythm";
+import { createAnalyserSim, lightMetrics, luminanceOf, maxStep, SIM_FFT, SIM_RATE, worstFlashesPerSecond } from "./rhythm.sim";
+import type { LightFrame } from "./rhythm.sim";
 
-// Señales sintéticas → mismo camino que el navegador: ventana de Blackman, FFT, suavizado, escala dB → byte (AnalyserNode).
-const SAMPLE_RATE = 44100;
-const FFT_SIZE = 2048;
-const HOP = SAMPLE_RATE / 60;
-
-function fft(re: Float64Array, im: Float64Array) {
-  const n = re.length;
-  for (let i = 1, j = 0; i < n; i++) {
-    let bit = n >> 1;
-    for (; j & bit; bit >>= 1) j ^= bit;
-    j ^= bit;
-    if (i < j) {
-      [re[i], re[j]] = [re[j], re[i]];
-      [im[i], im[j]] = [im[j], im[i]];
-    }
-  }
-  for (let size = 2; size <= n; size <<= 1) {
-    const angle = (-2 * Math.PI) / size;
-    for (let start = 0; start < n; start += size) {
-      for (let k = 0; k < size / 2; k++) {
-        const wr = Math.cos(angle * k);
-        const wi = Math.sin(angle * k);
-        const a = start + k;
-        const b = a + size / 2;
-        const tr = re[b] * wr - im[b] * wi;
-        const ti = re[b] * wi + im[b] * wr;
-        re[b] = re[a] - tr;
-        im[b] = im[a] - ti;
-        re[a] += tr;
-        im[a] += ti;
-      }
-    }
-  }
-}
-
-class FakeAnalyser {
-  private smooth = new Float64Array(FFT_SIZE / 2);
-  constructor(private readonly smoothing = 0.4) {}
-  /** `signal(t)` en segundos; `end` = instante del último muestreo de la ventana. */
-  frame(signal: (t: number) => number, end: number): Uint8Array {
-    const re = new Float64Array(FFT_SIZE);
-    const im = new Float64Array(FFT_SIZE);
-    for (let i = 0; i < FFT_SIZE; i++) {
-      const w = 0.42 - 0.5 * Math.cos((2 * Math.PI * i) / FFT_SIZE) + 0.08 * Math.cos((4 * Math.PI * i) / FFT_SIZE);
-      re[i] = signal(end - (FFT_SIZE - 1 - i) / SAMPLE_RATE) * w;
-    }
-    fft(re, im);
-    const bytes = new Uint8Array(FFT_SIZE / 2);
-    for (let k = 0; k < bytes.length; k++) {
-      const magnitude = Math.hypot(re[k], im[k]) / FFT_SIZE;
-      this.smooth[k] = this.smoothing * this.smooth[k] + (1 - this.smoothing) * magnitude;
-      const db = 20 * Math.log10(Math.max(this.smooth[k], 1e-12));
-      bytes[k] = Math.round(Math.min(255, Math.max(0, (255 * (db + 100)) / 70)));
-    }
-    return bytes;
-  }
-}
+// Señales sintéticas → mismo camino que el navegador (rhythm.sim.ts: ventana de Blackman, FFT, suavizado, dB → byte como AnalyserNode).
+const HOP = SIM_RATE / 60;
+const DT = 1000 / 60;
 
 // Ruido determinista (sin Math.random: el test no puede ser inestable).
 function noise(seed: number) {
@@ -66,11 +14,11 @@ function noise(seed: number) {
   return () => ((state = (state * 1664525 + 1013904223) >>> 0) / 2 ** 32) * 2 - 1;
 }
 
-/** Bombo (seno de 55 Hz con caída) en cada instante de `kicks`, más un colchón de 440 Hz y hi-hats de ruido en cada corchea. */
-function music(kicks: number[], amplitude: (t: number) => number) {
+/** Bombo (seno de 55 Hz con caída) en cada instante de `kicks`, más un colchón de 440 Hz y hi-hats de ruido cada `hatGap` s. */
+function music(kicks: number[], amplitude: (t: number) => number, hatGap = 0.25) {
   const random = noise(7);
   const hats: number[] = [];
-  for (let t = 0.25; t < 20; t += 0.25) hats.push(t);
+  for (let t = 0.25; t < 20; t += hatGap) hats.push(t);
   return (t: number) => {
     let value = 0.04 * Math.sin(2 * Math.PI * 440 * t);
     for (const kick of kicks) {
@@ -85,17 +33,26 @@ function music(kicks: number[], amplitude: (t: number) => number) {
   };
 }
 
-function detect(signal: (t: number) => number, seconds: number) {
-  const analyser = new FakeAnalyser();
-  const detector = createBeatDetector();
-  const beats: number[] = [];
-  for (let frame = 0; frame * HOP < seconds * SAMPLE_RATE; frame++) {
-    const now = (frame * HOP) / SAMPLE_RATE;
-    const { beat } = detector.push(analyser.frame(signal, now), SAMPLE_RATE, FFT_SIZE, now * 1000);
-    if (beat) beats.push(now);
-  }
-  return beats;
+interface Step {
+  bands: Bands;
+  beat: boolean;
+  pace: number;
+  now: number;
 }
+
+/** Cuadros a 60 fps por el mismo análisis que `ui/Backdrop.tsx`. */
+function analyse(signal: (t: number) => number, seconds: number, sensitivity: Sensitivity = "auto"): Step[] {
+  const analyser = createAnalyserSim();
+  const analysis = createAnalysis();
+  const steps: Step[] = [];
+  for (let frame = 0; frame * HOP < seconds * SIM_RATE; frame++) {
+    const now = (frame * HOP * 1000) / SIM_RATE;
+    steps.push({ ...analysis.push(analyser.frame(signal, now / 1000), SIM_RATE, SIM_FFT, now, sensitivity), now });
+  }
+  return steps;
+}
+
+const beatsOf = (steps: Step[]) => steps.filter((step) => step.beat).map((step) => step.now / 1000);
 
 /** Cuántos golpes reales se detectaron dentro de `window` s tras ellos, y cuántas detecciones no corresponden a ninguno. */
 function score(kicks: number[], beats: number[], window = 0.15) {
@@ -104,55 +61,64 @@ function score(kicks: number[], beats: number[], window = 0.15) {
   return { hit, falsePositives: false_ };
 }
 
-describe("energía por bandas", () => {
-  const analyse = (frequency: number) => {
-    const analyser = new FakeAnalyser(0);
-    return bandEnergies(analyser.frame((t) => 0.5 * Math.sin(2 * Math.PI * frequency * t), 1), SAMPLE_RATE, FFT_SIZE);
-  };
+function lit(steps: Step[], speed = 1): (LightFrame & { drift: number })[] {
+  const light = createLight();
+  return steps.map((step) => light.push({ ...step, dtMs: DT, speed }));
+}
 
-  it("un seno grave carga los graves; uno agudo, los agudos", () => {
-    const low = analyse(60);
+describe("energía por bandas", () => {
+  const energies = (frequency: number) => bandEnergies(createAnalyserSim(0).frame((t) => 0.5 * Math.sin(2 * Math.PI * frequency * t), 1), SIM_RATE, SIM_FFT);
+
+  it("un seno grave carga los graves; uno de voz, los medios; uno agudo, los agudos", () => {
+    const low = energies(60);
     expect(low.bass).toBeGreaterThan(0.3);
-    expect(low.mid).toBeLessThan(0.1);
-    expect(low.treble).toBeLessThan(0.05);
-    const high = analyse(6000);
-    expect(high.treble).toBeGreaterThan(0.005);
+    expect(low.bass).toBeGreaterThan(low.mid * 3);
+    expect(low.bass).toBeGreaterThan(low.treble * 5);
+    const high = energies(8000);
     expect(high.treble).toBeGreaterThan(high.bass * 5);
-    expect(analyse(800).mid).toBeGreaterThan(analyse(800).bass * 3);
+    expect(energies(800).mid).toBeGreaterThan(energies(800).bass * 3);
   });
 
   it("el silencio da energía cero", () => {
-    expect(bandEnergies(new Uint8Array(1024), SAMPLE_RATE, FFT_SIZE)).toEqual({ bass: 0, mid: 0, treble: 0 });
+    expect(bandEnergies(new Uint8Array(1024), SIM_RATE, SIM_FFT)).toEqual({ bass: 0, mid: 0, treble: 0 });
   });
 });
 
-describe("detección de golpes", () => {
+describe("detección de golpes (flujo espectral con umbral relativo)", () => {
   const kicks = Array.from({ length: 18 }, (_, i) => 1 + i * 0.5); // 120 BPM
 
   it("encuentra los bombos de un compás de 120 BPM con hi-hats, sin falsos golpes", () => {
-    const beats = detect(music(kicks, () => 0.7), 10.5);
-    const { hit, falsePositives } = score(kicks, beats);
+    const { hit, falsePositives } = score(kicks, beatsOf(analyse(music(kicks, () => 0.7), 10.5)));
     expect(hit).toBeGreaterThanOrEqual(16);
     expect(falsePositives).toBeLessThanOrEqual(1);
   });
 
-  it("un tono constante o el silencio no producen golpes", () => {
-    expect(detect((t) => 0.3 * Math.sin(2 * Math.PI * 80 * t), 6)).toEqual([]);
-    expect(detect(() => 0, 6)).toEqual([]);
+  it("un tono constante o el silencio no producen golpes ni mueven el nivel", () => {
+    const tone = analyse((t) => 0.3 * Math.sin(2 * Math.PI * 80 * t), 6);
+    expect(beatsOf(tone)).toEqual([]);
+    expect(Math.abs(tone.at(-1)!.bands.bass - 0.5)).toBeLessThan(0.05);
+    const silence = analyse(() => 0, 6);
+    expect(beatsOf(silence)).toEqual([]);
+    expect(silence.at(-1)!.bands).toEqual({ bass: 0, mid: 0, treble: 0 });
   });
 
   it("el umbral se adapta: sigue detectando cuando la música baja 17 dB", () => {
-    const loudThenQuiet = music(kicks, (t) => (t < 5.9 ? 0.8 : 0.11));
-    const beats = detect(loudThenQuiet, 10.5);
+    const beats = beatsOf(analyse(music(kicks, (t) => (t < 5.9 ? 0.8 : 0.11)), 10.5));
     const quiet = kicks.filter((kick) => kick > 7); // tras 1–2 s de adaptación
-    const { hit } = score(quiet, beats);
-    expect(hit).toBeGreaterThanOrEqual(quiet.length - 1);
+    expect(score(quiet, beats).hit).toBeGreaterThanOrEqual(quiet.length - 1);
   });
 
   it("respeta la separación mínima entre golpes", () => {
     const fast = Array.from({ length: 30 }, (_, i) => 1 + i * 0.1); // 600 BPM: más rápido que el límite
-    const beats = detect(music(fast, () => 0.7), 4.2);
+    const beats = beatsOf(analyse(music(fast, () => 0.7), 4.2));
     for (let i = 1; i < beats.length; i++) expect(beats[i] - beats[i - 1]).toBeGreaterThanOrEqual(0.19);
+  });
+
+  it("la sensibilidad Baja dispara menos que Auto, y Auto menos que Alta", () => {
+    const soft = music(kicks, (t) => 0.15 + 0.1 * Math.sin(t * 7)); // bombos de fuerza irregular
+    const count = (sensitivity: Sensitivity) => beatsOf(analyse(soft, 10.5, sensitivity)).length;
+    expect(count("low")).toBeLessThanOrEqual(count("auto"));
+    expect(count("auto")).toBeLessThanOrEqual(count("high"));
   });
 });
 
@@ -166,115 +132,59 @@ describe("follow", () => {
 });
 
 // --- Luz del fondo: lo que llega al shader (brillo, velocidad) medido sobre el mismo camino que usa el navegador. ---
-interface Step {
-  bands: Bands;
-  beat: boolean;
-  now: number;
-}
-
-/** Cuadros a 60 fps con las bandas escaladas igual que `ui/Backdrop.tsx` y el golpe del detector. */
-function drive(signal: (t: number) => number, seconds: number): Step[] {
-  const analyser = new FakeAnalyser();
-  const detector = createBeatDetector();
-  const steps: Step[] = [];
-  for (let frame = 0; frame * HOP < seconds * SAMPLE_RATE; frame++) {
-    const t = (frame * HOP) / SAMPLE_RATE;
-    const spectrum = analyser.frame(signal, t);
-    const raw = bandEnergies(spectrum, SAMPLE_RATE, FFT_SIZE);
-    const bands = { bass: Math.min(1, raw.bass * 1.15), mid: Math.min(1, raw.mid * 1.8), treble: Math.min(1, raw.treble * 3) };
-    steps.push({ bands, beat: detector.push(spectrum, SAMPLE_RATE, FFT_SIZE, t * 1000).beat, now: t * 1000 });
-  }
-  return steps;
-}
-
-/** Colchón de banda ancha (grave, medio y agudo) con volumen `amplitude(t)`: música "llena" frente a música "suave". */
-const bed = (amplitude: (t: number) => number) => (t: number) =>
-  amplitude(t) * (Math.sin(2 * Math.PI * 60 * t) + Math.sin(2 * Math.PI * 800 * t) + Math.sin(2 * Math.PI * 5000 * t)) / 3;
 
 /** Bombos secos y separados (55 Hz que se apagan en 35 ms): cada golpe sube y baja del todo, como un fondo que parpadea. */
 const punch = (kicks: number[], level = 0.3) => (t: number) =>
   kicks.reduce((sum, kick) => (t >= kick && t < kick + 0.12 ? sum + level * Math.exp(-(t - kick) / 0.035) * Math.sin(2 * Math.PI * 55 * (t - kick)) : sum), 0);
 
-const DT = 1000 / 60;
-const GAIN_MAX = 1.25;
-
-/** Brillo relativo (0–1) del fondo antes de este cambio: la fórmula del shader anterior, con la música tal cual. */
-function legacyLuminance(steps: Step[]): number[] {
-  let bass = 0;
-  let pulse = 0;
-  return steps.map(({ bands, beat }) => {
-    bass = follow(bass, bands.bass, DT);
-    pulse = beat ? 1 : pulse * Math.exp(-DT / 120);
-    return Math.min(0.9 + bass * 0.5 + pulse * 0.3, GAIN_MAX) / GAIN_MAX;
-  });
-}
-
-function currentLuminance(steps: Step[], speed = 1) {
-  const light = createLight();
-  return steps.map((step) => {
-    const frame = light.push({ ...step, dtMs: DT, speed });
-    return { luminance: (0.9 + frame.swell * 0.35) / GAIN_MAX, rate: frame.rate, drift: frame.drift };
-  });
-}
-
-/** Mayor cambio de brillo en 100 ms. */
-function maxStep(series: number[], window = 6) {
-  let worst = 0;
-  for (let i = window; i < series.length; i++) worst = Math.max(worst, Math.abs(series[i] - series[i - window]));
-  return worst;
-}
-
-/** Destellos por segundo en la peor ventana de 1 s: un destello = subida y bajada de al menos `minSwing` (5 %, el doble de exigente que el 10 % de WCAG). */
-function worstFlashesPerSecond(series: number[], minSwing = 0.05) {
-  const swings: number[] = []; // instantes (s) en que termina cada subida o bajada completa
-  let extreme = series[0];
-  let rising = true;
-  series.forEach((value, i) => {
-    if (rising ? value > extreme : value < extreme) extreme = value;
-    else if (Math.abs(extreme - value) >= minSwing) {
-      swings.push(i / 60);
-      extreme = value;
-      rising = !rising;
-    }
-  });
-  return Math.max(0, ...swings.map((from) => swings.filter((t) => t >= from && t < from + 1).length)) / 2;
+/**
+ * Máster comprimido de poca dinámica (el caso de "The Spins"): un bajo que nunca para, colchón y voz constantes, y bombos que
+ * apenas asoman 3 dB sobre el bajo. Antes, los graves se quedaban pegados al techo del analizador y la luz no se movía.
+ */
+function dense(t: number) {
+  const beat = t % 0.66; // ~91 BPM
+  const kick = beat < 0.15 ? 0.35 * Math.exp(-beat / 0.05) : 0;
+  return (0.5 + kick) * Math.sin(2 * Math.PI * 50 * t) + 0.25 * Math.sin(2 * Math.PI * 600 * t) + 0.05 * Math.sin(2 * Math.PI * 6000 * t);
 }
 
 describe("luz del fondo", () => {
   const everyBeat = (gap: number) => Array.from({ length: Math.floor(7 / gap) }, (_, i) => 1 + i * gap);
-  const frantic = drive(punch(everyBeat(0.25), 0.06), 8); // 240 BPM con bombos limpios: lo que más parpadeaba
+  const luminance = (frames: LightFrame[]) => frames.map((frame) => luminanceOf(frame.swell));
 
-  it("antes parpadeaba más de 3 veces por segundo y con saltos de brillo; ahora no", () => {
-    const before = legacyLuminance(frantic);
-    const after = currentLuminance(frantic).map((frame) => frame.luminance);
-    expect(worstFlashesPerSecond(before)).toBeGreaterThan(3);
-    expect(maxStep(before)).toBeGreaterThan(0.1);
-    expect(worstFlashesPerSecond(after)).toBeLessThanOrEqual(3);
-    expect(maxStep(after)).toBeLessThan(0.1);
+  it("a 240 y 300 BPM no destella más de 3 veces por segundo ni cambia el brillo más de un 10 % en 100 ms", () => {
+    for (const gap of [0.25, 0.2]) {
+      const after = luminance(lit(analyse(punch(everyBeat(gap), 0.06), 8)));
+      expect(worstFlashesPerSecond(after)).toBeLessThanOrEqual(3);
+      expect(maxStep(after)).toBeLessThan(0.1);
+    }
   });
 
-  it("aunque el detector dispare en todos los cuadros, el fondo no destella más de 3 veces por segundo", () => {
+  it("peor caso: golpe en cada cuadro y graves que saltan de 0 a 1 en cada cuadro; los topes aguantan por construcción", () => {
     const light = createLight();
-    const luminance = Array.from({ length: 360 }, (_, i) => (0.9 + light.push({ bands: { bass: 0.5, mid: 0.3, treble: 0.2 }, beat: true, dtMs: DT, now: i * DT, speed: 1 }).swell * 0.35) / GAIN_MAX);
-    expect(worstFlashesPerSecond(luminance)).toBeLessThanOrEqual(3);
+    const frames = Array.from({ length: 600 }, (_, i) => light.push({ bands: { bass: i % 2, mid: i % 2, treble: 0 }, beat: true, pace: 1, dtMs: DT, now: i * DT, speed: 1 }));
+    expect(worstFlashesPerSecond(luminance(frames))).toBeLessThanOrEqual(3);
+    expect(maxStep(luminance(frames))).toBeLessThan(0.1);
+    expect(frames.filter((frame) => frame.flash).length / 10).toBeLessThanOrEqual(3);
   });
 
-  it("a 300 BPM sigue por debajo de 3 destellos por segundo", () => {
-    const after = currentLuminance(drive(punch(everyBeat(0.2), 0.06), 8)).map((frame) => frame.luminance);
-    expect(worstFlashesPerSecond(after)).toBeLessThanOrEqual(3);
+  it("una mezcla comprimida de poca dinámica también late, dentro de los topes", () => {
+    const metrics = lightMetrics(lit(analyse(dense, 20)));
+    expect(metrics.actividad).toBeGreaterThan(1);
+    expect(metrics.destellos).toBeGreaterThan(0.5);
+    expect(metrics.peorDestellos).toBeLessThanOrEqual(3);
+    expect(metrics.maxPaso).toBeLessThan(0.1);
   });
 
-  it("la velocidad responde a la energía: más rápida con música fuerte, más lenta con música suave, sin saltos", () => {
-    const frames = currentLuminance(drive(bed((t) => (t < 9 ? 0.003 : 0.5)), 19));
+  it("la velocidad sigue a los platos: más rápida con hi-hats densos, más lenta sin ellos, sin saltos", () => {
+    const kicks = Array.from({ length: 36 }, (_, i) => 0.5 + i * 0.5);
+    const [bare, busy] = [music(kicks, () => 0.5, 100), music(kicks, () => 0.5, 0.125)];
+    const frames = lit(analyse((t) => (t < 9 ? bare(t) : busy(t)), 19));
     const rate = (seconds: number) => frames[Math.round(seconds * 60)].rate;
-    expect(rate(8.5)).toBeLessThan(0.95); // suave
-    expect(rate(18.5)).toBeGreaterThan(1.2); // fuerte
-    expect(rate(18.5) - rate(8.5)).toBeGreaterThan(0.3);
-    // No llega de golpe: medio segundo después del cambio ha recorrido menos de un tercio y a los 3 s ya más de la mitad.
+    expect(rate(8.5)).toBeLessThan(0.95); // sin platos
+    expect(rate(18.5)).toBeGreaterThan(1.2); // corcheas de hi-hat a 240/min
+    // No llega de golpe, la velocidad cambia menos de 1 por segundo y la fase de la deriva avanza siempre, sin saltos.
     const total = rate(18.5) - rate(8.5);
-    expect(rate(9.5) - rate(8.5)).toBeLessThan(total / 3);
-    expect(rate(12) - rate(8.5)).toBeGreaterThan(total / 2);
-    // La velocidad cambia menos de 1 por segundo (el tope de diseño: 2 de ganancia / 2 s de ataque) y la fase de la deriva avanza siempre, sin saltos.
+    expect(rate(9.5) - rate(8.5)).toBeLessThan(total / 2);
     let maxRateStep = 0;
     for (let i = 1; i < frames.length; i++) {
       maxRateStep = Math.max(maxRateStep, Math.abs(frames[i].rate - frames[i - 1].rate) * 60);
@@ -296,9 +206,10 @@ describe("luz del fondo", () => {
 
   it("sin reacción al audio (modo Portada) la velocidad es exactamente la elegida y el brillo no se mueve", () => {
     const light = createLight();
-    let frame = light.push({ bands: null, beat: true, dtMs: DT, now: 0, speed: 1 });
-    for (let i = 1; i < 600; i++) frame = light.push({ bands: null, beat: true, dtMs: DT, now: i * DT, speed: 1 });
+    let frame = light.push({ bands: null, beat: true, pace: 1, dtMs: DT, now: 0, speed: 1 });
+    for (let i = 1; i < 600; i++) frame = light.push({ bands: null, beat: true, pace: 1, dtMs: DT, now: i * DT, speed: 1 });
     expect(frame.rate).toBeCloseTo(1, 6);
     expect(frame.swell).toBe(0);
+    expect(frame.flash).toBe(false);
   });
 });

@@ -2,6 +2,7 @@
 import { colorsFromHue, hueSwatches, swatchColors } from "./palette";
 import type { Gamut, Palette, Rgb } from "./palette";
 import type { FpsSetting } from "./quality";
+import type { Sensitivity } from "./rhythm";
 
 /**
  * - cover: gradiente multicolor animado con la paleta de la portada.
@@ -29,6 +30,8 @@ export interface BackgroundSettings {
   intensity: number;
   /** Velocidad de la deriva (0,25–2×). */
   speed: number;
+  /** Modo Ritmo: cuánto reacciona la luz. Las tres se adaptan a cada canción; cambian los umbrales y la amplitud (core/rhythm.ts). */
+  sensitivity: Sensitivity;
   palette: PaletteSource;
   /** Tono elegido (0–360) cuando `palette` es "custom". */
   hue: number;
@@ -44,6 +47,7 @@ export const defaultBackground: BackgroundSettings = {
   shortcuts: true,
   intensity: 0.6,
   speed: 1,
+  sensitivity: "auto",
   palette: "cover",
   hue: 250,
   fps: "auto",
@@ -55,6 +59,7 @@ export const SPEED_LIMITS = { min: 0.25, max: 2 } as const;
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
 const modes: readonly BackgroundMode[] = ["cover", "rhythm", "static", "amoled"];
 const sources: readonly PaletteSource[] = ["cover", "accent", "custom"];
+const sensitivities: readonly Sensitivity[] = ["auto", "low", "high"];
 
 /** Acepta ajustes guardados por cualquier versión (o corruptos) y devuelve unos válidos. */
 export function sanitizeBackground(saved: Partial<BackgroundSettings> | undefined): BackgroundSettings {
@@ -67,6 +72,7 @@ export function sanitizeBackground(saved: Partial<BackgroundSettings> | undefine
     shortcuts: typeof s.shortcuts === "boolean" ? s.shortcuts : defaultBackground.shortcuts,
     intensity: clamp(s.intensity, 0, 1),
     speed: clamp(s.speed, SPEED_LIMITS.min, SPEED_LIMITS.max),
+    sensitivity: sensitivities.includes(s.sensitivity) ? s.sensitivity : defaultBackground.sensitivity,
     palette: sources.includes(s.palette) ? s.palette : defaultBackground.palette,
     hue: Number.isFinite(s.hue) ? ((s.hue % 360) + 360) % 360 : defaultBackground.hue, // el tono da la vuelta, no se recorta
     fps: s.fps === 30 || s.fps === 60 ? s.fps : "auto",

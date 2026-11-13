@@ -97,11 +97,18 @@ const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gestur
   check("el menú tiene página «Fondo» con vista previa en vivo (segundo lienzo)", (await heading(page).innerText()) === "Fondo" && (await canvases(page)) === 2 && (await stats(page)).length === 2);
   await page.screenshot({ path: join(shots, "fondo-03-menu-portada-1440x900.png") });
 
+  const sensitivity = () => menu(page).getByRole("radiogroup", { name: "Sensibilidad" });
+  check("en Portada no aparece «Sensibilidad» (solo afecta a Ritmo)", (await sensitivity().count()) === 0);
   await pickMode(page, "Ritmo");
   let s = await stats(page);
   check("cambiar a Ritmo llega al render (reproductor y vista previa)", s.length === 2 && s.every((x) => x.mode === "rhythm"), JSON.stringify(s.map((x) => x.mode)));
   check("sigue ≤ 2 ms por cuadro en modo Ritmo (con análisis de audio)", s.every((x) => x.cpuMs <= 2), s.map((x) => x.cpuMs.toFixed(3)).join(" / "));
   await page.screenshot({ path: join(shots, "fondo-04-menu-ritmo-1440x900.png") });
+  check("en Ritmo, «Sensibilidad» empieza en Auto", (await sensitivity().getByRole("radio", { name: "Auto" }).getAttribute("aria-checked")) === "true");
+  await sensitivity().getByRole("radio", { name: "Alta" }).click();
+  await wait(page, 200);
+  check("elegir Alta queda marcado", (await sensitivity().getByRole("radio", { name: "Alta" }).getAttribute("aria-checked")) === "true");
+  await sensitivity().getByRole("radio", { name: "Auto" }).click();
 
   await setRange(menu(page).getByLabel(/^Intensidad/), 0.2);
   await wait(page, 300);

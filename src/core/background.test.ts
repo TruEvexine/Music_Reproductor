@@ -23,8 +23,9 @@ describe("ajustes del fondo", () => {
   });
 
   it("conserva ajustes válidos", () => {
-    const ok = { mode: "rhythm", hdr: true, reduceMotion: true, shortcuts: false, intensity: 0.3, speed: 1.5, palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
+    const ok = { mode: "rhythm", hdr: true, reduceMotion: true, shortcuts: false, intensity: 0.3, speed: 1.5, sensitivity: "high", palette: "custom", hue: 120, fps: 30, batterySaver: false } as const;
     expect(sanitizeBackground(ok)).toEqual(ok);
+    expect(sanitizeBackground({ sensitivity: "máxima" } as never).sensitivity).toBe("auto");
   });
 
   it("solo cover y rhythm se mueven", () => {

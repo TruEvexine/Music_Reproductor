@@ -24,12 +24,13 @@ texto y quema batería. Mi recomendación es **un fondo en capas, contenido y co
 
 ## Luz sin parpadeo (implementado en `core/rhythm.ts` → `createLight`)
 
-El modo Ritmo no pinta el análisis crudo: lo pasa por un limitador que el shader solo lee.
+El modo Ritmo no pinta el análisis crudo: lo normaliza a cada canción y lo pasa por un limitador que el shader solo lee. Detalle,
+diagrama y cifras en `docs/LUCES_REACTIVAS.md`.
 
-- **Brillo (`swell`):** graves con ataque 90 ms y caída 450 ms; cada golpe sostiene un pulso de 100 ms y entre dos pulsos hay al menos
-  340 ms (≤ 2,9 destellos/s, bajo el límite de 3 de WCAG 2.3.1). Tope de cambio de 2,5 unidades/s: ningún paso de 100 ms supera el 10 % de
-  luminancia.
-- **Velocidad (`rate`):** multiplicador 0,5–2,5× ligado a una envolvente de energía lenta (ataque 2 s, caída 4 s). La fase de la deriva se
+- **Brillo (`swell`):** graves normalizados con ataque 90 ms y caída 450 ms; cada golpe sostiene un pulso de 100 ms y entre dos pulsos
+  hay al menos 340 ms (≤ 2,9 destellos/s, bajo el límite de 3 de WCAG 2.3.1). Sube como mucho 2,5 unidades/s (ningún paso de 100 ms supera
+  el 10 % de luminancia) y baja como mucho 0,65/s (ningún ciclo de destello dura menos de 349 ms).
+- **Velocidad (`rate`):** multiplicador 0,5–2,5× ligado a la densidad de ataques de agudos, con envolvente lenta (ataque 2 s, caída 4 s). La fase de la deriva se
   integra en la CPU (`drift`), así que cambiar la velocidad, por la música o por el control, nunca la hace saltar. Antes se multiplicaba el
   tiempo acumulado por los agudos, y cada cambio desplazaba las manchas de golpe.
 - **Intensidad del control:** se acerca a su valor con ataque 120 ms y caída 400 ms.

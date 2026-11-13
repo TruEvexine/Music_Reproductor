@@ -1,6 +1,8 @@
 // Banco de pruebas de las luces reactivas, sin navegador: imita `AnalyserNode` y mide lo que llega al shader.
 // Lo usan `rhythm.test.ts` (señales sintéticas) y `scripts/medir-luces.ts` (audio real decodificado con ffmpeg). La app no lo importa.
 
+import { ANALYSER_DB } from "./rhythm.ts";
+
 export const SIM_RATE = 44100;
 export const SIM_FFT = 2048;
 
@@ -36,9 +38,9 @@ function fft(re: Float64Array, im: Float64Array) {
 
 /**
  * El mismo camino que `getByteFrequencyData`: ventana de Blackman, FFT, suavizado temporal (0,4, como el motor) y escala
- * dB → byte entre `minDb` y `maxDb` (de serie, los del analizador: −100 y −30). `frame(signal, end)` analiza los últimos 2048 muestreos hasta `end` (s).
+ * dB → byte entre `minDb` y `maxDb` (los del motor, `ANALYSER_DB`). `frame(signal, end)` analiza los últimos 2048 muestreos hasta `end` (s).
  */
-export function createAnalyserSim(smoothing = 0.4, minDb = -100, maxDb = -30) {
+export function createAnalyserSim(smoothing = 0.4, minDb: number = ANALYSER_DB.min, maxDb: number = ANALYSER_DB.max) {
   const smooth = new Float64Array(SIM_FFT / 2);
   const window = Float64Array.from({ length: SIM_FFT }, (_, i) => 0.42 - 0.5 * Math.cos((2 * Math.PI * i) / SIM_FFT) + 0.08 * Math.cos((4 * Math.PI * i) / SIM_FFT));
   return {
