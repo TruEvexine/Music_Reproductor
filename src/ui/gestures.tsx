@@ -52,6 +52,26 @@ const LIMIT = 132;
 const PRESS_MS = 500;
 
 /**
+ * Descarta el clic que el navegador genera al soltar tras un gesto, caiga donde caiga. Tras una pulsación larga cae en el fondo
+ * de la hoja recién abierta (capa superior, fuera de la fila) y la cerraba. Un toque nuevo o 400 ms sin clic lo desactivan.
+ */
+function swallowNextClick() {
+  const stop = (event: Event) => {
+    event.stopPropagation();
+    event.preventDefault();
+    off();
+  };
+  const off = () => {
+    window.removeEventListener("click", stop, true);
+    window.removeEventListener("pointerdown", off, true);
+    window.clearTimeout(timer);
+  };
+  window.addEventListener("click", stop, true);
+  window.addEventListener("pointerdown", off, true);
+  const timer = window.setTimeout(off, 400);
+}
+
+/**
  * Fila deslizable: derecha = `right`, izquierda = `left`; pulsación larga (o menú contextual) = `onMenu`.
  * `touch-action: pan-y` deja el scroll vertical al navegador; solo el dedo (táctil/lápiz) desliza, el ratón usa botones.
  */
@@ -72,7 +92,6 @@ export function SwipeRow({
 }) {
   const row = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ x: number; y: number; mode: "idle" | "swipe" | "press"; dx: number; armed: boolean; timer: number } | null>(null);
-  const swallow = useRef(false); // el clic que sigue a un gesto no debe reproducir la pista
 
   const reset = () => {
     row.current?.style.setProperty("--dx", "0px");
@@ -85,10 +104,7 @@ export function SwipeRow({
     if (!g) return;
     window.clearTimeout(g.timer);
     if (g.mode === "swipe" && run && g.armed) (g.dx > 0 ? right : left)?.run();
-    if (g.mode !== "idle") {
-      swallow.current = true;
-      window.setTimeout(() => (swallow.current = false), 400);
-    }
+    if (g.mode !== "idle") swallowNextClick();
     reset();
   };
 
@@ -96,12 +112,6 @@ export function SwipeRow({
     <div
       aria-current={current ? "true" : undefined}
       className={`swipe ${className}`}
-      onClickCapture={(event) => {
-        if (!swallow.current) return;
-        swallow.current = false;
-        event.stopPropagation();
-        event.preventDefault();
-      }}
       onContextMenu={(event) => {
         event.preventDefault();
         onMenu();
@@ -109,7 +119,6 @@ export function SwipeRow({
       onPointerCancel={() => finish(false)}
       onPointerDown={(event) => {
         if (event.pointerType === "mouse" || !event.isPrimary) return;
-        swallow.current = false;
         const g = { x: event.clientX, y: event.clientY, mode: "idle" as const, dx: 0, armed: false, timer: 0 };
         g.timer = window.setTimeout(() => {
           if (gesture.current?.mode !== "idle") return;

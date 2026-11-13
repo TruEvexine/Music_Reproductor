@@ -15,7 +15,8 @@ const check = (name, ok, detail = "") => {
 };
 
 const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
-const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, deviceScaleFactor: 2 });
+// isMobile: como en un teléfono, soltar tras una pulsación larga genera un "click" (cae en el fondo de la hoja recién abierta).
+const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
 const page = await context.newPage();
 await page.route("**/demoCatalog.dev.ts*", (route) => route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }));
 const errors = [];
@@ -100,6 +101,21 @@ check("y no reproduce la pista al soltar", (await nowTitle()) === A);
 const actions = await page.locator("dialog.dialog[open] .sheet-action").allInnerTexts();
 check("la hoja ofrece reproducir, a continuación y a la cola (también si ya está en la cola)", actions.join("|") === "Reproducir|Reproducir a continuación|Añadir a la cola", actions.join("|"));
 check("áreas táctiles de la hoja ≥ 44 px", await page.evaluate(() => [...document.querySelectorAll("dialog.dialog[open] button")].every((b) => b.getBoundingClientRect().height >= 44 && b.getBoundingClientRect().width >= 44)));
+// 10 pulsaciones largas de 520 a 952 ms: la hoja sigue abierta tras soltar todas las veces (el clic de soltar se descarta).
+await page.keyboard.press("Escape");
+await page.waitForTimeout(400);
+let stayedOpen = 0;
+for (let i = 0; i < 10; i++) {
+  at = await center(row(2));
+  await touch({ x: 120, y: at.y }, { x: 120, y: at.y }, { hold: 520 + i * 48 });
+  await page.waitForTimeout(450);
+  if ((await count("dialog.dialog[open]")) === 1) stayedOpen += 1;
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(400);
+}
+check("pulsación larga: la hoja sigue abierta al soltar, 10 de 10", stayedOpen === 10, `${stayedOpen}/10`);
+await touch({ x: 120, y: at.y }, { x: 120, y: at.y }, { hold: 700 });
+await page.waitForTimeout(400);
 // Arrastrar la cabecera hacia abajo cierra la hoja.
 const head = await center(page.locator("dialog.dialog[open] .dialog-header h2"));
 await touch({ x: head.x, y: head.y }, { x: head.x, y: head.y + 300 }, { steps: 8 });
