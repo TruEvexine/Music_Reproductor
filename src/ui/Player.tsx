@@ -134,7 +134,7 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
     <footer aria-label="Reproductor" className="player-bar">
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
       <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
-        <Cover className="bar-cover" seed={coverSeed(track.title, track.artist)} hash={track.coverHash} />
+        <Cover artist={track.artist} className="bar-cover" seed={coverSeed(track.title, track.artist)} hash={track.coverHash} title={track.title} />
         <span className="bar-copy">
           <span className="title">
             <Marquee>{track.title}</Marquee>
@@ -281,6 +281,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
             return (
               <span aria-hidden={current ? undefined : true} className="now-slot" data-side={current ? undefined : side} key={key}>
                 <Cover
+                  artist={item.artist}
                   className="now-cover"
                   hash={item.coverHash}
                   label={current ? `«${item.title}», de ${item.artist}` : undefined}
@@ -288,6 +289,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
                   seed={coverSeed(item.title, item.artist)}
                   sharp={current}
                   size="large"
+                  title={item.title}
                 />
               </span>
             );
@@ -342,7 +344,7 @@ function QueueRow({ entryKey, track, index, first, last, state, repeated }: { en
     >
       <button className="row-main" data-state={state} onClick={() => player.playEntry(entryKey)} type="button">
         <span className="row-coverbox">
-          <Cover className="row-cover" hash={track.coverHash} seed={coverSeed(track.title, track.artist)} />
+          <Cover artist={track.artist} className="row-cover" hash={track.coverHash} seed={coverSeed(track.title, track.artist)} title={track.title} />
         </span>
         <span className="row-copy">
           <span className="title">

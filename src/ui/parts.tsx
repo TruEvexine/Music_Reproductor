@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { ComponentPropsWithRef, ReactNode } from "react";
+import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
-import { artBackground, artOf } from "../core/coverArt";
+import { artBackground, artOf, COVER_STYLE, hueOf, initialOf } from "../core/coverArt";
 import { coverBucket } from "../core/resample";
 import { useCover } from "../state/covers";
 import type { CoverSize } from "../state/covers";
@@ -72,6 +72,8 @@ export function Cover({
   sharp = false,
   playing = false,
   label,
+  title,
+  artist,
 }: {
   hash?: string;
   size?: CoverSize;
@@ -80,26 +82,54 @@ export function Cover({
   sharp?: boolean;
   playing?: boolean;
   label?: string;
+  title?: string;
+  artist?: string;
 }) {
   const [px, ref] = useDevicePixels(sharp);
   const src = useCover(hash, size, px);
   const reduced = useReducedMotion();
   const visible = useSyncExternalStore(watchVisibility, pageVisible);
-  const art = useMemo(() => artBackground(artOf(seed), sharp), [seed, sharp]);
-  const moving = sharp && !reduced && !src;
+  const flat = COVER_STYLE !== "campos";
+  const art = useMemo(() => (flat ? "" : artBackground(artOf(seed), sharp)), [seed, sharp, flat]);
+  const moving = !flat && sharp && !reduced && !src;
   const generated = !hash && Boolean(label);
   return (
     <span
       aria-label={generated ? `Portada generada para ${label}` : undefined}
       className={`cover ${className}`}
       data-art={moving ? "drift" : undefined}
+      data-cover={flat ? COVER_STYLE : undefined}
       data-live={(moving && playing && visible) || undefined}
       ref={ref}
       role={generated ? "img" : undefined}
-      style={moving ? undefined : { background: art }}
+      style={flat ? ({ "--h": hueOf(seed) } as CSSProperties) : moving ? undefined : { background: art }}
     >
+      {flat && !src && <FlatArt artist={artist} seed={seed} title={title} />}
       {moving && <span aria-hidden="true" className="art-drift" style={{ background: art }} />}
       {src && <img alt={label ? `Portada de ${label}` : ""} decoding="async" loading="lazy" src={src} />}
+    </span>
+  );
+}
+
+/** Contenido de la portada plana (el tono lo pone el CSS). Es decorativo: el título ya está al lado o en `aria-label`. */
+function FlatArt({ seed, title, artist }: { seed: string; title?: string; artist?: string }) {
+  const name = title ?? seed.split("\u0000")[0];
+  return (
+    <span aria-hidden="true" className="art">
+      {COVER_STYLE === "inicial" && <span className="art-initial">{initialOf(name)}</span>}
+      {COVER_STYLE === "nota" && (
+        <svg className="art-note" fill="currentColor" viewBox="0 0 100 100">
+          <ellipse cx="30" cy="72" rx="14" ry="10" transform="rotate(-20 30 72)" />
+          <ellipse cx="73" cy="62" rx="14" ry="10" transform="rotate(-20 73 62)" />
+          <path d="M38 24 87 14v15L38 39zM38 24h6v48h-6zM81 14h6v48h-6z" />
+        </svg>
+      )}
+      {COVER_STYLE === "tarjeta" && (
+        <>
+          <span className="art-title">{name}</span>
+          {artist && <span className="art-artist">{artist}</span>}
+        </>
+      )}
     </span>
   );
 }

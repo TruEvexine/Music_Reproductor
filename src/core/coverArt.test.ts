@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { artBackground, artOf, coverSeed, hash32, LAYOUTS, TONE_LIMITS } from "./coverArt";
+import { artBackground, artOf, coverSeed, hash32, hueOf, initialOf, LAYOUTS, TONE_LIMITS } from "./coverArt";
 
 const songs = Array.from({ length: 2000 }, (_, i) => coverSeed(`Canción ${i * 7919}`, `Artista ${i % 83}`));
 
@@ -69,5 +69,28 @@ describe("portada generativa", () => {
       }
       expect(rich.split("no-repeat").length).toBe(plain.split("no-repeat").length + 1);
     }
+  });
+});
+
+describe("portada plana (propuestas inicial, nota y tarjeta)", () => {
+  it("el tono sale del título: estable, en 0–359 y repartido por todo el círculo", () => {
+    expect(hueOf(coverSeed("Marea de Fase", "X"))).toBe(hueOf(coverSeed("  marea DE fase ", "x")));
+    const buckets = new Set(songs.map((seed) => Math.floor(hueOf(seed) / 30)));
+    expect(buckets.size).toBe(12);
+    for (const seed of songs.slice(0, 200)) {
+      expect(hueOf(seed)).toBeGreaterThanOrEqual(0);
+      expect(hueOf(seed)).toBeLessThan(360);
+    }
+  });
+
+  it("la inicial es la primera letra o cifra, en mayúscula y sin perder el acento", () => {
+    expect(initialOf("amanecer")).toBe("A");
+    expect(initialOf("  ñandú")).toBe("Ñ");
+    expect(initialOf("¿Qué?")).toBe("Q");
+    expect(initialOf("(2019) Sol")).toBe("2");
+    expect(initialOf("日本の歌")).toBe("日");
+    expect(initialOf("🎵 mix")).toBe("M");
+    expect(initialOf("***")).toBe("*");
+    expect(initialOf("")).toBe("\u266a");
   });
 });

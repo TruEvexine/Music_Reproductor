@@ -115,3 +115,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Decidido:** presentación anónima («una persona en México»), sin universidad, sin historia personal, tono cercano.
 - **Pendiente:** seudónimo (si lo quiere), redes o contacto públicos, y la historia en sus palabras si más adelante quiere añadirla (no se redacta por el usuario).
 - **Efecto en la FAQ:** el texto ya está en tono cercano; solo falta el nombre (D22) y completar `{{CORREO_PRIVACIDAD}}` (D20) para publicarla.
+
+### D27 — Portada por defecto: elegir una de tres (2026-11-13)
+- **Qué:** las portadas generativas actuales no gustan. Hay tres propuestas implementadas (inicial, nota, tarjeta) y capturas en `docs/capturas/portadas/`; `COVER_STYLE` sigue en `"campos"` hasta que se decida. Detalle, comparación y la valoración de Cover Art Archive en `docs/PORTADA_POR_DEFECTO.md`.
+- **Bloquea:** nada.
+- **Recomendación:** A · Inicial. Adoptarla es cambiar la constante y borrar las otras dos ramas y, si se descarta «campos», su código y la sección de `DESIGN.md`.

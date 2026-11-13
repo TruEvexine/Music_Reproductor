@@ -113,7 +113,7 @@ export function PlaylistsView({ auth, onAccount }: { auth: AuthController; onAcc
                   {entries.map(({ identifier, track }, index) => (
                     <li className="track-row" key={identifier}>
                       <button className="row-main" disabled={!track} onClick={() => track && player.playContext(playable, track.id)} type="button">
-                        <Cover className="row-cover" hash={track?.coverHash} seed={track ? coverSeed(track.title, track.artist) : identifier} />
+                        <Cover artist={track?.artist} className="row-cover" hash={track?.coverHash} seed={track ? coverSeed(track.title, track.artist) : identifier} title={track?.title} />
                         <span className="row-copy">
                           <span className="title">{track?.title ?? "No está en este dispositivo"}</span>
                           <span className="subtitle">{track ? `${track.artist} · ${track.album}` : "Añade el archivo para escucharla"}</span>

@@ -285,6 +285,85 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   }
 }
 
+/* Portadas planas sin carátula (propuestas, ver COVER_STYLE): tono plano que sale del título (--h) con luminosidad y croma fijos por estilo. Todo se mide con
+   unidades de contenedor (cqw) del hueco `.art`, así la misma portada sirve a 48 px y a pantalla completa. Sin degradados, sin sombras, sin movimiento. */
+.cover > .art {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  container-type: size;
+}
+
+.cover[data-cover="inicial"] {
+  background: oklch(0.28 0.055 var(--h));
+  color: oklch(0.8 0.075 var(--h));
+}
+
+.cover[data-cover="nota"] {
+  background: oklch(0.5 0.075 var(--h));
+  color: oklch(0.95 0.015 var(--h));
+}
+
+.cover[data-cover="tarjeta"] {
+  background: oklch(0.86 0.045 var(--h));
+  color: oklch(0.24 0.04 var(--h));
+}
+
+.art-initial {
+  place-self: center;
+  padding-bottom: 5cqw; /* centrado óptico: las mayúsculas pesan sobre la línea base */
+  font-size: 66cqw;
+  font-stretch: 88%;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.art-note {
+  place-self: center;
+  width: 54cqw;
+  height: 54cqw;
+  transform: translate(1cqw, -1cqw); /* centrado óptico: el peso de la nota está abajo y a la izquierda */
+}
+
+.art-title,
+.art-artist {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+
+.art-title {
+  align-self: start;
+  margin: 8cqw 8cqw 0;
+  -webkit-line-clamp: 4;
+  font-size: max(12px, 15cqw);
+  font-stretch: 80%;
+  font-weight: 650;
+  line-height: 1.02;
+  text-align: left;
+}
+
+.art-artist {
+  align-self: end;
+  margin: 0 8cqw 8cqw;
+  -webkit-line-clamp: 1;
+  font-size: max(12px, 8cqw);
+  font-weight: 550;
+  opacity: 0.78;
+}
+
+/* A 48–96 px solo cabe el comienzo del título. */
+@container (max-width: 100px) {
+  .art-artist {
+    display: none;
+  }
+  .art-title {
+    margin: 3px 0 0 3px;
+    -webkit-line-clamp: 3;
+    font-stretch: 75%;
+  }
+}
+
 .cover img {
   display: block;
   width: 100%;

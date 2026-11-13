@@ -8,6 +8,13 @@ const normalize = (text: string) => text.normalize("NFC").trim().replace(/\s+/g,
 /** La semilla de una canción: título y artista sin distinguir mayúsculas ni espacios de más. */
 export const coverSeed = (title: string, artist: string) => `${normalize(title)}\u0000${normalize(artist)}`;
 
+/**
+ * Estilo de la portada sin carátula. «campos» es el actual (arte generativo, arriba). Las otras tres son propuestas de portada natural, sin formas al azar:
+ * un tono plano que sale del título (`hueOf`) y, encima, su inicial, una nota musical o el título escrito. Cambiar de estilo es cambiar esta constante.
+ */
+export type CoverStyle = "campos" | "inicial" | "nota" | "tarjeta";
+export const COVER_STYLE: CoverStyle = "campos";
+
 /** FNV-1a de 32 bits. */
 export function hash32(text: string): number {
   let hash = 0x811c9dc5;
@@ -24,6 +31,16 @@ function random(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/** Matiz (0–359) de la portada plana: el mismo título da siempre el mismo tono; luminosidad y croma fijos por estilo (base.css), así todas forman una familia. */
+export const hueOf = (seed: string) => (hash32(seed) >>> 8) % 360;
+
+/** Primera letra o cifra del título en mayúscula (la primera letra aunque lleve acento); sin ninguna, el primer carácter; sin nada, una corchea. */
+export function initialOf(title: string): string {
+  const text = title.normalize("NFC").trim();
+  const letter = text.match(/[\p{L}\p{N}]/u)?.[0] ?? Array.from(text)[0];
+  return letter ? letter.toLocaleUpperCase("es") : "\u266a";
 }
 
 export interface Tone {
