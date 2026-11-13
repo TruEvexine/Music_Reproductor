@@ -1,7 +1,8 @@
 # Luces reactivas: de dónde sale cada efecto
 
 Qué hace el fondo **Ritmo** del reproductor con la música, paso a paso. Código: `src/core/rhythm.ts` (análisis y luz, puro y con
-tests), `src/ui/Backdrop.tsx` (bucle de dibujo) y `src/ui/backdropRenderer.ts` (shader).
+tests), `src/ui/Backdrop.tsx` (bucle de dibujo) y `src/ui/backdropRenderer.ts` (shader). Las cifras de este documento se miden con
+`scripts/medir-luces.ts` (§8).
 
 ## 1. El recorrido en una imagen
 
@@ -146,3 +147,58 @@ Tres causas:
 
 Arreglo: rango del analizador −100 a −10 dB (`ANALYSER_DB`, lo fija el motor), normalización por banda (§3), ataques con umbral
 relativo (§4) y velocidad por densidad de agudos (§5).
+
+## 8. La métrica de actividad y los resultados
+
+`lightMetrics` (`src/core/rhythm.sim.ts`) mide la luz que llega al shader, cuadro a cuadro a 60 fps:
+
+- **Actividad:** desviación típica del brillo dentro de ventanas de 2 s, de media, en puntos (brillo de 0 a 100). Cuánto late la luz
+  al ritmo; un fondo quieto da 0. Las ventanas cortas ignoran los cambios lentos (de estrofa a estribillo).
+- **Destellos/s:** destellos disparados por segundo, de media.
+- **Velocidad σ:** cuánto varía el multiplicador de velocidad a lo largo de la canción.
+- **Topes:** destellos en la peor ventana de 1 s (≤ 3, contando cambios de brillo ≥ 5 %) y mayor cambio de brillo en 100 ms (< 0,10).
+
+**Criterio:** ninguna canción baja de actividad y ninguna pasa de los topes.
+
+Canciones completas, sensibilidad Auto. Antes = `core/rhythm.ts` de `cc1470f`.
+
+| Pista | Actividad | Destellos/s | Velocidad σ | Peor destellos/s | Máx. paso 100 ms |
+|---|---|---|---|---|---|
+| Highest in the Room · antes | 0,73 | 0,10 | 0,175 | 1,0 | 0,070 |
+| Highest in the Room · **después** | **2,55** | **1,02** | **0,314** | 2,5 | 0,070 |
+| The Spins · antes | 0,09 | 0,00 | 0,112 | 0,5 | 0,070 |
+| The Spins · **después** | **2,11** | **2,04** | **0,151** | 2,5 | 0,070 |
+| Sintética de poca dinámica (30 s) · antes | 0,70 | 0,00 | 0,088 | 0,0 | 0,070 |
+| Sintética de poca dinámica (30 s) · **después** | **2,56** | **1,13** | **0,110** | 2,0 | 0,070 |
+
+Fragmentos de 30 s desde el minuto 1:00: *Highest in the Room* 0,93 → 2,71 de actividad (0,07 → 0,67 destellos/s); *The Spins*
+0,46 → 2,16 (0,00 → 1,47 destellos/s). Peor ventana ≤ 2,5 destellos/s en ambos.
+
+Otras siete pistas de géneros variados (rap, pop, rock de los setenta, hyperpop, reguetón): actividad antes 0,46–1,45, después
+2,44–3,01; peor ventana ≤ 3,0 destellos/s y paso ≤ 0,070 en todas. **Antes, de la canción más quieta a la más viva había un factor 16;
+ahora, 1,4.**
+
+Sensibilidad (actividad, Baja / Auto / Alta): *Highest in the Room* 2,11 / 2,55 / 2,93; *The Spins* 2,14 / 2,11 / 2,07. En *The Spins*
+apenas cambia: con ~2 golpes por segundo lo que limita es la bajada máxima del brillo, que es un tope de seguridad.
+
+El máximo cambio en 100 ms es 0,070 en todas porque coincide con el tope de subida (2,5/s · 0,1 s · 0,35 / 1,25): se alcanza, nunca se
+supera.
+
+### Cómo repetir la medición
+
+```bash
+# Requiere ffmpeg. El audio no sale de tu equipo ni se versiona (src/assets/music/ está ignorada por git).
+node scripts/medir-luces.ts "src/assets/music/<pista>.flac"                       # versión actual
+node scripts/medir-luces.ts --antes cc1470f "src/assets/music/<pista>.flac"        # versión anterior, para comparar
+node scripts/medir-luces.ts --desde 60 --segundos 30 --sensibilidad high <pista>   # un fragmento, otra sensibilidad
+```
+
+## 9. Límites
+
+- Las cifras salen de una **simulación** del analizador (misma ventana, FFT, suavizado y escala que la especificación de Web Audio),
+  no del navegador: allí el analizador mezcla el estéreo a mono a su manera (aquí lo hace ffmpeg) y los cuadros llegan a intervalos
+  irregulares.
+- El analizador va **después** del volumen, el ecualizador y el limitador: con el volumen muy bajo la señal se acerca al suelo de
+  −100 dB y la banda puede entrar en «silencio». Los ataques no dependen del volumen (la escala es en dB); el silencio sí.
+- La métrica mide el brillo. El tamaño y la velocidad se ven, pero no entran en la cifra de actividad (la velocidad se informa aparte).
+- «Se ve bien» no es una cifra: falta mirarlo en un móvil real con varias canciones.

@@ -799,6 +799,16 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
 
    Skills aplicadas (puntos 3 y 4): ponytail; make-interfaces-feel-better, design-motion-principles, design-taste-frontend, ui-ux-pro-max e impeccable (cargadas y aplicadas a criterio: tokens de movimiento, solo `transform`/`opacity`, movimiento reducido, áreas de 44 px, semántica nativa; `impeccable context` leyó `PRODUCT.md` y `DESIGN.md`; sin buscador de ui-ux-pro-max: no hay Python).
 
+### 11.1i Luces reactivas que se adaptan a cada canción (2026-11-13)
+
+Explicación con diagrama, diagnóstico y cifras: `docs/LUCES_REACTIVAS.md`.
+
+1. **Diagnóstico.** `scripts/medir-luces.ts` decodifica audio local con ffmpeg y lo pasa por una simulación del analizador (`core/rhythm.sim.ts`, la misma que usan los tests) y por `core/rhythm.ts`; `--antes <ref>` carga la versión de otra revisión. Causas de que *The Spins* casi no se moviera: graves saturados en 255 (rango de serie del analizador hasta −30 dB), umbral de golpe absoluto (0,25) que la música real no alcanza (flujo p99 ≈ 0,08) y ganancias fijas por banda.
+2. **Arreglo** (`core/rhythm.ts` `createAnalysis`): analizador de −100 a −10 dB (`ANALYSER_DB`, lo fija el motor); bandas sin solaparse (20–150 / 250–4000 / 4000–16000 Hz); nivel de cada banda frente a su media y variación móviles (~4 s); ataques por flujo espectral con umbral media + k·σ; velocidad por densidad de ataques de agudos. Ajuste **Sensibilidad** (Baja · Auto · Alta, Auto por defecto) en el menú ≡ → Fondo y en Ajustes, solo en Ritmo. Topes intactos (340 ms entre destellos, subida 2,5/s, movimiento reducido) y uno nuevo más estricto: bajada ≤ 0,65/s, que garantiza ≤ 2,9 destellos/s por construcción.
+3. **Métrica** (`lightMetrics`): actividad = desviación típica del brillo en ventanas de 2 s. Canciones completas: *Highest in the Room* 0,73 → 2,55, *The Spins* 0,09 → 2,11; otras siete pistas 0,46–1,45 → 2,44–3,01; peor ventana ≤ 3 destellos/s y paso ≤ 0,070 en 100 ms en todas. Prueba de navegador: `prueba-fondo.mjs` comprueba el control. **Límite:** la medición es una simulación del analizador, no el navegador; falta mirarlo en un móvil real.
+
+   Skills aplicadas: ponytail; design-taste-frontend, ui-ux-pro-max, design-motion-principles, make-interfaces-feel-better e impeccable (control con el `Segmented` de la casa, sin movimiento nuevo, revisado en capturas de 1440 y 390 px).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
