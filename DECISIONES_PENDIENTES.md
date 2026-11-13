@@ -99,3 +99,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Decidido:** repositorio público bajo **PolyForm Noncommercial 1.0.0** (texto oficial 1.0.0, descargado de `polyformproject/polyform-licenses`). Archivo `LICENSE` añadido con la línea `Required Notice: Copyright {{RESPONSABLE}}`.
 - **Pendiente:** sustituir `{{RESPONSABLE}}` por el titular al publicar (D20); que un abogado revise el alcance de «no comercial» y la cláusula 4 de los términos. Falta decidir si se añade el campo `license` de `package.json` (hoy solo `"private": true`; no se tocó porque esta tanda no cambia código) y una línea en el README (tiene cambios sin commitear del usuario; no se tocó).
 - **Implicación:** no es «código abierto» según la OSI. Las dependencias conservan sus propias licencias; no se comprobó la compatibilidad de ninguna.
+
+### D24 — Cuentas: orden antes de abrir registros (2026-11-12)
+- **Decidido:** antes de abrir registros, los cuatro: eliminar cuenta, exportar datos de la cuenta, recuperar contraseña y SMTP propio. No se abre a la UE por ahora; el inglés queda para después.
+- **Dependencia que bloquea:** el SMTP propio y el correo de privacidad en dominio propio necesitan **dominio**, y este necesita **nombre** (D22). Hasta entonces los registros no se deben abrir al público.
+- **Sin decidir todavía:** edad mínima (L5), plazo de borrado tras eliminar la cuenta (L4), tribunales (L7) y si las playlists locales se conservan al eliminar la cuenta (`AJUSTES_PRIVACIDAD.md` §2.3).

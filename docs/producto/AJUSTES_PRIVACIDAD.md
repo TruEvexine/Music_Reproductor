@@ -125,7 +125,7 @@ Del cambio más pequeño al más grande; cada uno es un commit con su prueba:
 3. Bloque «Qué se guarda» con cifras reales. Captura en la matriz de `scripts/capturas.mjs`.
 4. «Datos de tu cuenta (JSON)». Test del formato con `parseBackup` (debe poder importarse).
 5. «Eliminar cuenta» con la Edge Function. Requiere desplegar una función en el proyecto compartido: documentarlo en `SUPABASE.md`
-   antes. **[Decides tú]** si se hace ya o al migrar al proyecto dedicado (`PLAN.md` §3.4).
+   antes. **Decidido 2026-11-12:** se hace **antes de abrir registros** (L9), no al migrar al proyecto dedicado.
 
 La analítica y el historial no entran aquí: dependen de decisiones previas.
 

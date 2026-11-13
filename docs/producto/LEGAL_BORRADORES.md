@@ -222,6 +222,8 @@ aun así, ofrecerla como opción activada por la persona. Entonces esta página 
 
 ## 6. Si hay usuarios en la Unión Europea
 
+> **Decisión 2026-11-12 (L8):** no se dirige a la UE por ahora, así que esta sección queda como referencia y no se aplica al aviso. Se reabre si cambia.
+
 El RGPD (Reglamento (UE) 2016/679, [eur-lex.europa.eu/eli/reg/2016/679/oj](https://eur-lex.europa.eu/eli/reg/2016/679/oj); no lo
 releí en esta sesión) aplica a un responsable fuera de la UE cuando **ofrece** bienes o servicios a personas en la UE (art. 3.2).
 Una web en español accesible desde España no basta por sí sola; anunciarse allí, aceptar euros o redactar para ese público sí
@@ -255,8 +257,8 @@ Y en la app: un botón "Eliminar cuenta" y una exportación de los datos de la c
 | L5 | Edad mínima | Términos, cláusula 3 |
 | L6 | **Resuelta 2026-11-12:** PolyForm Noncommercial 1.0.0, repositorio público; archivo `LICENSE` añadido con `{{RESPONSABLE}}` como titular. **[Pendiente: completar el titular al publicar; revisión del abogado]** | Términos, cláusula 4 |
 | L7 | Tribunales competentes | Términos, cláusula 9 |
-| L8 | Si se dirige a la UE | Decide si se aplica la sección 6 |
-| L9 | Si se implementa "Eliminar cuenta" antes de abrir registros | Sin él, cada baja es manual desde el panel de Supabase |
+| L8 | **Resuelta 2026-11-12:** no se dirige a la UE por ahora; la sección 6 **no aplica hasta que eso cambie** (se reabre si se anuncia allí, se aceptan euros o se traduce para ese público). Versión en inglés: después, cuando haya nombre en inglés | Sección 6 |
+| L9 | **Resuelta 2026-11-12:** sí, «Eliminar cuenta» y «Datos de tu cuenta» se implementan **antes de abrir registros** | Aviso, sección «Tus derechos» |
 
 ## 8. Lo omitido y los riesgos
 

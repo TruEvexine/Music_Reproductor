@@ -33,6 +33,8 @@ al despliegue (§11) están avanzados. Sin cuentas abiertas al público, sin nom
 
 ### Fase 3 — Cuentas listas para el público
 
+**Decidido 2026-11-12:** «Eliminar cuenta», «Datos de tu cuenta», recuperación de contraseña y SMTP propio van **antes de abrir registros**, los cuatro. El SMTP necesita dominio, que depende de elegir nombre (`MARCA.md` §0). No se abre a la UE por ahora y la versión en inglés queda para después.
+
 - **Entrada:** Fase 1 cerrada. Es requisito **antes** de anunciar la app en cualquier sitio, porque el registro es lo primero que se
   rompe (§3.3).
 - **Qué incluye:** SMTP propio con remitente del dominio, Turnstile, contraseña mínima ≥ 10 (D9); recuperación de contraseña;
