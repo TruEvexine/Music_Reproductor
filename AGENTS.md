@@ -46,7 +46,7 @@ UI (src/ui)  →  estado (src/state)  →  core (src/core) + motor (src/engine) 
 Una base de código, tres destinos (web, Android, iPhone con Capacitor). Ver `PLAN.md` §3.7 y `docs/ARQUITECTURA_APP.md`.
 
 - Fronteras: `LocalLibrary`, `AudioSession`, `SecureStore`, `Storage`, `Connectivity`. Hoy solo existe la versión web; la nativa se escribe cuando haya Android Studio.
-- Pruebas de navegador: `scripts/prueba-biblioteca.mjs` (biblioteca, Chromium/Firefox/WebKit, 5 000 pistas de `node scripts/gen-biblioteca.mjs`), `prueba-audio.mjs`, `prueba-menu.mjs`, `prueba-fondo.mjs`. Todas aceptan la URL base como primer argumento.
+- Pruebas de navegador: `scripts/prueba-biblioteca.mjs` (biblioteca, Chromium/Firefox/WebKit, 5 000 pistas de `node scripts/gen-biblioteca.mjs`), `prueba-audio.mjs`, `prueba-menu.mjs`, `prueba-fondo.mjs`, `prueba-enlace-magico.mjs` (vuelta del enlace de correo con Supabase interceptado). Todas aceptan la URL base como primer argumento.
 - Variantes por plataforma con `data-platform="web|android|ios"` en `<html>` y CSS; nunca forks de componentes enteros.
 - `VITE_TARGET=web|android|ios`. En nativo: `base: './'`, router con hash, CSP por `<meta>`, sin dominios absolutos.
 - **Todo el estado del usuario se escribe primero en IndexedDB** y funciona sin red. Supabase es sincronización opcional. La UI nunca espera a la red.

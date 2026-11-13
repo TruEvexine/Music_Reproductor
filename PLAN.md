@@ -334,7 +334,7 @@ La app (`/app`) no necesita posicionarse; la **landing** sí.
 - **Metadatos:** `title` ≤ 60 caracteres, `description` ≤ 155, `canonical`, `lang="es-MX"` (y `hreflang` cuando haya inglés), Open Graph y Twitter con imagen 1200×630, favicon + iconos PWA.
 - **Datos estructurados:** JSON-LD `SoftwareApplication`/`WebApplication` con `offers` (gratis) y `FAQPage` en la landing.
 - **Archivos:** `robots.txt`, `sitemap.xml` generado en build.
-- **Rendimiento (Core Web Vitals):** LCP < 2.5 s, INP < 200 ms, CLS < 0.1. Cargar Supabase solo en `/app` o cuando haga falta (hoy entra en el bundle principal), fuentes con `font-display: swap` y *preload*, imágenes WebP/AVIF.
+- **Rendimiento (Core Web Vitals):** LCP < 2.5 s, INP < 200 ms, CLS < 0.1. Supabase se descarga solo cuando hace falta (`getSupabase()`, ver `docs/PLAN_RENDIMIENTO.md` Fase 2), fuentes con `font-display: swap` y *preload*, imágenes WebP/AVIF.
 - **Contenido:** páginas que respondan búsquedas reales — "reproductor FLAC online", "escuchar música local en el navegador", "ecualizador de música web", comparativas honestas. Blog opcional después.
 - **Medición:** Google Search Console + analítica respetuosa de la privacidad (Plausible o Umami). Sin cookies de terceros en `/app`.
 

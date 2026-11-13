@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { getSupabase } from "./supabaseClient";
 
 export interface Playlist {
   id: string;
@@ -19,13 +19,6 @@ interface PlaylistTrackRow {
   position: number;
 }
 
-function requireSupabase() {
-  if (!supabase) {
-    throw new Error("Configura Supabase antes de usar playlists sincronizadas.");
-  }
-  return supabase;
-}
-
 /** Error de Supabase con su estado HTTP: el outbox decide con él si reintentar. */
 function failure(error: { message: string; code?: string }, status: number): Error & { status: number; code?: string } {
   return Object.assign(new Error(error.message), { status, code: error.code });
@@ -33,12 +26,12 @@ function failure(error: { message: string; code?: string }, status: number): Err
 
 /** Crea o renombra con el id generado en el dispositivo (la playlist ya existía localmente). */
 export async function upsertUserPlaylist(playlistId: string, userId: string, name: string): Promise<void> {
-  const { error, status } = await requireSupabase().from("playlists").upsert({ id: playlistId, user_id: userId, name }, { onConflict: "id" });
+  const { error, status } = await (await getSupabase()).from("playlists").upsert({ id: playlistId, user_id: userId, name }, { onConflict: "id" });
   if (error) throw failure(error, status);
 }
 
 export async function fetchUserPlaylists(userId: string): Promise<Playlist[]> {
-  const client = requireSupabase();
+  const client = await getSupabase();
   const { data: playlistData, error: playlistError } = await client
     .from("playlists")
     .select("id, name, created_at")
@@ -76,7 +69,7 @@ export async function fetchUserPlaylists(userId: string): Promise<Playlist[]> {
 }
 
 export async function deleteUserPlaylist(playlistId: string): Promise<void> {
-  const { error, status } = await requireSupabase()
+  const { error, status } = await (await getSupabase())
     .from("playlists")
     .delete()
     .eq("id", playlistId);
@@ -87,7 +80,7 @@ export async function replacePlaylistTracks(
   playlistId: string,
   trackIdentifiers: string[],
 ): Promise<void> {
-  const { error, status } = await requireSupabase().rpc("replace_playlist_tracks", {
+  const { error, status } = await (await getSupabase()).rpc("replace_playlist_tracks", {
     p_playlist_id: playlistId,
     p_track_identifiers: trackIdentifiers,
   });

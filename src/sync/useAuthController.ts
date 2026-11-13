@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { createAttemptLimiter, SIGN_UP_SENT, signInMessage, signUpMessage } from "../core/authMessages";
-import { supabase, supabaseConfigured } from "./supabaseClient";
+import { getSupabase, supabaseConfigured } from "./supabaseClient";
 
 const signInLimiter = createAttemptLimiter();
 
@@ -24,18 +24,21 @@ export function useAuthController() {
   const [databaseError, setDatabaseError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabaseConfigured) return;
 
     let active = true;
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    void supabase.auth
-      .getSession()
-      .then(({ data: sessionData, error }) => {
-        if (error) throw error;
-        if (active) setSession(sessionData.session);
+    let unsubscribe = () => {};
+    void getSupabase()
+      .then((supabase) => {
+        if (!active) return;
+        const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+          setSession(nextSession);
+        });
+        unsubscribe = () => data.subscription.unsubscribe();
+        return supabase.auth.getSession().then(({ data: sessionData, error }) => {
+          if (error) throw error;
+          if (active) setSession(sessionData.session);
+        });
       })
       .catch(() => {
         if (active) {
@@ -45,12 +48,12 @@ export function useAuthController() {
 
     return () => {
       active = false;
-      data.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
   useEffect(() => {
-    if (!supabaseConfigured || !session?.user.id || !supabase) {
+    if (!supabaseConfigured || !session?.user.id) {
       if (supabaseConfigured) setDatabaseState("checking");
       return;
     }
@@ -59,19 +62,17 @@ export function useAuthController() {
     setDatabaseState("checking");
     setDatabaseError(null);
 
-    void supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", session.user.id)
-      .maybeSingle()
+    const userId = session.user.id;
+    void getSupabase()
+      .then((supabase) => supabase.from("profiles").select("id").eq("id", userId).maybeSingle())
       .then(({ error }) => {
+        if (error) throw error;
+        if (active) setDatabaseState("connected");
+      })
+      .catch(() => {
         if (!active) return;
-        if (error) {
-          setDatabaseState("error");
-          setDatabaseError("No se pudo leer tu perfil. Inténtalo más tarde.");
-          return;
-        }
-        setDatabaseState("connected");
+        setDatabaseState("error");
+        setDatabaseError("No se pudo leer tu perfil. Inténtalo más tarde.");
       });
 
     return () => {
@@ -80,7 +81,7 @@ export function useAuthController() {
   }, [session?.user.id]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    if (!supabase) return;
+    if (!supabaseConfigured) return;
 
     const wait = signInLimiter.waitSeconds();
     if (wait > 0) {
@@ -91,7 +92,7 @@ export function useAuthController() {
     setAuthError(null);
     setAuthNotice(null);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await (await getSupabase()).auth.signInWithPassword({
         email,
         password,
       });
@@ -107,13 +108,13 @@ export function useAuthController() {
 
   const signUp = useCallback(
     async (email: string, password: string, displayName: string) => {
-      if (!supabase) return;
+      if (!supabaseConfigured) return;
 
       setIsSubmitting(true);
       setAuthError(null);
       setAuthNotice(null);
       try {
-        const { data, error } = await supabase.auth.signUp({
+        const { data, error } = await (await getSupabase()).auth.signUp({
           email,
           password,
           options: { data: { display_name: displayName } },
@@ -132,10 +133,12 @@ export function useAuthController() {
   );
 
   const signOut = useCallback(async () => {
-    if (!supabase) return;
+    if (!supabaseConfigured) return;
 
     setAuthError(null);
-    const { error } = await supabase.auth.signOut();
+    const { error } = await getSupabase()
+      .then((supabase) => supabase.auth.signOut())
+      .catch((failure: unknown) => ({ error: failure }));
     if (error) setAuthError("No se pudo cerrar la sesión.");
   }, []);
 
