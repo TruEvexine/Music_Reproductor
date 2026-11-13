@@ -17,7 +17,7 @@ al despliegue (§11) están avanzados. Sin cuentas abiertas al público, sin nom
 ### Fase 1 — Publicar la web
 
 - **Entrada:** checklist de `PLAN.md` §11.4 completa; borrar los deployments antiguos con música (D4); responsable, domicilio y correo
-  de contacto decididos (`LEGAL_BORRADORES.md`, L1 a L3).
+  de contacto decididos (`LEGAL_BORRADORES.md`, L1 a L3; resueltos, falta completar los marcadores al publicar).
 - **Qué incluye:** despliegue a producción, aviso de privacidad, términos y página de almacenamiento local publicados (revisados por un
   abogado), FAQ publicada (`FAQ.md`).
 - **Éxito:** producción en línea con los textos legales; matriz de `scripts/capturas.mjs` y pruebas de navegador en verde contra la URL

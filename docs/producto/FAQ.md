@@ -46,12 +46,12 @@ sesión**: el borrado no la cierra, y tus playlists de la cuenta volverán a apa
 Comprobado en: `src/ui/SettingsView.tsx`, `src/state/library.ts` (`wipeAll`), `src/platform/web/db.ts` (`clearDatabase`).
 
 ### ¿Cómo elimino mi cuenta?
-Todavía no se puede desde la app. Escribe a [correo de contacto] desde el correo de tu cuenta y la eliminamos junto con tus playlists.
+Todavía no se puede desde la app. Escribe a {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta y la eliminamos junto con tus playlists.
 
 Comprobado en: no hay llamada de borrado de usuario en `src/sync/`.
 
 ### Olvidé mi contraseña.
-La app todavía no tiene recuperación de contraseña. Escribe a [correo de contacto] desde el correo de tu cuenta.
+La app todavía no tiene recuperación de contraseña. Escribe a {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta.
 
 Comprobado en: `src/sync/useAuthController.ts` (solo registro, entrada y salida).
 
@@ -181,5 +181,5 @@ No publicar respuestas sobre: recaps y estadísticas (`PERFIL_Y_RECAPS.md`), per
 
 ## Riesgos
 
-- Dos respuestas remiten a [correo de contacto], que no existe todavía. Sin él, la FAQ no se puede publicar.
+- Dos respuestas remiten a `{{CORREO_PRIVACIDAD}}`, que se completa al publicar (valor en `privado/`). Es un correo temporal.
 - La respuesta sobre Safari depende de D16; al probarla en un dispositivo real, actualizarla.

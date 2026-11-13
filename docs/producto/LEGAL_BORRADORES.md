@@ -94,8 +94,8 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > **Aviso de privacidad de [Nombre de la app]**
 > Última actualización: [fecha]
 >
-> **Quién es responsable.** [Nombre completo o razón social], con domicilio en [domicilio], es responsable de los datos personales
-> que se tratan en [Nombre de la app] ("la app"). Contacto para cualquier asunto de privacidad: [correo de contacto].
+> **Quién es responsable.** {{RESPONSABLE}}, con domicilio en {{DOMICILIO}}, es responsable de los datos personales
+> que se tratan en [Nombre de la app] ("la app"). Contacto para cualquier asunto de privacidad: {{CORREO_PRIVACIDAD}}.
 >
 > **Lo que no recabamos.** Tu música no sale de tu dispositivo: la app lee los archivos en tu navegador y no los sube a ningún
 > servidor. Tampoco usamos cookies, analítica, publicidad ni herramientas de rastreo.
@@ -129,7 +129,7 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > conservar por obligación legal. **[Decides tú]** el plazo; **[Abogado]** si hay obligación de conservar algo.
 >
 > **Tus derechos (ARCO).** Puedes pedir acceso, rectificación, cancelación u oposición, o revocar tu consentimiento, escribiendo a
-> [correo de contacto] desde el correo de tu cuenta, con tu nombre, lo que pides y, si es rectificación, el dato correcto.
+> {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta, con tu nombre, lo que pides y, si es rectificación, el dato correcto.
 > Respondemos en un máximo de 20 días hábiles y, si procede, lo aplicamos en los 15 días hábiles siguientes. Es gratuito.
 > Desde la app también puedes: cerrar sesión, borrar tus playlists y borrar todos los datos de tu dispositivo.
 > **[Decides tú]** Cuando exista "Eliminar cuenta" en la app, mencionarlo aquí.
@@ -141,8 +141,8 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 
 ### 3.2 Aviso simplificado (bajo el botón de registro)
 
-> [Nombre o razón social] usa tu correo, tu nombre visible y tus playlists sincronizadas solo para darte tu cuenta y sincronizar
-> entre dispositivos. Tu música no se sube. Puedes limitar el uso o borrar tus datos escribiendo a [correo]. Aviso completo:
+> {{RESPONSABLE}} usa tu correo, tu nombre visible y tus playlists sincronizadas solo para darte tu cuenta y sincronizar
+> entre dispositivos. Tu música no se sube. Puedes limitar el uso o borrar tus datos escribiendo a {{CORREO_PRIVACIDAD}}. Aviso completo:
 > [URL]/privacidad.
 
 ---
@@ -187,7 +187,7 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > **9. Ley y jurisdicción.** Estos términos se rigen por las leyes de México. **[Decides tú]** tribunales competentes (por ejemplo,
 > los de [ciudad]). **[Abogado]** si esa cláusula es válida frente a consumidores.
 >
-> **10. Contacto.** [correo de contacto].
+> **10. Contacto.** {{CORREO_PRIVACIDAD}}.
 
 ---
 
@@ -247,9 +247,9 @@ Y en la app: un botón "Eliminar cuenta" y una exportación de los datos de la c
 
 | # | Decisión | Por qué importa |
 |---|---|---|
-| L1 | Responsable: persona física (tú) o una persona moral | Va en la primera línea del aviso y define el domicilio que se publica |
-| L2 | Domicilio que se publica | El art. 15, fr. I lo exige. Puede ser un domicilio para recibir notificaciones, no necesariamente el particular. **[Abogado]** |
-| L3 | Correo de contacto de privacidad (ideal: en el dominio propio, ver `MARCA.md`) | Es el medio ARCO |
+| L1 | **Resuelta 2026-11-12:** persona física. Responsable: `{{RESPONSABLE}}` | Va en la primera línea del aviso |
+| L2 | **Resuelta 2026-11-12:** se publica el domicilio particular, `{{DOMICILIO}}`. **[Pendiente: confirmar con el abogado que basta]** | Art. 15, fr. I |
+| L3 | **Resuelta en parte 2026-11-12:** `{{CORREO_PRIVACIDAD}}` es un correo temporal de Gmail. **[Pendiente: correo en el dominio propio, cuando exista]** | Medio ARCO |
 | L4 | Plazo de borrado tras eliminar la cuenta | Aviso, sección "Cuánto tiempo" |
 | L5 | Edad mínima | Términos, cláusula 3 |
 | L6 | Licencia del código | Términos, cláusula 4 |

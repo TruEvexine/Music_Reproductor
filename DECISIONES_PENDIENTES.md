@@ -79,3 +79,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 
 ### D12 — Activar los hooks en cada clon nuevo
 - En esta copia ya están activos. En cualquier otro clon: `npm run setup`.
+
+### D20 — Completar marcadores de datos personales al publicar (tanda de documentos, 2026-11-12)
+- **Qué:** los documentos públicos usan `{{RESPONSABLE}}`, `{{DOMICILIO}}` y `{{CORREO_PRIVACIDAD}}`. Los valores reales están en `docs/producto/privado/DATOS_PUBLICACION.md` (ignorado por git).
+- **Pendiente:** sustituir los marcadores en el momento de publicar (nunca commitear los valores); cambiar el correo temporal de Gmail por uno del dominio propio cuando exista; que un abogado confirme que publicar el domicilio particular basta (art. 15, fr. I).

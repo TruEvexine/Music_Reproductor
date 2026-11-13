@@ -51,3 +51,6 @@ ios/App/build/
 
 # Música y portadas de ejemplo de la landing (scripts/descargar-musica-landing.mjs)
 tests/fixtures/landing/
+
+# Datos personales para completar marcadores al publicar (domicilio, correos): nunca se versionan
+docs/producto/privado/
