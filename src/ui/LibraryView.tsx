@@ -1,7 +1,8 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
-import { ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
+import { AudioLines, ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Pause, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { coverSeed } from "../core/coverArt";
+import { hasPlayed } from "../core/queue";
 import { formatTime, isHiRes, qualityLabel, searchKey } from "../core/format";
 import { groupTracks, matchesAll as matches, recentTracks, searchTextOf, sortGroups, sortTracks } from "../core/library";
 import type { GroupBy, GroupSort, TrackGroup, TrackSort } from "../core/library";
@@ -65,6 +66,7 @@ function follow(to: string) {
 export function TrackRow({ track, number, onPlay }: { track: Track; number?: number; onPlay: () => void }) {
   const isCurrent = usePlayer((state) => state.queue.current?.id === track.id);
   const isPlaying = usePlayer((state) => isCurrent && state.isPlaying);
+  const played = usePlayer((state) => !isCurrent && hasPlayed(state.queue, track.id));
   const blocked = track.unplayable || track.unsupported;
   const [sheet, setSheet] = useState(false);
   const playNext = { label: "Reproducir a continuación", icon: <ListStart {...iconSmall} />, run: () => queueAction("Sonará a continuación", () => player.playNext(track.id)) };
@@ -78,7 +80,7 @@ export function TrackRow({ track, number, onPlay }: { track: Track; number?: num
       onMenu={() => setSheet(true)}
       right={isCurrent ? undefined : { ...playNext, label: "Siguiente" }}
     >
-      <button aria-label={`Reproducir ${track.title}, de ${track.artist}`} className="row-main" onClick={onPlay} type="button">
+      <button aria-label={`Reproducir ${track.title}, de ${track.artist}`} className="row-main" data-state={isCurrent ? "current" : played ? "played" : undefined} onClick={onPlay} type="button">
         {number !== undefined ? (
           <span aria-hidden="true" className="row-number time">
             {track.trackNumber ?? number}
@@ -93,9 +95,12 @@ export function TrackRow({ track, number, onPlay }: { track: Track; number?: num
             )}
             {track.title}
           </span>
-          <span className="subtitle">
-            {isCurrent ? (isPlaying ? "Sonando · " : "En pausa · ") : ""}
-            {track.artist}
+          <span className="subtitle row-sub">
+            {isCurrent && <span className="row-status">{isPlaying ? <AudioLines {...iconSmall} size={14} /> : <Pause {...iconSmall} size={14} />}</span>}
+            <span className="row-text">
+              {isCurrent ? (isPlaying ? "Sonando · " : "En pausa · ") : ""}
+              {track.artist}
+            </span>
           </span>
         </span>
         <span className="row-album subtitle">{track.album}</span>

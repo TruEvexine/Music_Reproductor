@@ -5,6 +5,7 @@ import {
   cycleRepeat,
   emptyQueue,
   enqueue,
+  hasPlayed,
   moveInQueue,
   nextInQueue,
   playEntry,
@@ -229,5 +230,21 @@ describe("restoreQueue", () => {
     expect(q.original[0]).toBe(q.order[1]);
     expect(q.current).toBe(q.order[1]);
     expect(upgradeQueue(abc)).toBe(abc);
+  });
+});
+
+describe("hasPlayed", () => {
+  it("solo cuentan las pistas anteriores a la actual; la que suena y las siguientes no", () => {
+    const q = at(abc, "b");
+    expect(["a", "b", "c"].map((id) => hasPlayed(q, id))).toEqual([true, false, false]);
+    expect(hasPlayed(emptyQueue, "a")).toBe(false);
+    expect(hasPlayed(q, "zzz")).toBe(false);
+  });
+
+  it("una pista repetida solo está sonada si ya pasaron todas sus copias", () => {
+    const q = enqueue(abc, "a"); // a b c a
+    expect(hasPlayed(playEntry(q, keyOf(q, "c", 0)), "a")).toBe(false);
+    expect(hasPlayed(playEntry(q, keyOf(q, "a", 1)), "a")).toBe(false);
+    expect(hasPlayed(playEntry(q, keyOf(q, "a", 1)), "b")).toBe(true);
   });
 });

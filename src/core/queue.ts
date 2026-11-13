@@ -54,6 +54,25 @@ export function currentIndex(state: QueueState): number {
   return state.current === null ? -1 : indexOf(state.order, state.current.key);
 }
 
+// Posiciones de cada entrada, calculadas una vez por cola: una lista de 5 000 filas consulta esto en cada cambio del reproductor.
+const positions = new WeakMap<QueueEntry[], { byKey: Map<string, number>; lastById: Map<string, number> }>();
+
+/** ¿Ya sonó esta pista? Todas sus apariciones en la cola están antes de la actual. La que suena nunca cuenta como sonada. */
+export function hasPlayed(state: QueueState, id: string): boolean {
+  if (state.current === null) return false;
+  let found = positions.get(state.order);
+  if (!found) {
+    const built = { byKey: new Map<string, number>(), lastById: new Map<string, number>() };
+    state.order.forEach((item, at) => {
+      built.byKey.set(item.key, at);
+      built.lastById.set(item.id, at);
+    });
+    positions.set(state.order, (found = built));
+  }
+  const last = found.lastById.get(id);
+  return last !== undefined && last < (found.byKey.get(state.current.key) ?? -1);
+}
+
 /** Sustituye la cola por un contexto (álbum, lista filtrada…) empezando en `startId`. */
 export function replaceQueue(state: QueueState, ids: string[], startId: string, rng: Rng = Math.random): QueueState {
   const original = [...new Set(ids)].map(entry);

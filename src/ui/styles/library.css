@@ -38,14 +38,9 @@
   display: none;
 }
 
-/* Pista actual: acento en el título y una barra a la izquierda (no solo color). */
+/* Pista actual: título en acento, estado escrito junto al artista y una pastilla de tono (más abajo, tras el hover). Sin líneas de color. */
 [aria-current="true"] > .row-main .title {
   color: var(--accent);
-}
-
-[aria-current="true"] > .row-main {
-  box-shadow: inset 3px 0 0 var(--accent);
-  background: var(--surface-1);
 }
 
 .notices {
@@ -96,7 +91,6 @@
 
 .playlist-item[aria-current="true"] {
   background: var(--surface-3);
-  box-shadow: inset 0 -3px 0 var(--accent);
 }
 
 .playlist-detail {
@@ -147,9 +141,6 @@
   }
   .playlist-item {
     max-width: none;
-  }
-  .playlist-item[aria-current="true"] {
-    box-shadow: inset 3px 0 0 var(--accent);
   }
 }
 
@@ -581,7 +572,7 @@ ol.track-list .row-album {
   }
 }
 
-/* Cola: la jerarquía sale del tono y del texto, no de líneas de color. Sonando = una pastilla de tono (--surface-3) con el estado escrito;
+/* Cola y biblioteca: la jerarquía sale del tono y del texto, no de líneas de color. Sonando = una pastilla de tono (--surface-3) con el estado escrito;
    ya sonaron = tinta terciaria; las acciones aparecen con el puntero o el foco, y en táctil son un solo «⋯» (la hoja de acciones). */
 .row-coverbox {
   position: relative;
@@ -605,9 +596,19 @@ ol.track-list .row-album {
   color: var(--ink-2);
 }
 
-.queue-row[aria-current="true"] > .row-main {
-  box-shadow: none;
+.row-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La pastilla cubre la fila entera (también su botón de acción); el hover de .row-main, de igual especificidad y más arriba, no la pisa. */
+.swipe[aria-current="true"] {
   background: var(--surface-3);
+}
+
+.swipe[aria-current="true"] > .row-main {
+  background: none;
 }
 
 .row-main[data-state="current"] .row-status {
