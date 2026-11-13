@@ -2,7 +2,7 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react"
 import type { Device } from "../core/quality";
 import { backgroundColors, gradientCss, isAnimated } from "../core/background";
 import type { BackgroundSettings, HdrLook } from "../core/background";
-import type { Rgb } from "../core/palette";
+import type { Palette, Rgb } from "../core/palette";
 import type { Bands } from "../core/rhythm";
 import { createGovernor, fpsCap, QUALITY_LEVELS, startLevel } from "../core/quality";
 import { bandEnergies, createBeatDetector, createLight, follow } from "../core/rhythm";
@@ -18,6 +18,12 @@ import { PaletteContext } from "./usePalette";
 // El lienzo solo existe mientras este componente está montado: con el reproductor colapsado no hay bucle ni contexto.
 
 const BLACK: Rgb = [0, 0, 0];
+
+/**
+ * Color hacia el que va el gesto del carrusel de portadas: la paleta de la vecina y cuánto se ha avanzado (0–1). El bucle lo lee en cada
+ * cuadro, sin re-render. Solo el lienzo lo interpola; el respaldo CSS (Estático, movimiento reducido) cambia de golpe al completar el gesto.
+ */
+export const backdropPreview: { palette: Palette | null; amount: number } = { palette: null, amount: 0 };
 
 type BatteryManager = EventTarget & { charging: boolean; level: number };
 type NavigatorExtras = Navigator & { getBattery?: () => Promise<BatteryManager>; connection?: { saveData?: boolean }; deviceMemory?: number };
@@ -51,6 +57,8 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0, rate: 1, swell: 0 };
   if (import.meta.env.DEV) ((window as unknown as { __backdrop?: Stats[] }).__backdrop ??= []).push(stats); // solo desarrollo: lo leen las pruebas
 
+  let previewFor: Palette | null = null;
+  let previewColors: Rgb[] = [];
   let shownIntensity = live.current.settings.intensity;
   let time = 0;
   let last = performance.now();
@@ -88,10 +96,16 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     time += (dt / 1000) * settings.speed;
     shownIntensity = follow(shownIntensity, settings.intensity, dt, 120, 400); // el control de intensidad no da saltos
 
-    const ease = 1 - Math.exp(-dt / 250);
+    const { palette: toward, amount } = backdropPreview;
+    if (toward !== previewFor) {
+      previewFor = toward;
+      previewColors = toward ? backgroundColors(settings, toward, hdr) : [];
+    }
+    const ease = 1 - Math.exp(-dt / (toward ? 60 : 250)); // con el dedo, casi directo; al cambiar de pista o volver, suave
     shown.forEach((color, i) => {
-      const target = colors[i % colors.length];
-      for (let c = 0; c < 3; c++) color[c] += (target[c] - color[c]) * ease;
+      const from = colors[i % colors.length];
+      const to = previewColors.length ? previewColors[i % previewColors.length] : from;
+      for (let c = 0; c < 3; c++) color[c] += (from[c] + (to[c] - from[c]) * amount - color[c]) * ease;
     });
 
     if (dirty || level !== sizedFor) {

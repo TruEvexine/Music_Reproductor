@@ -1,16 +1,19 @@
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { PointerEvent, ReactNode, RefObject } from "react";
 import { buzz } from "./toast";
 
 // Gestos con Pointer Events. Todos tienen alternativa sin gesto: botón de cerrar/Escape para arrastrar hacia abajo,
 // y menú contextual (clic derecho, tecla de menú) → hoja de acciones para deslizar y pulsar largo.
 
+const SLOP = 10; // px antes de decidir el eje (deslizar o desplazar, cerrar o pasar de portada)
+
 /**
  * Arrastrar hacia abajo para cerrar una hoja: sigue al dedo y, al soltar, cierra si pasó 96 px o fue rápido.
  * Se pone en el asa o la cabecera (que deben tener `touch-action: none`). `touchOnly`: el ratón no arrastra.
+ * Eje bloqueado: un gesto que empieza en horizontal no es suyo (lo toma el carrusel de portadas), y el puntero solo se captura al decidirlo.
  */
 export function useDragDismiss(target: RefObject<HTMLElement | null>, onDismiss: () => void, { enabled = true, touchOnly = false } = {}) {
-  const drag = useRef<{ startY: number; startTime: number; dy: number } | null>(null);
+  const drag = useRef<{ startX: number; startY: number; startTime: number; dy: number; locked: boolean } | null>(null);
   const end = (event: PointerEvent<HTMLElement>) => {
     const gesture = drag.current;
     drag.current = null;
@@ -26,14 +29,22 @@ export function useDragDismiss(target: RefObject<HTMLElement | null>, onDismiss:
   return {
     onPointerDown(event: PointerEvent<HTMLElement>) {
       if (!enabled || (touchOnly && event.pointerType === "mouse") || (event.target as HTMLElement).closest("button, input, a")) return;
-      drag.current = { startY: event.clientY, startTime: event.timeStamp, dy: 0 };
-      event.currentTarget.setPointerCapture(event.pointerId);
-      if (target.current) target.current.style.transition = "none";
+      drag.current = { startX: event.clientX, startY: event.clientY, startTime: event.timeStamp, dy: 0, locked: false };
     },
     onPointerMove(event: PointerEvent<HTMLElement>) {
-      if (!drag.current || !target.current) return;
-      drag.current.dy = Math.max(0, event.clientY - drag.current.startY);
-      target.current.style.transform = `translateY(${drag.current.dy}px)`;
+      const gesture = drag.current;
+      if (!gesture || !target.current) return;
+      const dx = event.clientX - gesture.startX;
+      const dy = event.clientY - gesture.startY;
+      if (!gesture.locked) {
+        if (Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+        if (Math.abs(dx) > Math.abs(dy)) return void (drag.current = null);
+        gesture.locked = true;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        target.current.style.transition = "none";
+      }
+      gesture.dy = Math.max(0, dy - SLOP); // sin salto al decidir el eje
+      target.current.style.transform = `translateY(${gesture.dy}px)`;
     },
     onPointerUp: end,
     onPointerCancel: end,
@@ -46,7 +57,6 @@ export interface SwipeAction {
   run: () => void;
 }
 
-const SLOP = 10; // px antes de decidir si es deslizar o desplazar la lista
 const THRESHOLD = 88; // px que arman la acción (vibra al cruzarlo); a esa altura ya se lee el icono y la etiqueta
 const LIMIT = 132;
 const PRESS_MS = 500;
@@ -174,4 +184,98 @@ export function SwipeRow({
       {children}
     </div>
   );
+}
+
+const COMMIT = 0.33; // fracción del recorrido que completa el cambio de portada
+const FLICK = 0.45; // px/ms: un gesto rápido lo completa aunque sea corto
+
+/**
+ * Carrusel de portadas: deslizar a la izquierda = `onNext`, a la derecha = `onPrevious` (sin vecina hacia ese lado: resiste y vuelve).
+ * La portada sigue al dedo y la vecina (`[data-side="next|prev"]` dentro de `track`) asoma; al soltar, pasado un tercio del recorrido
+ * o con un gesto rápido se completa y, si no, vuelve. Eje bloqueado: un gesto que empieza en vertical es del cierre de la hoja.
+ * `onProgress(p)`: -1…1 mientras se arrastra (negativo, hacia la siguiente). Solo dedo o lápiz; los botones de transporte son la alternativa.
+ * `resetKey` (la entrada actual de la cola): al cambiar, el carril vuelve a 0 en el mismo cuadro en que la vecina pasa a ser la actual.
+ */
+export function useCoverSwipe(
+  track: RefObject<HTMLElement | null>,
+  { onNext, onPrevious, onProgress, resetKey }: { onNext?: () => void; onPrevious?: () => void; onProgress: (progress: number) => void; resetKey: string | undefined },
+) {
+  const gesture = useRef<{ x: number; y: number; dx: number; mode: "idle" | "drag"; distance: { next: number; prev: number }; samples: { t: number; x: number }[] } | null>(null);
+  const settling = useRef(false);
+  const set = (dx: number, transition = "none") => {
+    if (!track.current) return;
+    track.current.style.transition = transition;
+    track.current.style.setProperty("--dx", `${dx}px`);
+  };
+  useLayoutEffect(() => {
+    settling.current = false;
+    set(0);
+    track.current?.removeAttribute("data-dragging");
+    onProgress(0);
+    // onProgress cambia en cada render; solo importa el cambio de pista
+  }, [resetKey]);
+
+  const finish = (event: PointerEvent<HTMLElement>) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || g.mode !== "drag") return;
+    const run = g.dx < 0 ? onNext : onPrevious;
+    const distance = g.dx < 0 ? g.distance.next : g.distance.prev;
+    const last = g.samples[g.samples.length - 1];
+    const first = g.samples.find((sample) => last.t - sample.t <= 100) ?? g.samples[0];
+    const speed = (last.x - first.x) / Math.max(last.t - first.t, 1); // px/ms en los últimos 100 ms
+    const flick = Math.abs(speed) > FLICK && Math.sign(speed) === Math.sign(g.dx) && Math.abs(g.dx) > 24;
+    if (!run || event.type === "pointercancel" || (Math.abs(g.dx) < distance * COMMIT && !flick)) {
+      set(0, "transform var(--base) var(--ease)");
+      track.current?.removeAttribute("data-dragging");
+      onProgress(0);
+      return;
+    }
+    // Se completa: la vecina llega al centro y entonces cambia la pista (el efecto de `resetKey` deja el carril en 0 sin salto).
+    settling.current = true;
+    onProgress(g.dx < 0 ? -1 : 1);
+    set(Math.sign(g.dx) * distance, "transform var(--base) var(--ease-move)");
+    let done = false;
+    const commit = () => {
+      if (done) return;
+      done = true;
+      run();
+    };
+    track.current?.addEventListener("transitionend", commit, { once: true });
+    window.setTimeout(commit, 320); // movimiento reducido (transición de 0,01 ms) o una transición que no llegó a empezar
+  };
+
+  return {
+    onPointerDown(event: PointerEvent<HTMLElement>) {
+      if (event.pointerType === "mouse" || !event.isPrimary || settling.current) return;
+      gesture.current = { x: event.clientX, y: event.clientY, dx: 0, mode: "idle", distance: { next: 0, prev: 0 }, samples: [{ t: event.timeStamp, x: event.clientX }] };
+    },
+    onPointerMove(event: PointerEvent<HTMLElement>) {
+      const g = gesture.current;
+      const element = track.current;
+      if (!g || !element) return;
+      const dx = event.clientX - g.x;
+      if (g.mode === "idle") {
+        const dy = event.clientY - g.y;
+        if (Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+        if (Math.abs(dy) >= Math.abs(dx)) return void (gesture.current = null); // vertical: de la hoja
+        g.mode = "drag";
+        event.currentTarget.setPointerCapture(event.pointerId);
+        element.setAttribute("data-dragging", "");
+        // Recorrido hasta que la vecina ocupa el sitio de la actual, medido una vez por gesto (cambia con el tamaño de pantalla).
+        const left = element.getBoundingClientRect().left;
+        const edge = (side: string) => element.querySelector(`[data-side="${side}"]`)?.getBoundingClientRect().left;
+        g.distance = { next: (edge("next") ?? left) - left, prev: left - (edge("prev") ?? left) };
+      }
+      g.samples.push({ t: event.timeStamp, x: event.clientX });
+      if (g.samples.length > 8) g.samples.shift();
+      const toward = dx < 0 ? onNext : onPrevious;
+      const distance = dx < 0 ? g.distance.next : g.distance.prev;
+      g.dx = toward ? dx : 0;
+      set(toward ? dx : dx * 0.2); // sin vecina: resistencia, y vuelve al soltar
+      onProgress(toward && distance > 0 ? Math.max(-1, Math.min(1, dx / distance)) : 0);
+    },
+    onPointerUp: finish,
+    onPointerCancel: finish,
+  };
 }

@@ -233,8 +233,34 @@
   display: grid;
   place-items: center;
   min-height: 0;
-  padding: var(--s3) 0;
+  /* Carrusel (gestures.tsx: useCoverSwipe): el recorte llega hasta el borde de la pantalla, así la vecina asoma desde ahí y no antes. */
+  margin-inline: calc(var(--gutter) * -1);
+  padding: var(--s3) var(--gutter);
+  overflow-x: clip;
   container-type: size;
+}
+
+.now-track {
+  position: relative;
+  transform: translateX(var(--dx, 0px));
+}
+
+.now-slot {
+  display: block;
+}
+
+/* En reposo, cada vecina queda justo fuera del recorte (centro + medio contenedor + margen lateral). */
+.now-slot[data-side] {
+  position: absolute;
+  top: 0;
+}
+
+.now-slot[data-side="next"] {
+  left: calc(50% + 50cqw + var(--gutter));
+}
+
+.now-slot[data-side="prev"] {
+  right: calc(50% + 50cqw + var(--gutter));
 }
 
 .now-cover {

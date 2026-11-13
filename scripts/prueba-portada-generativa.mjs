@@ -34,9 +34,9 @@ async function open(files, options = {}) {
 const backgrounds = (page) => page.locator(".track-row .row-cover").evaluateAll((nodes) => nodes.map((node) => node.style.background));
 const drift = (page) =>
   page.evaluate(() => ({
-    layers: document.querySelectorAll(".now-cover .art-drift").length,
-    live: document.querySelector(".now-cover")?.hasAttribute("data-live"),
-    states: document.querySelector(".now-cover .art-drift")?.getAnimations().map((a) => a.playState) ?? [],
+    layers: document.querySelectorAll(".now-slot:not([data-side]) > .now-cover .art-drift").length,
+    live: document.querySelector(".now-slot:not([data-side]) > .now-cover")?.hasAttribute("data-live"),
+    states: document.querySelector(".now-slot:not([data-side]) > .now-cover .art-drift")?.getAnimations().map((a) => a.playState) ?? [],
   }));
 const wait = (page, ms = 300) => page.waitForTimeout(ms);
 const idle = (page) => page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur()); // Espacio sobre un botón enfocado lo activa a él, no la reproducción
@@ -61,7 +61,7 @@ const idle = (page) => page.evaluate(() => document.activeElement instanceof HTM
   await wait(page, 500);
   await page.locator(".bar-track").click();
   await wait(page, 1000);
-  const cover = page.locator(".now-cover");
+  const cover = page.locator(".now-slot:not([data-side]) > .now-cover");
   const label = (await cover.getAttribute("aria-label")) ?? "";
   check("el reproductor grande describe la portada generada para lectores de pantalla", (await cover.getAttribute("role")) === "img" && /^Portada generada para «.+», de .+/.test(label), label);
   const playing = await drift(page);
@@ -108,7 +108,7 @@ const idle = (page) => page.evaluate(() => document.activeElement instanceof HTM
   await page.locator(".bar-track").click();
   await wait(page, 600);
   const reduced = await drift(page);
-  check("con «Reducir movimiento» de Ajustes la capa móvil no existe y el arte sigue pintado", reduced.layers === 0 && (await page.locator(".now-cover").evaluate((node) => node.style.background.includes("no-repeat"))));
+  check("con «Reducir movimiento» de Ajustes la capa móvil no existe y el arte sigue pintado", reduced.layers === 0 && (await page.locator(".now-slot:not([data-side]) > .now-cover").evaluate((node) => node.style.background.includes("no-repeat"))));
   await page.keyboard.press("Escape");
   await wait(page, 400);
 
@@ -121,7 +121,7 @@ const idle = (page) => page.evaluate(() => document.activeElement instanceof HTM
   const amoled = await page.evaluate(() => ({
     bg: document.documentElement.dataset.bg,
     color: getComputedStyle(document.querySelector(".shell")).getPropertyValue("--bg").trim(),
-    cover: document.querySelector(".now-cover").getBoundingClientRect().width,
+    cover: document.querySelector(".now-slot:not([data-side]) > .now-cover").getBoundingClientRect().width,
   }));
   check("AMOLED: fondo negro puro y la portada sigue ahí", amoled.bg === "amoled" && /oklch\(0 0 0\)/.test(amoled.color) && amoled.cover > 200, JSON.stringify(amoled));
   if (out) await page.screenshot({ path: join(out, "generativa-amoled-1440.png") });
@@ -131,7 +131,7 @@ const idle = (page) => page.evaluate(() => document.activeElement instanceof HTM
   await wait(page, 300);
   await page.locator(".bar-track").click();
   await wait(page, 700);
-  const hdr = await page.evaluate(() => ({ hdr: document.documentElement.hasAttribute("data-hdr"), filter: getComputedStyle(document.querySelector(".now-cover")).filter }));
+  const hdr = await page.evaluate(() => ({ hdr: document.documentElement.hasAttribute("data-hdr"), filter: getComputedStyle(document.querySelector(".now-slot:not([data-side]) > .now-cover")).filter }));
   check("HDR global: la portada generada recibe el mismo realce que las demás", hdr.hdr && hdr.filter !== "none", JSON.stringify(hdr));
   if (out) await page.screenshot({ path: join(out, "generativa-hdr-1440.png") });
   await page.context().close();
@@ -161,9 +161,9 @@ const idle = (page) => page.evaluate(() => document.activeElement instanceof HTM
   await page.locator(".bar-track").click();
   await wait(page, 1500);
   const real = await page.evaluate(() => ({
-    img: document.querySelector(".now-cover img")?.getAttribute("alt"),
-    role: document.querySelector(".now-cover")?.getAttribute("role"),
-    layer: document.querySelectorAll(".now-cover .art-drift").length,
+    img: document.querySelector(".now-slot:not([data-side]) > .now-cover img")?.getAttribute("alt"),
+    role: document.querySelector(".now-slot:not([data-side]) > .now-cover")?.getAttribute("role"),
+    layer: document.querySelectorAll(".now-slot:not([data-side]) > .now-cover .art-drift").length,
   }));
   check("con carátula real se ve la imagen, con su texto alternativo, y no hay arte debajo animándose", /^Portada de «.+»/.test(real.img ?? "") && real.role === null && real.layer === 0, JSON.stringify(real));
   await context.close();

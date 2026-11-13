@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { CircleUser, Library, ListMusic, Settings } from "lucide-react";
 import { isNative } from "../platform";
-import { useCover } from "../state/covers";
+import { usePaletteOf } from "../state/covers";
 import { setSyncUser } from "../sync/playlistSync";
 import { useAuthController } from "../sync/useAuthController";
 import { Backdrop, Tint } from "./Backdrop";
@@ -17,7 +17,7 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
 import { usePresence } from "./motion";
-import { PaletteContext, usePalette } from "./usePalette";
+import { PaletteContext } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
 function NavLink({ to, active, children }: { to: string; active: boolean; children: ReactNode }) {
@@ -38,7 +38,7 @@ function Shell() {
   const auth = useAuthController();
   const [account, setAccount] = useState(false);
   const track = useCurrentTrack();
-  const palette = usePalette(useCover(track?.coverHash, "small"));
+  const palette = usePaletteOf(track?.coverHash);
   // Los paneles salen con animación (--exit): se mantienen montados mientras salen. La cola en columna fija (escritorio, sin
   // reproductor grande) no se anima, así que se desmonta al instante.
   const playerPanel = usePresence(panel === "player");

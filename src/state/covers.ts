@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { storage } from "../platform";
-import { scaleCover } from "../platform/web/covers";
+import { coverPalette, scaleCover } from "../platform/web/covers";
+import { fallbackPalette } from "../core/palette";
+import type { Palette } from "../core/palette";
 
 // Portadas guardadas en IndexedDB → URLs blob: con conteo de uso. Al dejar de usarse se conservan unas pocas
 // (para no recrearlas al hacer scroll) y el resto se revocan. Además, las portadas grandes se sirven al tamaño real de pantalla
@@ -14,6 +16,8 @@ interface CoverRecord {
   master?: Blob;
   /** Lado en px de `large`. */
   largeSide?: number;
+  /** Paleta (core/palette), calculada una vez en el worker la primera vez que se pidió. */
+  palette?: Palette;
 }
 interface Entry {
   url: Promise<string | undefined>;
@@ -107,4 +111,43 @@ export async function holdCover(hash: string | undefined): Promise<string | unde
   if (held) release(held);
   held = key;
   return key && hash ? acquire(key, stored(hash, "large")).url : undefined;
+}
+
+// Paletas: una por portada, calculada una sola vez en el worker y guardada con la portada; en memoria, la ya resuelta se lee al instante.
+const palettes = new Map<string, Promise<Palette>>();
+const resolved = new Map<string, Palette>();
+
+function paletteOf(hash: string): Promise<Palette> {
+  let found = palettes.get(hash);
+  if (!found) {
+    found = storage
+      .read<CoverRecord>("covers", hash)
+      .then(async (record) => {
+        if (!record || record.palette) return record?.palette ?? fallbackPalette;
+        const palette = await coverPalette(record.small);
+        if (!palette) return fallbackPalette; // sin worker u OffscreenCanvas: paleta neutra
+        void storage.write("covers", [{ ...record, palette }]);
+        return palette;
+      })
+      .catch(() => fallbackPalette)
+      .then((palette) => (resolved.set(hash, palette), palette));
+    palettes.set(hash, found);
+  }
+  return found;
+}
+
+/** Paleta de la portada `hash`. Sin portada (arte generativo) o portada sin color: la neutra, que da el fondo por defecto. */
+export function usePaletteOf(hash: string | undefined): Palette {
+  const [loaded, setLoaded] = useState(fallbackPalette);
+  useEffect(() => {
+    if (!hash) return;
+    let active = true;
+    void paletteOf(hash).then((palette) => active && setLoaded(palette));
+    return () => {
+      active = false;
+    };
+  }, [hash]);
+  // Ya resuelta en memoria: sin esperar a un render más (al terminar el gesto, la nueva pista estrena su color en el mismo cuadro).
+  // Mientras se calcula una nueva, sigue la anterior (sin destello a la neutra).
+  return hash ? (resolved.get(hash) ?? loaded) : fallbackPalette;
 }

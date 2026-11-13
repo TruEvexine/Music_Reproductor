@@ -215,17 +215,17 @@ for (const dpr of [1, 2]) {
   check(`densidad ${dpr}: el worker de portadas no existe hasta que hace falta`, !app.workers().some((worker) => worker.url().includes("cover.worker")));
   await app.evaluate(() => (window.__long.length = 0));
   await app.locator(".bar-track").click();
-  await app.waitForFunction(() => document.querySelector(".now-cover img"), null, { timeout: 10_000 });
+  await app.waitForFunction(() => document.querySelector(".now-slot:not([data-side]) > .now-cover img"), null, { timeout: 10_000 });
   await app.waitForTimeout(1500);
   const shown = await app.evaluate(() => {
-    const image = document.querySelector(".now-cover img");
+    const image = document.querySelector(".now-slot:not([data-side]) > .now-cover img");
     return { natural: image.naturalWidth, css: image.clientWidth, long: window.__long.slice() };
   });
   const expected = Math.min(1280, Math.ceil((shown.css * dpr) / 64) * 64);
   check(`densidad ${dpr}: la portada de 300 px se sirve a los píxeles reales de pantalla`, shown.natural === expected && shown.natural > 300, `${shown.natural} px naturales para ${shown.css} px CSS × ${dpr} (esperado ${expected})`);
   check(`densidad ${dpr}: no hay tareas largas (≥ 50 ms) en el hilo principal al abrir el reproductor`, shown.long.length === 0, `${shown.long.length} tareas${shown.long.length ? ` (${shown.long.map((d) => d.toFixed(0)).join(", ")} ms)` : ""}`);
   check(`densidad ${dpr}: el worker de portadas se creó al pedir la ampliación`, app.workers().some((worker) => worker.url().includes("cover.worker")));
-  if (dpr === 2) await app.locator(".now-cover").screenshot({ path: join(tmp, "portada-baja-resolucion-app-2x.png") });
+  if (dpr === 2) await app.locator(".now-slot:not([data-side]) > .now-cover").screenshot({ path: join(tmp, "portada-baja-resolucion-app-2x.png") });
   await app.close();
 }
 

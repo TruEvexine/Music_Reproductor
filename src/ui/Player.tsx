@@ -25,13 +25,17 @@ import { coverSeed } from "../core/coverArt";
 import { formatTime, isHiRes, qualityLabel } from "../core/format";
 import { lineAt } from "../core/lyrics";
 import type { Lyrics } from "../core/lyrics";
+import { currentIndex, previousInQueue } from "../core/queue";
+import type { QueueEntry } from "../core/queue";
 import type { Track } from "../core/track";
+import { usePaletteOf } from "../state/covers";
 import { useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
 import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
 import { ActionSheet } from "./ActionSheet";
-import { SwipeRow, useDragDismiss } from "./gestures";
+import { backdropPreview } from "./Backdrop";
+import { SwipeRow, useCoverSwipe, useDragDismiss } from "./gestures";
 import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
@@ -206,8 +210,32 @@ function LyricsDialog({ lyrics, title, onClose }: { lyrics: Lyrics; title: strin
   );
 }
 
+/** Las entradas vecinas de la actual tal como las tomarían «siguiente» y «anterior» (sin la vuelta barajada, que aún no existe). */
+function useNeighbors() {
+  const queue = usePlayer((state) => state.queue);
+  const tracks = useLibrary((state) => state.tracks);
+  const at = currentIndex(queue);
+  const next = at < 0 ? undefined : (queue.order[at + 1] ?? (queue.repeat === "queue" && !queue.shuffle ? queue.order[0] : undefined));
+  const previous = previousInQueue(queue).current ?? undefined;
+  const find = (entry?: QueueEntry) => (entry && entry.key !== queue.current?.key ? tracks.find((track) => track.id === entry.id) : undefined);
+  return { key: queue.current?.key, nextKey: next?.key, previousKey: previous?.key, next: find(next), previous: find(previous) };
+}
+
 export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNode; closing?: true; queueOpen: boolean }) {
   const track = useCurrentTrack();
+  const neighbors = useNeighbors();
+  const nextPalette = usePaletteOf(neighbors.next?.coverHash);
+  const previousPalette = usePaletteOf(neighbors.previous?.coverHash);
+  const carousel = useRef<HTMLDivElement>(null);
+  const swipe = useCoverSwipe(carousel, {
+    onNext: neighbors.next && player.next,
+    onPrevious: neighbors.previous && neighbors.previousKey ? () => player.playEntry(neighbors.previousKey!) : undefined,
+    onProgress: (progress) => {
+      backdropPreview.palette = progress < 0 ? nextPalette : progress > 0 ? previousPalette : null;
+      backdropPreview.amount = Math.abs(progress);
+    },
+    resetKey: neighbors.key,
+  });
   const [lyrics, setLyrics] = useState(false);
   const sheet = useRef<HTMLElement>(null);
   const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
@@ -249,8 +277,33 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
           <MenuButton />
         </div>
       </header>
-      <div className="now-art">
-        <Cover className="now-cover" hash={track.coverHash} label={`«${track.title}», de ${track.artist}`} playing={isPlaying} seed={coverSeed(track.title, track.artist)} sharp size="large" />
+      {/* Carrusel (solo dedo; los botones de transporte son la alternativa). Cada portada lleva la clave de su pista: la vecina que llega
+          al centro es el mismo nodo, sin parpadeo de imagen. Las vecinas esperan fuera del recorte hasta que el gesto las trae. */}
+      <div className="now-art" {...swipe}>
+        <div className="now-track" ref={carousel}>
+          {/* Claves de entrada de la cola (una pista puede repetirse); con dos entradas y «repetir cola», la misma es anterior y siguiente. */}
+          {([
+            ["prev", neighbors.previous, neighbors.previousKey === neighbors.nextKey ? `prev:${neighbors.previousKey}` : neighbors.previousKey],
+            ["current", track, neighbors.key],
+            ["next", neighbors.next, neighbors.nextKey],
+          ] as const).map(([side, item, key]) => {
+            if (!item) return null;
+            const current = side === "current";
+            return (
+              <span aria-hidden={current ? undefined : true} className="now-slot" data-side={current ? undefined : side} key={key}>
+                <Cover
+                  className="now-cover"
+                  hash={item.coverHash}
+                  label={current ? `«${item.title}», de ${item.artist}` : undefined}
+                  playing={current && isPlaying}
+                  seed={coverSeed(item.title, item.artist)}
+                  sharp={current}
+                  size="large"
+                />
+              </span>
+            );
+          })}
+        </div>
       </div>
       <div className="now-controls">
         <div className="now-copy">

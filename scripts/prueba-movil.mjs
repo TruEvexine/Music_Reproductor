@@ -176,6 +176,36 @@ const seek = await center(page.locator(".now-controls .seek input"));
 await touch({ x: seek.x - 60, y: seek.y }, { x: seek.x + 60, y: seek.y + 120 }, { steps: 6 });
 await page.waitForTimeout(400);
 check("arrastrar el control de posición no cierra el reproductor", (await count(".now-playing")) === 1);
+
+// ───────────── Carrusel de portadas ─────────────
+const nowPlayingTitle = () => page.locator(".now-title").innerText();
+const railOffset = () => page.locator(".now-track").evaluate((el) => el.style.getPropertyValue("--dx"));
+check("carrusel: en reposo la vecina espera fuera de la pantalla", await page.locator('.now-slot[data-side="next"]').evaluate((el) => el.getBoundingClientRect().left >= innerWidth));
+await touch({ x: art.x + 60, y: art.y }, { x: art.x + 20, y: art.y + 4 }, { steps: 6 }); // corto: no llega al umbral
+await page.waitForTimeout(400);
+check("carrusel: un deslizamiento corto vuelve a su sitio", (await nowPlayingTitle()) === A && ["", "0px"].includes(await railOffset()) && (await count(".now-playing")) === 1);
+// A mitad del gesto la portada sigue al dedo y la siguiente asoma.
+await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: art.x + 120, y: art.y }] });
+for (let i = 1; i <= 8; i++) {
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: art.x + 120 - i * 20, y: art.y + 2 }] });
+  await page.waitForTimeout(16);
+}
+const peek = await page.locator('.now-slot[data-side="next"]').evaluate((el) => el.getBoundingClientRect().left);
+check("carrusel: a mitad del gesto la portada sigue al dedo y la siguiente asoma", (await railOffset()) === "-160px" && peek < 390, `vecina en x=${Math.round(peek)}`);
+if (process.env.CAPTURA_CARRUSEL) await page.screenshot({ path: process.env.CAPTURA_CARRUSEL });
+await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+await page.waitForTimeout(700);
+check("carrusel: deslizar a la izquierda pasa a la siguiente", (await nowPlayingTitle()) === M && (await nowTitle()) === M, await nowPlayingTitle());
+check("carrusel: el carril vuelve a 0 con la nueva portada en el centro", ["", "0px"].includes(await railOffset()));
+await touch({ x: art.x - 120, y: art.y }, { x: art.x + 180, y: art.y + 4 }, { steps: 8 });
+await page.waitForTimeout(700);
+check("carrusel: deslizar a la derecha vuelve a la anterior", (await nowPlayingTitle()) === A, await nowPlayingTitle());
+await touch({ x: art.x - 120, y: art.y }, { x: art.x + 180, y: art.y + 4 }, { steps: 8 });
+await page.waitForTimeout(700);
+check("carrusel: sin anterior, resiste y se queda", (await nowPlayingTitle()) === A && ["", "0px"].includes(await railOffset()));
+await page.locator(".now-controls").getByRole("button", { name: "Pausar" }).tap(); // las pistas duran segundos: en pausa no cambian solas
+await page.waitForTimeout(300);
+
 await touch({ x: art.x, y: art.y - 100 }, { x: art.x, y: art.y + 300 }, { steps: 8 });
 await page.waitForTimeout(700);
 check("arrastrar hacia abajo lo cierra y vuelve a la biblioteca", (await count(".now-playing")) === 0 && !page.url().includes("panel="), page.url());
