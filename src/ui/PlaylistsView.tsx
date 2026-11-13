@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Pencil, Play, Plus, Trash2, X } from "lucide-react";
+import { coverSeed } from "../core/coverArt";
 import { formatTime } from "../core/format";
 import { trackV1Id } from "../core/track";
 import type { Track } from "../core/track";
@@ -112,7 +113,7 @@ export function PlaylistsView({ auth, onAccount }: { auth: AuthController; onAcc
                   {entries.map(({ identifier, track }, index) => (
                     <li className="track-row" key={identifier}>
                       <button className="row-main" disabled={!track} onClick={() => track && player.playContext(playable, track.id)} type="button">
-                        <Cover className="row-cover" hash={track?.coverHash} seed={track?.album ?? identifier} />
+                        <Cover className="row-cover" hash={track?.coverHash} seed={track ? coverSeed(track.title, track.artist) : identifier} />
                         <span className="row-copy">
                           <span className="title">{track?.title ?? "No está en este dispositivo"}</span>
                           <span className="subtitle">{track ? `${track.artist} · ${track.album}` : "Añade el archivo para escucharla"}</span>

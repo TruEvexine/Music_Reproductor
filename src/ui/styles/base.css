@@ -252,11 +252,37 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 }
 
 .cover {
+  position: relative;
   display: block;
   flex: none;
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: var(--radius-s);
+}
+
+/* Portada generativa del reproductor grande: la capa se agranda un 12 % para poder moverse sin dejar bordes y solo avanza mientras suena y la pestaña se ve. */
+.art-drift {
+  position: absolute;
+  inset: -12%;
+  animation: art-drift var(--drift) var(--ease-move) infinite alternate paused;
+}
+
+/* Con una capa que se mueve, overflow + border-radius no la recortan en Chromium (se ve fuera del borde): se recorta con clip-path (las portadas grandes son --radius-m). */
+.cover[data-art] {
+  clip-path: inset(0 round var(--radius-m));
+}
+
+.cover[data-live] .art-drift {
+  animation-play-state: running;
+}
+
+@keyframes art-drift {
+  from {
+    transform: translate3d(-2.5%, -2%, 0) scale(1.02);
+  }
+  to {
+    transform: translate3d(2.5%, 2%, 0) scale(1.08);
+  }
 }
 
 .cover img {

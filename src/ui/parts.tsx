@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 import { X } from "lucide-react";
+import { artBackground, artOf } from "../core/coverArt";
 import { coverBucket } from "../core/resample";
 import { useCover } from "../state/covers";
 import type { CoverSize } from "../state/covers";
 import { useDragDismiss } from "./gestures";
-import { useExit } from "./motion";
+import { useExit, useReducedMotion } from "./motion";
 
 /** Tamaño y trazo únicos para todos los iconos (Lucide). */
 export const icon = { size: 22, strokeWidth: 1.75, "aria-hidden": true } as const;
@@ -22,13 +23,6 @@ export function IconButton({
       {children}
     </button>
   );
-}
-
-// Respaldo sin portada: un degradado estable derivado del texto (álbum), nunca un gris plano.
-function hueOf(text: string): number {
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) >>> 0;
-  return hash % 360;
 }
 
 /** Píxeles reales de pantalla que ocupa el elemento (ancho × densidad, redondeados con `coverBucket`); 0 si no se pide medir. Se reevalúa al cambiar el tamaño, el zoom o de pantalla. */
@@ -58,18 +52,54 @@ function useDevicePixels(enabled: boolean) {
   return [px, ref] as const;
 }
 
-/** `sharp`: portada grande que se sirve al tamaño real de pantalla (reproductor grande, cabecera de álbum). En listas y rejillas no hace falta. */
-export function Cover({ hash, size = "small", seed, className = "", sharp = false }: { hash?: string; size?: CoverSize; seed: string; className?: string; sharp?: boolean }) {
+const pageVisible = () => document.visibilityState === "visible";
+const watchVisibility = (listener: () => void) => {
+  document.addEventListener("visibilitychange", listener);
+  return () => document.removeEventListener("visibilitychange", listener);
+};
+
+/**
+ * Portada. Sin carátula (o mientras carga) se pinta arte generativo estable por pista (core/coverArt.ts): en listas, un `background` estático barato.
+ * `sharp`: portada grande que se sirve al tamaño real de pantalla (reproductor grande, cabecera de álbum) y cuyo arte, además, se mueve despacio
+ * mientras `playing`, solo con la pestaña visible y nunca con movimiento reducido (entonces la capa que se mueve ni existe).
+ * `label` describe la portada para lectores de pantalla; sin él es decorativa (el título está al lado).
+ */
+export function Cover({
+  hash,
+  size = "small",
+  seed,
+  className = "",
+  sharp = false,
+  playing = false,
+  label,
+}: {
+  hash?: string;
+  size?: CoverSize;
+  seed: string;
+  className?: string;
+  sharp?: boolean;
+  playing?: boolean;
+  label?: string;
+}) {
   const [px, ref] = useDevicePixels(sharp);
   const src = useCover(hash, size, px);
-  const hue = hueOf(seed);
+  const reduced = useReducedMotion();
+  const visible = useSyncExternalStore(watchVisibility, pageVisible);
+  const art = useMemo(() => artBackground(artOf(seed), sharp), [seed, sharp]);
+  const moving = sharp && !reduced && !src;
+  const generated = !hash && Boolean(label);
   return (
     <span
+      aria-label={generated ? `Portada generada para ${label}` : undefined}
       className={`cover ${className}`}
+      data-art={moving ? "drift" : undefined}
+      data-live={(moving && playing && visible) || undefined}
       ref={ref}
-      style={{ background: `linear-gradient(135deg, oklch(0.42 0.07 ${hue}), oklch(0.24 0.05 ${(hue + 50) % 360}))` }}
+      role={generated ? "img" : undefined}
+      style={moving ? undefined : { background: art }}
     >
-      {src && <img alt="" decoding="async" loading="lazy" src={src} />}
+      {moving && <span aria-hidden="true" className="art-drift" style={{ background: art }} />}
+      {src && <img alt={label ? `Portada de ${label}` : ""} decoding="async" loading="lazy" src={src} />}
     </span>
   );
 }

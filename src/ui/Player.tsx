@@ -21,6 +21,7 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
+import { coverSeed } from "../core/coverArt";
 import { formatTime, isHiRes, qualityLabel } from "../core/format";
 import { lineAt } from "../core/lyrics";
 import type { Lyrics } from "../core/lyrics";
@@ -140,7 +141,7 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
     <footer aria-label="Reproductor" className="player-bar">
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
       <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
-        <Cover className="bar-cover" seed={track.album} hash={track.coverHash} />
+        <Cover className="bar-cover" seed={coverSeed(track.title, track.artist)} hash={track.coverHash} />
         <span className="bar-copy">
           <span className="title">
             <Marquee>{track.title}</Marquee>
@@ -211,6 +212,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
   const sheet = useRef<HTMLElement>(null);
   const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
   const wide = useMedia("(min-width: 1000px)");
+  const isPlaying = usePlayer((state) => state.isPlaying);
   if (!track) return null;
   return (
     <section
@@ -248,7 +250,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         </div>
       </header>
       <div className="now-art">
-        <Cover className="now-cover" hash={track.coverHash} seed={track.album} sharp size="large" />
+        <Cover className="now-cover" hash={track.coverHash} label={`«${track.title}», de ${track.artist}`} playing={isPlaying} seed={coverSeed(track.title, track.artist)} sharp size="large" />
       </div>
       <div className="now-controls">
         <div className="now-copy">
@@ -298,7 +300,7 @@ function QueueRow({ entryKey, track, index, first, last, state, repeated }: { en
     >
       <button className="row-main" data-state={state} onClick={() => player.playEntry(entryKey)} type="button">
         <span className="row-coverbox">
-          <Cover className="row-cover" hash={track.coverHash} seed={track.album} />
+          <Cover className="row-cover" hash={track.coverHash} seed={coverSeed(track.title, track.artist)} />
         </span>
         <span className="row-copy">
           <span className="title">

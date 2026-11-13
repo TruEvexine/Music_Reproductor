@@ -75,6 +75,7 @@ Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba
 | `--slow` | 280 ms | Abrir el reproductor |
 | `--exit` | 140 ms | **Toda salida** (≈ 60 % de su entrada) |
 | `--page` | 560 ms | Solo landing y primer uso |
+| `--drift` | 48 s | Vaivén del arte generativo del reproductor grande (ver Portada). Solo mientras suena; nunca con movimiento reducido |
 | `--ease` | `cubic-bezier(0.2, 0.8, 0.2, 1)` | Entradas, salidas y pulsación (decelera) |
 | `--ease-move` | `cubic-bezier(0.65, 0, 0.35, 1)` | Moverse entre dos posiciones ya en pantalla (cambio de página del menú, fila que vuelve) |
 | `--press` / `--press-wide` | 0.96 / 0.985 | Escala al pulsar controles compactos / filas anchas (nunca por debajo de 0.95) |
@@ -93,6 +94,17 @@ Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba
 `prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista: fundido de portada y paleta 700–900 ms (Fase 4).
 
 Puerta de frecuencia: transporte, teclado, pestañas y filas de lista → sin animación. Abrir y cerrar reproductor, cola, menú y diálogos → sí. Primer uso y estados vacíos → se permite algo más expresivo (`--page`).
+
+### Portada generativa
+
+Cuando una pista no trae carátula, su portada sale de un hash del título y el artista (`core/coverArt.ts`): la misma canción siempre tiene la misma y dos canciones casi nunca se parecen. Elegida entre tres propuestas (`docs/capturas/portada-generativa-propuesta-*.jpg`):
+aurora (luces difusas), horizonte (capas de crestas) y **campos de color** (la elegida). Campos de color son rectángulos planos de bordes duros sobre un tono profundo, en tres composiciones que reparte el hash (bloque con bloque dentro, dos mitades con un cuadrado en la costura, un horizonte con un bloque).
+
+- **Por qué esa.** No usa degradados ni sombras (principio 3 y «Prohibido»: el único degradado permitido es el ambiente); se distingue del fondo del reproductor, que ya es una luz difusa (la aurora se fundía con él); se lee a 48 px; y es lo más barato de pintar. La aurora era la más bonita en grande pero se perdía contra el fondo y en listas eran manchas iguales; el horizonte se lee como un paisaje genérico.
+- **Tonos.** Tres (claro, medio y profundo) con luminosidad 0,24–0,82 y croma ≤ 0,14, los rangos del acento; nada más oscuro que las superficies, así que se ve sobre el negro de AMOLED. En HDR recibe el mismo filtro de `.cover`.
+- **Barata en listas:** un `background` de dos o tres capas por fila, calculado del hash (sin canvas, sin imágenes). **Rica en el reproductor grande:** una capa más y, mientras suena y la pestaña está visible, un vaivén lento de `transform` (`--drift`); con `prefers-reduced-motion` o «Reducir movimiento» esa capa no existe.
+- **Original:** formas geométricas planas; sin personajes, marcas ni obras reconocibles (la composición «bloque dentro de bloque» recuerda a la abstracción geométrica en general, no a una obra concreta).
+- **Accesible:** en el reproductor grande y la cabecera de grupo, `role="img"` y «Portada generada para «Título», de Artista»; en listas es decorativa (el título está al lado). Las portadas reales llevan `alt` «Portada de …».
 
 ### Iconos
 
@@ -127,7 +139,7 @@ Unidades: `dvh` (nunca `100vh`), `env(safe-area-inset-*)` en barra, pestañas, r
 | Componente | Regla |
 |---|---|
 | Fila de pista | Tocar la fila reproduce (la cola pasa a ser la lista visible). 64 px de alto, portada 48 px. Desde 700 px añade álbum, calidad y duración en columnas. Pista actual: título en acento **y** barra a la izquierda |
-| Portada | Siempre 1:1. Sin imagen: degradado derivado del nombre del álbum, nunca gris plano ni un glifo |
+| Portada | Siempre 1:1. Sin imagen: **arte generativo** estable por canción, nunca gris plano ni un glifo (abajo). Las portadas grandes se sirven al tamaño real de pantalla (`ui/parts.tsx`, `platform/web/coverScale.ts`) |
 | Botón | Uno primario por pantalla (relleno de acento). El resto, tono `--surface-2` o enlace |
 | Menú del reproductor (≡) | Una sola entrada para lo avanzado (repetir, sonido, temporizador, fondo). Móvil: hoja inferior con grabber y arrastre (<600 px); ancho: popover anclado al icono. Los submenús se abren dentro del mismo panel con flecha de volver, nunca menús flotantes anidados. Filas de 52 px, opciones con marca ✓ además del color, interruptores cuya posición comunica el estado. Los controles de uso constante (aleatorio, repetir) siguen a un toque en el reproductor |
 | Insignia de calidad | Texto, sin caja: `FLAC 24/96`, `MP3 320` (`core/format.ts`). Hi-Res (sin pérdida y > 16 bit o > 48 kHz) añade «Hi-Res» en acento y peso 650 |

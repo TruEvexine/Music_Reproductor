@@ -1,6 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
 import { ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
+import { coverSeed } from "../core/coverArt";
 import { formatTime, isHiRes, qualityLabel, searchKey } from "../core/format";
 import { groupTracks, matchesAll as matches, recentTracks, searchTextOf, sortGroups, sortTracks } from "../core/library";
 import type { GroupBy, GroupSort, TrackGroup, TrackSort } from "../core/library";
@@ -83,7 +84,7 @@ export function TrackRow({ track, number, onPlay }: { track: Track; number?: num
             {track.trackNumber ?? number}
           </span>
         ) : (
-          <Cover className="row-cover" hash={track.coverHash} seed={track.album} />
+          <Cover className="row-cover" hash={track.coverHash} seed={coverSeed(track.title, track.artist)} />
         )}
         <span className="row-copy">
           <span className="title">
@@ -136,15 +137,14 @@ function TrackList({ tracks, label, numbered = false }: { tracks: Track[]; label
   );
 }
 
-function GroupRows({ groups, tab, byId }: { groups: TrackGroup[]; tab: Tab; byId: Map<string, Track> }) {
+function GroupRows({ groups, tab }: { groups: TrackGroup[]; tab: Tab }) {
   return (
     <VirtualList className="group-list" getKey={(group) => group.key} items={groups} label={tabs.find((item) => item.id === tab)!.label} rowHeight={ROW}>
       {(group) => {
-        const first = byId.get(group.trackIds[0]);
         const to = `${tabPath(tab)}/${encodeURIComponent(group.key)}`;
         return (
           <a className="row-main group-row" href={isNative ? `#${to}` : to} onClick={follow(to)}>
-            <Cover className="row-cover" hash={group.coverHash} seed={first?.album ?? group.label} />
+            <Cover className="row-cover" hash={group.coverHash} seed={group.key} />
             <span className="row-copy">
               <span className="title">{group.label}</span>
               <span className="subtitle">{group.subtitle}</span>
@@ -180,7 +180,7 @@ function AlbumGrid({ groups }: { groups: TrackGroup[] }) {
                 const to = `/app/albumes/${encodeURIComponent(group.key)}`;
                 return (
                   <a className="album-tile" href={isNative ? `#${to}` : to} key={group.key} onClick={follow(to)}>
-                    <Cover hash={group.coverHash} seed={group.label} size={tile > 120 ? "large" : "small"} />
+                    <Cover hash={group.coverHash} seed={group.key} size={tile > 120 ? "large" : "small"} />
                     <span className="title">{group.label}</span>
                     <span className="subtitle">{group.subtitle}</span>
                   </a>
@@ -204,7 +204,7 @@ function GroupDetail({ group, tab, tracks }: { group: TrackGroup; tab: Tab; trac
   return (
     <>
       <header className="group-header">
-        <Cover className="group-cover" hash={group.coverHash} seed={tracks[0]?.album ?? group.label} sharp size="large" />
+        <Cover className="group-cover" hash={group.coverHash} label={`«${group.label}»`} seed={group.key} sharp size="large" />
         <div className="group-copy">
           <h2>{group.label}</h2>
           <p className="subtitle">{facts.join(" · ")}</p>
@@ -449,7 +449,7 @@ export function LibraryView({ path }: { path: string }) {
   else if (group) content = <GroupDetail group={group} tab={tab} tracks={visible} />;
   else if (groupBy && groups.length === 0) content = <p className="no-results">Nada coincide con «{search}».</p>;
   else if (tab === "albumes") content = <AlbumGrid groups={groups} />;
-  else if (groupBy) content = <GroupRows byId={byId} groups={groups} tab={tab} />;
+  else if (groupBy) content = <GroupRows groups={groups} tab={tab} />;
   else if (visible.length === 0)
     content = <p className="no-results">{search ? `Nada coincide con «${search}». Prueba con otro título, artista o álbum.` : "Aquí aparecerá lo que escuches y lo último que añadas."}</p>;
   else content = <TrackList label={tabs.find((item) => item.id === tab)!.label} tracks={visible} />;
