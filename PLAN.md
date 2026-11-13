@@ -332,7 +332,7 @@ La app (`/app`) no necesita posicionarse; la **landing** sí.
 - **Separar rutas:** `/` landing prerenderizada (HTML estático en el build), `/funciones`, `/precios`, `/privacidad`, `/terminos`, `/app` con `noindex`.
 - **Nombre de marca:** "Music Reproductor" es genérico e imposible de posicionar. Elegir nombre propio y dominio **antes** de invertir en SEO.
 - **Metadatos:** `title` ≤ 60 caracteres, `description` ≤ 155, `canonical`, `lang="es-MX"` (y `hreflang` cuando haya inglés), Open Graph y Twitter con imagen 1200×630, favicon + iconos PWA.
-- **Datos estructurados:** JSON-LD `SoftwareApplication`/`WebApplication` con `offers` (gratis + Pro) y `FAQPage` en la landing.
+- **Datos estructurados:** JSON-LD `SoftwareApplication`/`WebApplication` con `offers` (gratis) y `FAQPage` en la landing.
 - **Archivos:** `robots.txt`, `sitemap.xml` generado en build.
 - **Rendimiento (Core Web Vitals):** LCP < 2.5 s, INP < 200 ms, CLS < 0.1. Cargar Supabase solo en `/app` o cuando haga falta (hoy entra en el bundle principal), fuentes con `font-display: swap` y *preload*, imágenes WebP/AVIF.
 - **Contenido:** páginas que respondan búsquedas reales — "reproductor FLAC online", "escuchar música local en el navegador", "ecualizador de música web", comparativas honestas. Blog opcional después.
@@ -342,21 +342,19 @@ La app (`/app`) no necesita posicionarse; la **landing** sí.
 
 ## 7. Monetización
 
-Poweramp funciona con **prueba + licencia de pago único**. Lo replicamos para lo local y usamos **suscripción solo para lo que tiene costo recurrente** (la nube).
+**Decisión 2026-11-12 (reemplaza la licencia Pro de pago único):** todo lo que corre en el dispositivo es **gratis**; solo se cobra lo que cuesta dinero cada mes en servidor. Razón: cobrar por código que ya corre en el cliente invita a desbloquearlo y contradice «tu música es tuya». Detalle, comisiones y fiscalidad en `docs/producto/MONETIZACION.md`, que manda en este tema.
 
-| Plan | Precio (a validar) | Incluye |
-|------|-------------------|---------|
-| **Gratis** | $0 | Reproducción local ilimitada (FLAC incluido), cola, shuffle/repetición, fondo Portada, búsqueda, hasta 3 playlists sincronizadas, EQ con presets |
-| **Pro (pago único)** | ~MXN 99–149 | EQ de 10 bandas editable + presets propios, modo Ritmo y visualizador, temas/AMOLED, letras sincronizadas, crossfade, ReplayGain, temporizador, estadísticas, playlists ilimitadas, sincronización de ajustes |
-| **Nube (suscripción)** | ~MXN 49/mes (50 GB) · ~MXN 89/mes (200 GB) | Todo Pro + biblioteca en la nube, streaming entre dispositivos, descarga sin conexión |
+| Nivel | Precio | Incluye |
+|-------|--------|---------|
+| **Gratis** | $0 | Todo lo que existe hoy: reproducción local sin límite (FLAC incluido), biblioteca, ecualizador, fondos y luces, letras, playlists ilimitadas, copia de seguridad en archivo y sincronización de playlists con cuenta |
+| **Apoyo** | Voluntario | Lo mismo. Enlace «Apoyar el proyecto» con Stripe Payment Links; sin funciones a cambio |
+| **Premium** (futuro, precio sin decidir) | Suscripción | Solo funciones con costo recurrente: sincronización completa, copias en la nube, recaps multidispositivo. La nube de música sería un nivel aparte |
 
-- Prueba de Pro: 14 días sin tarjeta.
-- **Sin anuncios en el reproductor:** arruinan la experiencia que nos diferencia. Como mucho, un banner discreto en la landing para la app.
-- **Pagos:** web → Stripe (tarjetas y OXXO) o Mercado Pago; Android → **Google Play Billing es obligatorio** para bienes digitales dentro de la app (comisión). Todo termina en la tabla `entitlements` vía webhook a una Edge Function.
-- **Validación siempre en servidor** para la nube (la Edge Function revisa plan y cuota antes de firmar). Las funciones Pro locales se desbloquean en cliente leyendo `entitlements` (aceptable: no cuestan dinero si alguien las fuerza).
-- **Margen de la nube** (estimado, verificar): 200 GB en R2 ≈ US$3/mes de costo → precio con margen sano. Revisar comisiones de pasarela.
-- Durante la beta: Ko-fi / GitHub Sponsors y lista de espera para Nube para medir interés antes de construirla.
-- **Legal México:** aviso de privacidad conforme a la ley federal de protección de datos personales vigente, términos de uso, política de retiro de contenido para la nube, facturación (CFDI) si se cobra como persona física/moral.
+- **Sin anuncios** en la app ni en la landing (en Vercel Hobby los anuncios cuentan como uso comercial).
+- **Pagos:** web → Stripe (la misma cuenta servirá para premium con Stripe Billing); Android → **Google Play Billing es obligatorio** para bienes digitales dentro de la app. Todo termina en la tabla `entitlements` vía webhook a una Edge Function.
+- **Validación siempre en servidor:** las funciones premium viven en el servidor, así que no hay nada que proteger en el cliente.
+- Antes de construir premium: lista de espera medida (`docs/producto/MONETIZACION.md` §4.2). Premium obliga a Vercel Pro y Supabase Pro dedicado.
+- **Legal México:** aviso de privacidad conforme a la ley federal vigente, términos de uso, política de retiro de contenido para la nube y facturación (CFDI) si se cobra. **El régimen fiscal con un contador está sin resolver** (`DECISIONES_PENDIENTES.md`, D21).
 
 ---
 
@@ -515,9 +513,9 @@ Skills aplicadas: ponytail (WebGL directo en vez de `ogl`, sin librería de visu
 - [ ] Actualizar `SUPABASE.md`
 
 ### Fase 9 — Monetización
-- [ ] `entitlements` + Edge Function de webhooks (Stripe o Mercado Pago)
-- [ ] Puertas de funciones Pro en UI + prueba de 14 días
-- [ ] Página de precios, aviso de privacidad, términos
+- [ ] Enlace «Apoyar el proyecto» (Stripe Payment Link) en Ajustes y landing; cláusula 7 de los términos (sin SDK ni cambios de CSP)
+- [ ] Premium (solo con lista de espera ≥ 3× el punto de equilibrio): `entitlements` + Edge Function de webhooks de Stripe; funciones validadas en servidor
+- [ ] Aviso de privacidad y términos actualizados con datos de cobro
 
 ### Fase 10 — Nube de música
 - [ ] Bucket R2 privado + CORS + Edge Functions de firma (PUT/GET) con validación de cuota
@@ -532,7 +530,7 @@ Arquitectura: **Capacitor** sobre la misma base web (§3.7 y `docs/ARQUITECTURA_
 - [ ] Android: `npx cap add android` (cuando el usuario confirme Android Studio), implementación nativa de `LocalLibrary` (selector de carpeta con permisos persistentes) y `AudioSession` (servicio en primer plano `mediaPlayback` + sesión de medios en notificación y pantalla de bloqueo)
 - [ ] Android: tokens en Keystore (`SecureStore`), botón/gesto atrás, borde a borde, variante de diseño si alguna pantalla no pasa la regla de reutilización (`docs/DISENO_ANDROID.md`)
 - [ ] Android: firma con Play App Signing, formulario de seguridad de datos, política de privacidad, borrado de cuenta dentro de la app y por enlace web
-- [ ] Google Play Billing para Pro/Nube
+- [ ] Google Play Billing para premium/Nube
 - [ ] iPhone cuando Android esté estable (requiere Mac y cuenta de Apple Developer): audio en segundo plano, selector de documentos, compras dentro de la app (`docs/DISENO_IOS.md`)
 
 ### Fase 12 — QA continuo

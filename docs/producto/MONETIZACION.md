@@ -1,12 +1,15 @@
 # Monetización: gratis, apoyo voluntario y premium a futuro
 
-Estado: **propuesta**. Los datos de comisiones se consultaron el 12-11-2026; cada cifra lleva su fuente y si se leyó en la página
+Estado: **decidido el 2026-11-12** (M1 y pasarela); lo fiscal sigue pendiente. Los datos de comisiones se consultaron el 12-11-2026; cada cifra lleva su fuente y si se leyó en la página
 oficial o no. Las decisiones tuyas están marcadas **[Decides tú]**.
 
-> **Choca con `PLAN.md` §7**, que propone una licencia Pro de pago único para funciones locales (ecualizador editable, modo Ritmo,
-> letras, crossfade). Este documento propone lo contrario: **todo lo que corre en tu dispositivo es gratis**, y solo se cobra lo que
-> cuesta dinero cada mes (servidores). Razón: cobrar por código que ya corre en el cliente invita a desbloquearlo y contradice el
-> mensaje «tu música es tuya». **[Decides tú]** cuál de los dos manda; después hay que actualizar `PLAN.md` §7 y la Fase 9.
+> **Resuelto el 2026-11-12:** manda este documento. **Todo lo que corre en tu dispositivo es gratis**, y solo se cobra lo que cuesta
+> dinero cada mes (servidores). La licencia Pro de pago único que proponía la versión anterior de `PLAN.md` §7 se descartó; `PLAN.md`
+> §7 y la Fase 9 ya dicen lo mismo que este documento. Razón: cobrar por código que ya corre en el cliente invita a desbloquearlo y
+> contradice el mensaje «tu música es tuya».
+>
+> **Decisiones de esa fecha:** pasarela del café = **Stripe Payment Links**; se quiere **abrir el café ya**; **todavía no se ha
+> consultado a un contador** → **[Pendiente: consulta con contador (M3)]**. Las dos últimas chocan entre sí: ver §6, primer riesgo.
 
 ## 1. El modelo
 
@@ -141,15 +144,16 @@ lanzar cuando tenga al menos tres veces el punto de equilibrio en correos (≈ 7
 
 | # | Decisión |
 |---|---|
-| M1 | ¿Todo lo local gratis (este documento) o licencia Pro de pago único (`PLAN.md` §7)? |
+| M1 | **Resuelta 2026-11-12:** todo lo local gratis; se cobra solo servidor. `PLAN.md` §7 actualizado |
 | M2 | Montos sugeridos del botón de apoyo |
-| M3 | Régimen fiscal y RFC, con un contador, antes del primer cobro |
+| M3 | **[Pendiente: consulta con contador]** régimen fiscal y RFC, antes del primer cobro. No se ha consultado |
 | M4 | Política de reembolso de aportaciones |
 | M5 | Precio de premium y si se ofrece prueba gratuita |
 | M6 | Si la nube de música llega a existir (riesgo legal y de costo: `PLAN.md` §3.5) |
 
 ## 6. Lo omitido y los riesgos
 
+- **Riesgo de la decisión de abrir el café ya sin contador:** se decidió abrirlo ya (2026-11-12), pero M3 sigue pendiente. Recibir dinero sin régimen dado de alta es el riesgo más concreto de este documento. Lo que se puede hacer ya sin ese riesgo es **construir** el enlace en la app; lo que lo activa es crear el Payment Link real y publicarlo. Recomendación: no publicar el enlace hasta resolver M3.
 - **Sin verificar en fuente oficial:** comisiones de PayPal y Ko-fi, la comisión fija del link de Mercado Pago, requisitos fiscales de
   alta en Stripe y Mercado Pago, la comisión de Stripe Billing y las retenciones del SAT para 2026. Las páginas bloquearon la lectura
   automática; revísalas a mano antes de decidir.

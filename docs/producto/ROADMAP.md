@@ -56,7 +56,7 @@ al despliegue (§11) están avanzados. Sin cuentas abiertas al público, sin nom
 
 ### Fase 6 — Apoyo voluntario
 
-- **Entrada:** régimen fiscal resuelto con un contador (`MONETIZACION.md`, M3); cuenta de Stripe en México activa.
+- **Entrada:** régimen fiscal resuelto con un contador (`MONETIZACION.md`, M3: **[Pendiente: consulta con contador]**); cuenta de Stripe en México activa. Se decidió abrir el café ya (2026-11-12): se puede construir el enlace antes, pero publicar el Payment Link real espera a M3.
 - **Qué incluye:** enlace «Apoyar el proyecto» en Ajustes y en la landing con Stripe Payment Links; cláusula 7 de los términos.
 - **Éxito:** el primer pago llega a tu cuenta bancaria; el aviso de privacidad y los términos coinciden con lo que hace el botón.
 
