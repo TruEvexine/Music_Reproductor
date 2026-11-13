@@ -4,12 +4,24 @@
 nombre y dominio antes de invertir en SEO, tiendas o redes.
 
 > **No comprobé la disponibilidad de ningún nombre**: ni dominios, ni marcas en el IMPI, ni cuentas en redes. Cada opción lleva la
-> lista de lo que tienes que verificar tú. La elección final es **[Decides tú]**.
+> lista de lo que tienes que verificar tú.
+
+## 0. Decisiones del 2026-11-12
+
+| Tema | Estado |
+|---|---|
+| **Nombre** | **[Pendiente: elegir nombre]**. Se decide más adelante. Criterio dado: **simple y en inglés**; **nada tan común ni «tonto» como Surco o Aguja**, que quedan descartadas. Hasta elegir, se conserva «Music Reproductor» como nombre de trabajo |
+| **Ambiente del logo** | **[Pendiente: ambiente]**. Se elegirá más adelante con ayuda de una skill de diseño (por ejemplo `impeccable`), no ahora. Hasta entonces la dirección de §3 es solo un punto de partida |
+| **Colores a evitar** | **[Pendiente: colores a evitar]** (no se ha pensado) |
+| **Referencias que gustan y que no** | **[Pendiente: referencias]** (todavía no hay ninguna) |
+
+Consecuencia: la lista de §2 se redactó con el criterio «español primero». **El criterio nuevo (inglés, simple) la deja desfasada**:
+Tocata, Atril y Brasa no están descartadas, pero tampoco cumplen claramente el criterio de inglés; Surco y Aguja sí se descartan. Antes de
+verificar nada en el IMPI, hace falta una lista nueva con ese criterio. No la he escrito porque no es una decisión mía.
 
 ## 1. Criterios
 
-1. **Español primero, pronunciable en inglés.** La app está en español y la audiencia inicial es México; el nombre no debe
-   romperse si alguien lo lee en inglés.
+1. ~~Español primero, pronunciable en inglés.~~ **Sustituido el 2026-11-12:** simple y en inglés; nada común ni «tonto» (§0).
 2. **Corto**: dos sílabas idealmente, sin acentos ni eñes (evitan problemas con dominios y con quien lo escribe en un teclado inglés).
 3. **Registrable.** El IMPI puede negar marcas genéricas o descriptivas del producto («Reproductor», «Música Local»). Un nombre
    evocador o arbitrario es más fácil de registrar y de defender. **[Abogado]** confirmar con un especialista en propiedad industrial.
@@ -66,8 +78,7 @@ acento dorado, luces que siguen la portada) y con la idea de escuchar a gusto, e
 
 ### Recomendación
 
-Verificar en este orden: **Surco** (la que mejor cuenta el producto), luego **Brasa** (la más registrable). Si Surco tiene una marca
-previa en clase 9 o 42, pasar a Brasa sin pelear. **[Decides tú]**.
+~~Verificar primero Surco y luego Brasa.~~ **Superada el 2026-11-12:** Surco queda descartada (§0) y el criterio pasó a ser un nombre simple en inglés. **[Pendiente: elegir nombre]**.
 
 ### Lista de verificación para el nombre elegido
 

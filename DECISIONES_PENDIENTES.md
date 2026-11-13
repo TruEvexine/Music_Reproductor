@@ -89,3 +89,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Contexto (2026-11-12):** se decidió usar Stripe Payment Links y abrir el café ya. Eso choca con este pendiente: recibir dinero sin régimen dado de alta es el riesgo más concreto de `MONETIZACION.md`.
 - **Recomendación:** construir el enlace, pero no publicar el Payment Link real hasta resolver esto. Preguntas para el contador: `MONETIZACION.md` §2.3.
 - **También pendientes (sin decidir):** montos sugeridos (M2), política de reembolso (M4), precio de premium (M5).
+
+### D22 — Nombre y logo sin decidir (2026-11-12)
+- **Qué:** el nombre se elegirá más adelante. Criterio del usuario: simple y en inglés; nada común ni «tonto» como Surco o Aguja (descartadas). El ambiente del logo se elegirá después con una skill de diseño; colores a evitar y referencias, sin pensar aún.
+- **Bloquea:** Fase 2 del ROADMAP (nombre, dominio, landing, logo), el correo de privacidad en dominio propio (D20) y las cuentas en redes. Hasta entonces la app sigue como «Music Reproductor».
+- **Siguiente paso:** una lista nueva de nombres con el criterio en inglés (la de `MARCA.md` §2 quedó desfasada), y la verificación en IMPI, dominios y redes del elegido.
