@@ -1,6 +1,7 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ComponentPropsWithRef, ReactNode } from "react";
 import { X } from "lucide-react";
+import { coverBucket } from "../core/resample";
 import { useCover } from "../state/covers";
 import type { CoverSize } from "../state/covers";
 import { useDragDismiss } from "./gestures";
@@ -30,12 +31,42 @@ function hueOf(text: string): number {
   return hash % 360;
 }
 
-export function Cover({ hash, size = "small", seed, className = "" }: { hash?: string; size?: CoverSize; seed: string; className?: string }) {
-  const src = useCover(hash, size);
+/** Píxeles reales de pantalla que ocupa el elemento (ancho × densidad, redondeados con `coverBucket`); 0 si no se pide medir. Se reevalúa al cambiar el tamaño, el zoom o de pantalla. */
+function useDevicePixels(enabled: boolean) {
+  const [px, setPx] = useState(0);
+  const ref = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const element = ref.current;
+    if (!enabled || !element) return;
+    let timer = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      // El máximo de ambas medidas: con la densidad emulada de las pruebas la de dispositivo llega en píxeles CSS, y con zoom la otra se queda corta.
+      const device = Math.max(entry.devicePixelContentBoxSize?.[0]?.inlineSize ?? 0, entry.contentRect.width * devicePixelRatio);
+      clearTimeout(timer);
+      timer = window.setTimeout(() => setPx(coverBucket(device)), 150); // al arrastrar el borde de la ventana solo cuenta el tamaño en el que se detiene
+    });
+    try {
+      observer.observe(element, { box: "device-pixel-content-box" });
+    } catch {
+      observer.observe(element); // Safari no mide en píxeles de dispositivo: se multiplica por la densidad
+    }
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
+  }, [enabled]);
+  return [px, ref] as const;
+}
+
+/** `sharp`: portada grande que se sirve al tamaño real de pantalla (reproductor grande, cabecera de álbum). En listas y rejillas no hace falta. */
+export function Cover({ hash, size = "small", seed, className = "", sharp = false }: { hash?: string; size?: CoverSize; seed: string; className?: string; sharp?: boolean }) {
+  const [px, ref] = useDevicePixels(sharp);
+  const src = useCover(hash, size, px);
   const hue = hueOf(seed);
   return (
     <span
       className={`cover ${className}`}
+      ref={ref}
       style={{ background: `linear-gradient(135deg, oklch(0.42 0.07 ${hue}), oklch(0.24 0.05 ${(hue + 50) % 360}))` }}
     >
       {src && <img alt="" decoding="async" loading="lazy" src={src} />}

@@ -766,6 +766,18 @@ service worker ni Media Session fiable). Ficha por ítem: **síntoma → causa e
    Pruebas: `core/shortcuts.test.ts` y `scripts/prueba-atajos.mjs` (foco en cuerpo, campo, deslizadores, botones, enlace, Ctrl/Alt/Meta, apagar y persistir).
    Skills aplicadas: ponytail; make-interfaces-feel-better, design-motion-principles, design-taste-frontend, ui-ux-pro-max e impeccable (cargadas y aplicadas a criterio; sin buscador ni lanzador de contexto: no hay Python y `PRODUCT.md` no existe).
 
+2. **Calidad de la portada.** Las portadas se generan desde la imagen original incrustada (nunca desde una miniatura): `platform/web/metadata.worker.ts` guarda `small` (96 px), `large` (600 px) y un
+   `master` (el original si pesa ≤ 512 KiB; si no, ≤ 1024 px en JPEG .82) más `largeSide` en el registro de `covers` (campos nuevos, sin migración de esquema). Las portadas grandes (reproductor expandido y cabecera de álbum,
+   prop `sharp` de `Cover`) miden su ancho real × densidad (`ResizeObserver`, redondeo a múltiplos de 64, tope 1280; `core/resample.ts`) y, si lo guardado queda corto, `state/covers.ts` pide a `platform/web/covers.ts`
+   (worker propio, creado solo la primera vez que hace falta) una versión a medida desde el `master`; el resultado se cachea con el mismo conteo de uso y las mismas URLs `blob:` revocables. Pipeline (`platform/web/coverScale.ts`): mitades
+   exactas en el canvas mientras haya ≥ 2× de sobra; al reducir, el último tramo lo hace el canvas; al ampliar, Lanczos 3 separable y unsharp mask sobre la luminancia con umbral y tope (`core/resample.ts`, puro, con test). Medido con 5 portadas
+   reales de dominio público a 300 px mostradas a 640 px (`scripts/medir-portada.mjs`, referencia = el original reducido a 640 px): PSNR +0,17…+0,79 dB (media +0,44), SSIM +0,004…+0,034, energía de bordes por debajo de la del original (sin halos).
+   **La mejora es real pero modesta: ningún algoritmo clásico devuelve el detalle que se perdió al bajar a 300 px; evita el desenfoque del navegador, no lo inventa.** Costes: escanear una portada distinta pasa de ~5 a ~28 ms (en el worker de metadatos);
+   ampliar 300 → 640 px ~50 ms y → 1088 px ~140 ms (worker, una vez); espacio por portada distinta: 3 KB + 72 KB + hasta 263 KB de master (peor caso medido: una pintura con textura). Con densidad 1 y 2 la portada llega a 576 y 1088 px reales
+   sin tareas largas en el hilo principal. Arranque con 5 002 pistas (`prueba-biblioteca.mjs`, pestaña nueva): 483 ms antes y 440 ms después (ruido: el worker de portadas no existe hasta que hace falta y esas pistas sintéticas no traen portada).
+   Captura de detalle (antes · después · original, zoom 3×): `docs/capturas/portada-baja-resolucion.png`. **Límites:** las portadas guardadas antes de este cambio no tienen `master` (se amplían desde `large`, ≤ 600 px; para regenerarlas hay que quitar la carpeta y volver a añadirla o usar «Borrar datos locales»);
+   sin `OffscreenCanvas` se queda lo de antes. **IA de superresolución:** no vale la pena todavía: un modelo (Real-ESRGAN pequeño, ONNX/WebGPU) pesa unos 5–20 MB, tarda segundos por portada en gama media y puede inventar texto y rostros.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

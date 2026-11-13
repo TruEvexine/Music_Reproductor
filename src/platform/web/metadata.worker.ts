@@ -4,6 +4,7 @@ import { safeCoverMime } from "../../core/coverMime";
 import { lyricsFromTags } from "../../core/lyrics";
 import type { LyricsTag } from "../../core/lyrics";
 import { computeTrackV2, sha256Hex } from "../../core/track";
+import { scaleBitmap } from "./coverScale";
 import type { MetadataJob, MetadataReply } from "./metadata";
 
 const scope = self as unknown as { onmessage: ((event: MessageEvent) => void) | null; postMessage(data: unknown): void };
@@ -14,17 +15,11 @@ const known = new Set<string>();
 
 const positive = (value: number | undefined | null) => (value !== undefined && value !== null && Number.isFinite(value) && value > 0 ? value : undefined);
 
-async function thumbnail(bitmap: ImageBitmap, size: number, original: Blob): Promise<Blob> {
-  if (typeof OffscreenCanvas === "undefined") return original;
-  const side = Math.min(bitmap.width, bitmap.height);
-  const target = Math.min(size, side);
-  const canvas = new OffscreenCanvas(target, target);
-  const context = canvas.getContext("2d");
-  if (!context) return original;
-  // Recorte cuadrado centrado: la portada siempre se pinta 1:1.
-  context.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, target, target);
-  return canvas.convertToBlob({ type: "image/jpeg", quality: 0.86 });
-}
+// Tras decodificar la imagen original incrustada se generan las dos miniaturas y, aparte, el «master» desde el que luego se sirve cualquier otro
+// tamaño (platform/web/covers.ts): el original tal cual si es pequeño, o una versión de hasta MASTER_SIDE px hecha desde el original (nunca desde una miniatura).
+// Tope de espacio: unos 100–300 KB por portada distinta (el original si ya es ligero; si no, 1024 px en JPEG).
+const MASTER_SIDE = 1024;
+const MASTER_RAW_BYTES = 512 * 1024;
 
 async function coverFrom(bytes: Uint8Array<ArrayBuffer>, type: string): Promise<MetadataReply["cover"]> {
   try {
@@ -33,10 +28,14 @@ async function coverFrom(bytes: Uint8Array<ArrayBuffer>, type: string): Promise<
     if (known.has(hash)) return { hash };
     const original = new Blob([bytes], { type });
     const bitmap = await createImageBitmap(original);
-    const [small, large] = await Promise.all([thumbnail(bitmap, THUMB_SIZES.small, original), thumbnail(bitmap, THUMB_SIZES.large, original)]);
+    const side = Math.min(bitmap.width, bitmap.height);
+    // Sin OffscreenCanvas (navegadores viejos) se guarda el original tal cual, como antes.
+    const scale = (target: number, quality: number) => (typeof OffscreenCanvas === "undefined" ? original : scaleBitmap(bitmap, Math.min(target, side), quality));
+    const keepRaw = Math.max(bitmap.width, bitmap.height) <= 2 * MASTER_SIDE && bytes.byteLength <= MASTER_RAW_BYTES;
+    const [small, large, master] = await Promise.all([scale(THUMB_SIZES.small, 0.86), scale(THUMB_SIZES.large, 0.86), keepRaw ? original : scale(MASTER_SIDE, 0.82)]);
     bitmap.close();
     known.add(hash);
-    return { hash, small, large };
+    return { hash, small, large, master, largeSide: Math.min(THUMB_SIZES.large, side) };
   } catch {
     return undefined; // imagen corrupta o sin hash: la pista queda con el degradado de respaldo
   }

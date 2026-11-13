@@ -248,7 +248,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         </div>
       </header>
       <div className="now-art">
-        <Cover className="now-cover" hash={track.coverHash} seed={track.album} size="large" />
+        <Cover className="now-cover" hash={track.coverHash} seed={track.album} sharp size="large" />
       </div>
       <div className="now-controls">
         <div className="now-copy">

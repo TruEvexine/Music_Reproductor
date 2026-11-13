@@ -137,7 +137,8 @@ async function applyMetadata(job: Job, reply: MetadataReply) {
   const track = byId().get(job.id);
   if (!track) return;
   if (reply.cover?.small && reply.cover.large) {
-    await storage.write("covers", [{ hash: reply.cover.hash, small: reply.cover.small, large: reply.cover.large }]);
+    const { hash, small, large, master, largeSide } = reply.cover;
+    await storage.write("covers", [{ hash, small, large, master, largeSide }]);
   }
   const tags = reply.metadata ?? {};
   const useful = Boolean(tags.title || tags.artist || tags.album || reply.cover);

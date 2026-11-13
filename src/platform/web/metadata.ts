@@ -40,7 +40,7 @@ export interface MetadataReply {
   v2?: string;
   lyrics?: Lyrics;
   /** Sin `small`/`large`: la portada ya existía y no se volvió a reducir. */
-  cover?: { hash: string; small?: Blob; large?: Blob };
+  cover?: { hash: string; small?: Blob; large?: Blob; /** Desde el que se sirven otros tamaños. */ master?: Blob; /** Lado en px de `large`. */ largeSide?: number };
 }
 
 export const METADATA_TIMEOUT_MS = 20_000;

@@ -204,7 +204,7 @@ function GroupDetail({ group, tab, tracks }: { group: TrackGroup; tab: Tab; trac
   return (
     <>
       <header className="group-header">
-        <Cover className="group-cover" hash={group.coverHash} seed={tracks[0]?.album ?? group.label} size="large" />
+        <Cover className="group-cover" hash={group.coverHash} seed={tracks[0]?.album ?? group.label} sharp size="large" />
         <div className="group-copy">
           <h2>{group.label}</h2>
           <p className="subtitle">{facts.join(" · ")}</p>

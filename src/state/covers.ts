@@ -1,13 +1,19 @@
 import { useEffect, useState } from "react";
 import { storage } from "../platform";
+import { scaleCover } from "../platform/web/covers";
 
 // Portadas guardadas en IndexedDB → URLs blob: con conteo de uso. Al dejar de usarse se conservan unas pocas
-// (para no recrearlas al hacer scroll) y el resto se revocan.
+// (para no recrearlas al hacer scroll) y el resto se revocan. Además, las portadas grandes se sirven al tamaño real de pantalla
+// (ancho × densidad): si lo guardado se queda corto, un worker lo rehace desde el original (platform/web/covers.ts) y el resultado se cachea aquí.
 export type CoverSize = "small" | "large";
 interface CoverRecord {
   hash: string;
   small: Blob;
   large: Blob;
+  /** Original incrustado (o una versión de hasta 1024 px hecha desde él). Las portadas anteriores a esto no lo tienen. */
+  master?: Blob;
+  /** Lado en px de `large`. */
+  largeSide?: number;
 }
 interface Entry {
   url: Promise<string | undefined>;
@@ -19,16 +25,14 @@ const entries = new Map<string, Entry>();
 const idle: string[] = []; // sin uso, de más antigua a más reciente
 const KEEP_IDLE = 120;
 
-function acquire(key: string, hash: string, size: CoverSize): Entry {
+type Load = () => Promise<string | undefined>;
+
+function acquire(key: string, load: Load): Entry {
   let entry = entries.get(key);
   if (!entry) {
     const created: Entry = {
       refs: 0,
-      url: storage.read<CoverRecord>("covers", hash).then((record) => {
-        const blob = record?.[size];
-        created.value = blob ? URL.createObjectURL(blob) : undefined;
-        return created.value;
-      }),
+      url: load().then((value) => (created.value = value)),
     };
     entries.set(key, (entry = created));
   }
@@ -50,25 +54,49 @@ function release(key: string) {
   }
 }
 
-/** URL de la portada mientras el componente esté montado. */
-export function useCover(hash: string | undefined, size: CoverSize): string | undefined {
-  const key = hash ? `${size}:${hash}` : "";
+const stored =
+  (hash: string, size: CoverSize): Load =>
+  () =>
+    storage.read<CoverRecord>("covers", hash).then((record) => (record?.[size] ? URL.createObjectURL(record[size]) : undefined));
+
+/** La portada rehecha a `px` de lado, o undefined si lo guardado ya alcanza (el navegador solo reduce) o no se pudo. */
+const sharp =
+  (hash: string, px: number): Load =>
+  async () => {
+    const record = await storage.read<CoverRecord>("covers", hash);
+    if (!record || px <= (record.largeSide ?? 0)) return undefined;
+    const blob = await scaleCover(record.master ?? record.large, px);
+    return blob && URL.createObjectURL(blob);
+  };
+
+function useEntry(key: string, load: Load): string | undefined {
   const [url, setUrl] = useState(() => (key ? entries.get(key)?.value : undefined));
   useEffect(() => {
-    if (!hash) {
+    if (!key) {
       setUrl(undefined);
       return;
     }
     let active = true;
-    const entry = acquire(key, hash, size);
+    const entry = acquire(key, load);
     if (entry.value) setUrl(entry.value);
     else void entry.url.then((value) => active && setUrl(value));
     return () => {
       active = false;
       release(key);
     };
-  }, [key, hash, size]);
+    // `load` se rehace en cada render pero siempre equivale a lo que dice la clave: basta con ella
+  }, [key]);
   return url;
+}
+
+/**
+ * URL de la portada mientras el componente esté montado. Con `px` (píxeles reales de pantalla, ver `coverBucket`) y tamaño grande, cuando lo guardado
+ * es más pequeño que eso se pide al worker una versión a medida; mientras llega se ve la guardada.
+ */
+export function useCover(hash: string | undefined, size: CoverSize, px = 0): string | undefined {
+  const base = useEntry(hash ? `${size}:${hash}` : "", stored(hash ?? "", size));
+  const exact = useEntry(hash && px && size === "large" ? `${px}:${hash}` : "", sharp(hash ?? "", px));
+  return exact ?? base;
 }
 
 /** Para la pantalla de bloqueo: retiene una sola portada grande a la vez. */
@@ -78,5 +106,5 @@ export async function holdCover(hash: string | undefined): Promise<string | unde
   if (key === held) return key ? entries.get(key)?.url : undefined;
   if (held) release(held);
   held = key;
-  return key && hash ? acquire(key, hash, "large").url : undefined;
+  return key && hash ? acquire(key, stored(hash, "large")).url : undefined;
 }
