@@ -186,3 +186,12 @@ Necesitas el móvil con cable USB, la **depuración USB** activada (Ajustes → 
 - **WebP/AVIF, SSR/prerender, timeouts de Supabase y paginación:** razones en §5.
 - **RUM continuo (p. ej. Vercel Speed Insights):** añade una dependencia, un ajuste en el panel de Vercel y una consideración de privacidad. Con una medición manual en móvil (§6.1) basta para decidir este plan. Se reconsidera si tú lo pides.
 - **Redis, pool, balanceo, OpenTelemetry y streaming:** no hay servidor propio.
+
+## 8. Fallos intermitentes medidos (2026-11-12, 10 pasadas cada uno, dev en este PC)
+
+| Prueba | Tasa | Causa | Qué se hizo |
+|---|---|---|---|
+| `capturas.mjs`, menú Fondo | 4 de 10 | Del script: reabría ≡ durante los 140 ms de salida. El clic caía entre `dialog.close()` y el evento `close` (el `<dialog>` ya cerrado, React aún con `open=true`), así que `setOpen(true)` no hacía nada | Arreglado en el script (espera a que el `<dialog>` se desmonte): 10 de 10 en verde |
+| `prueba-movil.mjs`, pulsación larga | 6 de 10 | De la app, o de la emulación táctil de Chromium: la hoja se abre a los 500 ms, pero al soltar llega un `click` cuyo destino es el propio `<dialog>` y `parts.tsx:63` lo cierra como si fuera un toque en el fondo. `SwipeRow` solo descarta el clic dentro de la fila. No depende de cuánto se mantenga el dedo (falla con 600, 700 y 1 000 ms) | Sin arreglar (la causa no está en el script). Falta comprobarlo en un móvil real |
+| `prueba-biblioteca.mjs`, recarga tras importar | 1 de 10 > 1 s (3 322 ms; resto 391–494 ms) | §2: almacenamiento ocupado tras la importación | Ya solo informativa (Fase 1). La pestaña nueva: 10 de 10 < 1 s |
+| `prueba-biblioteca.mjs`, scroll p95 (hallado de paso) | 1 de 10 (53 ms, umbral 50) | Sin investigar | Nada |
