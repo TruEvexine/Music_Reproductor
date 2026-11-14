@@ -84,6 +84,15 @@ sombras y brillos · reordenar, quitar o añadir hilos · otra tipografía para 
 
 Las fuentes SVG de cada icono están en `logo/iconos/fuente/`.
 
+**En la app (2026-11-14):** `public/manifest.webmanifest` usa `icon-192`, `icon-512` y `maskable-512`, copiados a `public/icons/`; la fuente
+sigue siendo `fuente/*.svg` y `src/core/brand.test.ts` falla si la copia difiere. Sin `monocromo-512` todavía (no se pidió).
+
+**Medido (Chromium, píxeles del PNG):** el rombo más lejano del centro queda a **56,4 %** del radio en `maskable-512` (zona segura: 80 %),
+con las esquinas opacas en `#0b0a08`; en `icon-512` queda a 66,4 % y las esquinas son transparentes. Los PNG coinciden con su SVG
+(≤ 0,07 % de los píxeles difieren, solo en el borde). **A 48 px** el símbolo se reconoce como cinco hilos oscuros en diagonal, pero en
+`icon-512` reducido (el símbolo ocupa ≈ 65 % del ancho) los huecos entre hilos casi se cierran y se lee más como textura; `favicon-48.png`
+(símbolo más grande) se lee mejor. A 16 px solo queda la silueta del rombo. Revisado a ojo en una sola captura, sin pruebas con usuarios.
+
 ## 3. Animación de carga
 
 - **Qué hace:** el símbolo aparece y un brillo recorre los hilos en diagonal, como la luz sobre el satén. Solo cambia la opacidad
@@ -110,8 +119,7 @@ Un commit aparte, cuando lo apruebes:
 
 1. `index.html`: fragmento de carga, `<title>Satin</title>`, enlaces a `favicon.ico`, `favicon.svg` y `apple-touch-icon.png`;
    `theme-color` a `#0b0a08`.
-2. Iconos copiados a `public/` (y `manifest.webmanifest` con los de §2 cuando llegue la Fase 4 del ROADMAP, que es la que crea el
-   manifest y el service worker).
+2. Iconos copiados a `public/` y `manifest.webmanifest` con los de §2 (hecho el 2026-11-14; el service worker sigue pendiente de la Fase 4 del ROADMAP).
 3. Comprobación: `npm run typecheck`, `npm test`, `npm run build`, `node scripts/verificar-csp.mjs` y la matriz de capturas.
 
 **Fuera de este commit:** cambiar «Music Reproductor» por «Satin» en textos de la landing, FAQ, legales, repositorio y Vercel. Conviene
