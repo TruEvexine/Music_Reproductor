@@ -209,3 +209,12 @@ export function sleevePalette(hue: number): Palette {
   }
   return palette;
 }
+
+/**
+ * Versión del algoritmo que saca la paleta de una portada. Cada portada guardada lleva la versión con que se calculó su paleta; si no coincide con esta, se recalcula al pedirla.
+ * Cambia el algoritmo (`paletteFromPixels`, `paletteSwatches`) → sube este número; `palette.test.ts` falla si se te olvida.
+ */
+export const PALETTE_VERSION = 1;
+
+/** ¿La paleta guardada con una portada sigue siendo válida? Sin paleta o calculada con otra versión del algoritmo, no. */
+export const paletteIsCurrent = (record: { palette?: Palette; paletteVersion?: number }) => record.palette !== undefined && record.paletteVersion === PALETTE_VERSION;

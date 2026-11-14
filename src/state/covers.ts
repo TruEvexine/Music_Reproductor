@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { storage } from "../platform";
 import { coverPalette, scaleCover } from "../platform/web/covers";
 import { hueOf } from "../core/coverArt";
-import { fallbackPalette, sleevePalette } from "../core/palette";
+import { fallbackPalette, PALETTE_VERSION, paletteIsCurrent, sleevePalette } from "../core/palette";
 import type { Palette } from "../core/palette";
 
 // Portadas guardadas en IndexedDB → URLs blob: con conteo de uso. Al dejar de usarse se conservan unas pocas
@@ -17,8 +17,10 @@ interface CoverRecord {
   master?: Blob;
   /** Lado en px de `large`. */
   largeSide?: number;
-  /** Paleta (core/palette), calculada una vez en el worker la primera vez que se pidió. */
+  /** Paleta (core/palette), calculada en el worker la primera vez que se pidió. */
   palette?: Palette;
+  /** Versión del algoritmo con que se calculó `palette`; si no es la actual (`PALETTE_VERSION`), se recalcula. */
+  paletteVersion?: number;
 }
 interface Entry {
   url: Promise<string | undefined>;
@@ -124,10 +126,11 @@ function paletteOf(hash: string): Promise<Palette> {
     found = storage
       .read<CoverRecord>("covers", hash)
       .then(async (record) => {
-        if (!record || record.palette) return record?.palette ?? fallbackPalette;
+        if (!record) return fallbackPalette;
+        if (paletteIsCurrent(record)) return record.palette!;
         const palette = await coverPalette(record.small);
-        if (!palette) return fallbackPalette; // sin worker u OffscreenCanvas: paleta neutra
-        void storage.write("covers", [{ ...record, palette }]);
+        if (!palette) return record.palette ?? fallbackPalette; // sin worker u OffscreenCanvas: la guardada (aunque sea de otra versión) o la neutra
+        void storage.write("covers", [{ ...record, palette, paletteVersion: PALETTE_VERSION }]);
         return palette;
       })
       .catch(() => fallbackPalette)
