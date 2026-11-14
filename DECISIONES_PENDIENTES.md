@@ -82,7 +82,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 
 ### D20 — Completar marcadores de datos personales al publicar (tanda de documentos, 2026-11-12)
 - **Qué:** los documentos públicos usan `{{RESPONSABLE}}`, `{{DOMICILIO}}` y `{{CORREO_PRIVACIDAD}}`. Los valores reales están en `docs/producto/privado/DATOS_PUBLICACION.md` (ignorado por git).
-- **Pendiente:** sustituir los marcadores en el momento de publicar (nunca commitear los valores); cambiar el correo temporal de Gmail por uno del dominio propio cuando exista; que un abogado confirme que publicar el domicilio particular basta (art. 15, fr. I).
+- **Hecho 2026-11-13:** la sustitución es automática al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO` y `LEGAL_CORREO_PRIVACIDAD` (variables de entorno del build o `.env`, ver `.env.example`); si falta alguna, `npm run build` falla. Para compilar en local sin los valores reales hay que pasar valores de prueba.
+- **Pendiente:** definir esas tres variables en Vercel en el momento de publicar (nunca commitear los valores); cambiar el correo temporal de Gmail por uno del dominio propio cuando exista; que un abogado confirme que publicar el domicilio particular basta (art. 15, fr. I).
 
 ### D21 — Consulta con contador antes de recibir aportaciones (M3)
 - **Qué:** no se ha consultado a un contador sobre régimen fiscal, RFC y retenciones de plataformas para recibir aportaciones por Stripe.

@@ -4,6 +4,8 @@
 > código de la rama `desarrollo` (12 de noviembre de 2026) y del texto vigente de la ley. Todo lo marcado **[Decides tú]** necesita
 > una decisión tuya antes de la revisión; lo marcado **[Abogado]** es una duda jurídica que no puedo resolver con el texto de la ley.
 
+> **Hecho 2026-11-13:** la app **renderiza** estos borradores en `/privacidad` (§3.1), `/terminos` (§4) y `/almacenamiento` (§5) (`src/ui/LegalPage.tsx`; sin las notas internas «[Decides tú]» y «[Abogado]»). **No están enlazadas** desde ninguna navegación pública, llevan la marca «Borrador pendiente de revisión legal» y piden no indexarse (`<meta robots>` y `X-Robots-Tag` en `vercel.json`). Los `{{MARCADORES}}` se sustituyen al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO` y `LEGAL_CORREO_PRIVACIDAD` (entorno o `.env`, nunca en el repositorio) y **`npm run build` falla si queda alguno** en el resultado. Quedan sin comprobar los textos entre corchetes (`[Nombre de la app]`, `[fecha]`, `[URL]`, `[30]`, `[15]`).
+
 Los textos para publicar están en las secciones 3, 4 y 5. Las secciones 1 y 2 son la base que el abogado necesita para revisarlos.
 
 ---

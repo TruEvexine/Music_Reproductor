@@ -830,6 +830,10 @@ Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMT
 
 5. **Botón «Comprar un café»** (`CafeLink.tsx`, `core/support.ts`): solo existe si el build trae `VITE_CAFE_URL` (https; cualquier otra cosa se ignora). Ajustes y pie de la landing; enlace en otra pestaña con `noopener noreferrer`, sin SDK ni CSP nueva. **No hay ningún enlace real en el repositorio**; sigue pendiente M3/D21 antes de poner uno en producción. Prueba: `scripts/prueba-cafe.mjs` (dos servidores, con y sin variable).
 
+6. **Páginas legales** (`LegalPage.tsx`, `virtual:docs`): `/privacidad`, `/terminos` y `/almacenamiento` renderizan los borradores de `LEGAL_BORRADORES.md` sin las notas internas, sin enlace en la navegación pública, con `noindex` (meta y `X-Robots-Tag`) y rewrites en `vercel.json` (`verificar-csp.mjs` sin violaciones). Los `{{MARCADORES}}` se completan al compilar con `LEGAL_*` y **el build falla si el resultado contiene alguno** (`writeBundle` en `vite.config.ts`, `unfilledMarkers` con test). Comprobado a mano: sin variables `npm run build` sale con 1 y lista los tres marcadores; con valores de prueba sale con 0 y `dist/` no tiene marcadores. Prueba: `scripts/prueba-legal.mjs` (desarrollo y build servido).
+
+   **Consecuencia:** `npm run build` en local exige esas tres variables (o valores de prueba). Skills aplicadas en los seis puntos: ponytail; design-taste-frontend, ui-ux-pro-max (sin buscador: no hay Python), design-motion-principles, make-interfaces-feel-better e impeccable (no se ejecutó `impeccable context`: solo se leyó su guía).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

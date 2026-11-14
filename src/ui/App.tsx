@@ -12,6 +12,7 @@ import { Backdrop, Tint } from "./Backdrop";
 import { HelpView } from "./HelpView";
 import { AuthDialog } from "./dialogs";
 import { Landing } from "./Landing";
+import { LEGAL_PATHS, LegalPage } from "./LegalPage";
 import { LibraryView } from "./LibraryView";
 import { icon } from "./parts";
 import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
@@ -117,6 +118,8 @@ function Shell() {
 
 export default function App() {
   const { path } = useRoute();
+  const legalDoc = LEGAL_PATHS[path];
+  if (legalDoc) return <LegalPage doc={legalDoc} />; // sin enlace desde la navegación pública: se llega por su dirección
   // La app nativa no tiene landing: siempre abre el reproductor.
   if (path === "/" && !isNative) return <Landing />;
   return <Shell />;

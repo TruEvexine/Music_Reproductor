@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { fillMarkers, findMarkers, parseFaq, parseLegal, stripNotes } from "./docsContent";
+import { fillMarkers, findMarkers, parseFaq, parseLegal, stripNotes, unfilledMarkers } from "./docsContent";
 
 const read = (name: string) => readFileSync(new URL(`../docs/producto/${name}`, import.meta.url), "utf8");
 
@@ -17,6 +17,26 @@ describe("marcadores", () => {
     expect(findMarkers("const a={b:{c:1}};`${x}` {{minuscula}} {}")).toEqual([]);
   });
 });
+
+describe("comprobación de build", () => {
+  it("lista cada marcador sin sustituir con su archivo, y nada si el build está completo", () => {
+    expect(unfilledMarkers({ "assets/a.js": 'x="{{RESPONSABLE}} {{DOMICILIO}}"', "index.html": "<p>{{RESPONSABLE}}</p>", "assets/b.css": "a{b:c}" })).toEqual([
+      "assets/a.js: {{RESPONSABLE}}",
+      "assets/a.js: {{DOMICILIO}}",
+      "index.html: {{RESPONSABLE}}",
+    ]);
+    expect(unfilledMarkers({ "assets/a.js": 'x="Ana, Calle 1"' })).toEqual([]);
+  });
+
+  it("los documentos solo usan los tres marcadores que el build sabe completar", () => {
+    const used = findMarkers(read("FAQ.md") + parseLegalAll());
+    expect(used.sort()).toEqual(["{{CORREO_PRIVACIDAD}}", "{{DOMICILIO}}", "{{RESPONSABLE}}"]);
+  });
+});
+
+function parseLegalAll() {
+  return Object.values(parseLegal(read("LEGAL_BORRADORES.md"))).join("\n");
+}
 
 describe("FAQ.md", () => {
   const faq = parseFaq(read("FAQ.md"));

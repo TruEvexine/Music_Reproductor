@@ -15,6 +15,15 @@ describe("parseBlocks", () => {
   });
 });
 
+describe("parseBlocks con elementos de lista de varias líneas", () => {
+  it("una línea sangrada sigue el elemento anterior; una sin sangría abre un párrafo", () => {
+    expect(parseBlocks("- uno\n  sigue\n- dos\nfin")).toEqual([
+      { type: "ul", items: ["uno sigue", "dos"] },
+      { type: "p", text: "fin" },
+    ]);
+  });
+});
+
 describe("inlineParts", () => {
   it("marca la negrita y el código sin dejar los asteriscos ni las comillas", () => {
     expect(inlineParts("Ve a **Ajustes** y pulsa `Q` ya.")).toEqual([{ text: "Ve a " }, { text: "Ajustes", kind: "strong" }, { text: " y pulsa " }, { text: "Q", kind: "code" }, { text: " ya." }]);

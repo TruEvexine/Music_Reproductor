@@ -14,6 +14,11 @@ export function findMarkers(text: string): string[] {
   return [...new Set(text.match(MARKER) ?? [])];
 }
 
+/** Marcadores sin sustituir en los archivos de un build (`ruta → texto`), como «ruta: {{X}}». Vacío si el build está listo para publicarse. */
+export function unfilledMarkers(files: Record<string, string>): string[] {
+  return Object.entries(files).flatMap(([name, text]) => findMarkers(text).map((marker) => `${name}: ${marker}`));
+}
+
 /** Sustituye `{{X}}` por `values.X` cuando existe y no está vacío; si no, lo deja como está (el build de producción lo rechaza). */
 export function fillMarkers(text: string, values: Record<string, string | undefined>): string {
   return text.replace(MARKER, (marker) => values[marker.slice(2, -2)]?.trim() || marker);

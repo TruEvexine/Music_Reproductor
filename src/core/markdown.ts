@@ -12,6 +12,8 @@ export function parseBlocks(markdown: string): Block[] {
     const text = line.trim();
     if (!text) {
       open = undefined;
+    } else if (open?.type === "ul" && /^\s+\S/.test(line) && !text.startsWith("- ")) {
+      open.items[open.items.length - 1] += ` ${text}`; // línea sangrada: sigue el elemento anterior de la lista
     } else if (text.startsWith("- ")) {
       if (open?.type !== "ul") blocks.push((open = { type: "ul", items: [] }));
       open.items.push(text.slice(2));

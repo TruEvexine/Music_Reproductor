@@ -17,6 +17,7 @@ import "./ui/styles/player.css";
 import "./ui/styles/menu.css";
 import "./ui/styles/backdrop.css";
 import "./ui/styles/landing.css";
+import "./ui/styles/legal.css";
 
 // Las variantes por plataforma se resuelven en CSS con [data-platform], no con componentes distintos.
 document.documentElement.dataset.platform = target;

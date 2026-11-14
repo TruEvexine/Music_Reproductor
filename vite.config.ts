@@ -1,10 +1,10 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { loadEnv, normalizePath } from "vite";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import { fillMarkers, parseFaq, parseLegal } from "./scripts/docsContent";
+import { fillMarkers, parseFaq, parseLegal, unfilledMarkers } from "./scripts/docsContent";
 import { findBundledAudio, findSecretEnv } from "./scripts/envGuard";
 
 function buildGuard(mode: string): Plugin {
@@ -15,6 +15,21 @@ function buildGuard(mode: string): Plugin {
       const problems = findSecretEnv({ ...process.env, ...loadEnv(mode, process.cwd(), "VITE_") });
       if (problems.length > 0) {
         this.error(`Variables VITE_* con secretos (acabarían en el JavaScript público):\n- ${problems.join("\n- ")}`);
+      }
+    },
+    // El resultado de producción no puede llevar ningún {{MARCADOR}} sin sustituir (datos personales de los textos legales que se completan al compilar).
+    writeBundle({ dir }) {
+      if (!dir) return;
+      const files = Object.fromEntries(
+        readdirSync(dir, { recursive: true, encoding: "utf8" })
+          .filter((name) => /\.(js|css|html|json|svg|txt|webmanifest)$/.test(name))
+          .map((name) => [name.replaceAll("\\", "/"), readFileSync(`${dir}/${name}`, "utf8")]),
+      );
+      const left = unfilledMarkers(files);
+      if (left.length > 0) {
+        this.error(
+          `El build contiene marcadores sin sustituir:\n- ${left.join("\n- ")}\nDefine LEGAL_RESPONSABLE, LEGAL_DOMICILIO y LEGAL_CORREO_PRIVACIDAD (variables de entorno del build; nunca en el repositorio) antes de compilar para publicar.`,
+        );
       }
     },
     generateBundle(_options, bundle) {

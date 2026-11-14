@@ -69,6 +69,19 @@
           "value": "no-cache"
         }
       ]
+    },
+    {
+      "source": "/(privacidad|terminos|almacenamiento)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ],
   "rewrites": [
@@ -78,6 +91,18 @@
     },
     {
       "source": "/app/(.*)",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/privacidad",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terminos",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/almacenamiento",
       "destination": "/index.html"
     }
   ]
