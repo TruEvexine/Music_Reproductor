@@ -3,7 +3,7 @@
   position: relative;
   isolation: isolate;
   display: grid;
-  grid-template: "main" minmax(0, 1fr) "bar" auto "nav" auto / minmax(0, 1fr);
+  grid-template: "main" minmax(0, 1fr) "tip" auto "bar" auto "nav" auto / minmax(0, 1fr);
   height: 100dvh;
 }
 
@@ -81,6 +81,7 @@
   .shell {
     grid-template:
       "nav main queue" minmax(0, 1fr)
+      "nav tip queue" auto
       "bar bar bar" auto / 220px minmax(0, 1fr) auto;
   }
 
@@ -130,4 +131,44 @@
 .view-header > div:first-child {
   flex: 1 1 14rem;
   min-width: 0;
+}
+
+/* Aviso de primera vez (ui/Tutorial.tsx): una franja en el flujo, no una capa. Si no hay aviso, su fila mide 0 y nada se mueve. Se separa por tono. */
+.tip {
+  grid-area: tip;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s3);
+  padding: var(--s2) calc(var(--gutter) + var(--safe-right)) var(--s2) calc(var(--gutter) + var(--safe-left));
+  background: var(--surface-1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  --o0: 0;
+  --o1: 0;
+}
+
+.tip p {
+  flex: 1 1 16rem;
+  min-width: 0;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.tip-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.tip-actions {
+  display: flex;
+  margin-left: auto;
+}
+
+/* Dentro del reproductor grande: una tarjeta sobre los controles, en el flujo (la portada cede ese alto). */
+.tip[data-slot="player"] {
+  grid-area: auto;
+  padding: var(--s1) var(--s3);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
 }

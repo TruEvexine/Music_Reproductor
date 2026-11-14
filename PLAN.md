@@ -817,6 +817,13 @@ Explicación con diagrama, diagnóstico y cifras: `docs/LUCES_REACTIVAS.md`.
 
    Skills aplicadas: ponytail; design-taste-frontend, ui-ux-pro-max, design-motion-principles, make-interfaces-feel-better e impeccable (`impeccable context` leyó `PRODUCT.md` y `DESIGN.md`; sin buscador de ui-ux-pro-max: no hay Python).
 
+### 11.1k Ayuda, tutoriales, privacidad, perfil, apoyo y páginas legales (2026-11-13)
+
+Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMTP, recaps) **no** se implementó.
+
+1. **Ayuda** (`/app/ayuda`, `HelpView.tsx`): atajos (`SHORTCUTS`), gestos (`core/gestures.ts`, con las etiquetas y umbrales que usa `gestures.tsx`), preguntas de `docs/producto/FAQ.md` (módulo virtual `virtual:docs` de `vite.config.ts`, parser en `scripts/docsContent.ts` con test) y «Nosotros» anónimo (D26). Al comprobar la FAQ contra el código se corrigió una afirmación (el temporizador ofrece 5–90 min o fin de canción, no «una hora»). Prueba: `scripts/prueba-ayuda.mjs`.
+2. **Tutoriales de primera vez** (`core/tutorials.ts`, `state/tutorials.ts`, `ui/Tutorial.tsx`): avisos en el flujo (no tapan), uno a la vez, al encontrar fila deslizable, reproductor grande o atajos; se omiten todos, se guardan en IndexedDB (`tutorials`) y Ajustes → «Ver tutoriales otra vez». Sin transición con movimiento reducido. Pruebas: `core/tutorials.test.ts` y `scripts/prueba-tutoriales.mjs` (incluye un deslizamiento táctil real por CDP).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

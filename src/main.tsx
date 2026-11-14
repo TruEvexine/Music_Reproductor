@@ -5,6 +5,7 @@ import { target } from "./platform";
 import { initBackground } from "./state/background";
 import { initSession } from "./state/player";
 import { playlists } from "./state/playlists";
+import { initTutorials } from "./state/tutorials";
 import App from "./ui/App";
 import "./ui/styles/tokens.css";
 import "./ui/styles/base.css";
@@ -25,6 +26,7 @@ addEventListener("keydown", () => (root.dataset.input = "key"), true);
 addEventListener("pointerdown", () => delete root.dataset.input, true);
 void initSession();
 void initBackground();
+void initTutorials();
 void playlists.init();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

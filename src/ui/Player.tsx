@@ -41,6 +41,7 @@ import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
 import { queueAction } from "./toast";
+import { TutorialHint, useEncounter } from "./Tutorial";
 import { Range } from "./Range";
 import { motionReduced } from "./motion";
 import { VirtualList } from "./VirtualList";
@@ -241,6 +242,8 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
   }, [neighbors.key]);
   const wide = useMedia("(min-width: 1000px)");
   const isPlaying = usePlayer((state) => state.isPlaying);
+  useEncounter("player-touch");
+  useEncounter("player-pointer");
   if (!track) return null;
   return (
     <section
@@ -313,6 +316,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         </div>
       </div>
       <div className="now-controls">
+        <TutorialHint slot="player" />
         <div className="now-copy" key={neighbors.key}>
           <h2 className="now-title">
             <Marquee>{track.title}</Marquee>

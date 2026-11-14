@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { CircleHelp, CircleUser, Library, ListMusic, Settings } from "lucide-react";
 import { isNative } from "../platform";
+import { useBackground } from "../state/background";
 import { usePaletteOf } from "../state/covers";
+import { usePlayer } from "../state/player";
 import { setSyncUser } from "../sync/playlistSync";
 import { useAuthController } from "../sync/useAuthController";
 import { Backdrop, Tint } from "./Backdrop";
@@ -17,6 +19,7 @@ import { SettingsView } from "./SettingsView";
 import { ShortcutsHelp } from "./ShortcutsHelp";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
+import { TutorialHint, useEncounter } from "./Tutorial";
 import { usePresence } from "./motion";
 import { PaletteContext } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
@@ -45,6 +48,9 @@ function Shell() {
   const playerPanel = usePresence(panel === "player");
   const queuePanel = usePresence(queue, panel === "player" || !matchMedia("(min-width: 1000px)").matches);
   useShortcuts(queue);
+  const playing = usePlayer((state) => state.isPlaying);
+  const shortcutsOn = useBackground((state) => state.shortcuts);
+  useEncounter("shortcuts", playing && shortcutsOn); // el aviso de atajos sale cuando suena la primera canción (solo con puntero)
   const userId = auth.session?.user.id ?? null;
   useEffect(() => setSyncUser(userId), [userId]);
 
@@ -96,6 +102,7 @@ function Shell() {
         <main className="main" inert={panel === "player"}>
           {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : path === "/app/ajustes" ? <SettingsView /> : path === "/app/ayuda" ? <HelpView /> : <LibraryView path={path} />}
         </main>
+        <TutorialHint enabled={panel !== "player"} slot="dock" />
         {queuePanel.mounted && <QueuePanel closing={queuePanel.closing} />}
         <PlayerBar queueOpen={queue} />
         {playerPanel.mounted && <NowPlaying backdrop={<Backdrop />} closing={playerPanel.closing} queueOpen={queue} />}

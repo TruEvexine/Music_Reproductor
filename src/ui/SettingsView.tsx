@@ -3,6 +3,7 @@ import { library } from "../state/library";
 import { useBackground, background } from "../state/background";
 import { ConfirmDialog } from "./dialogs";
 import { BackupSection, FoldersSection } from "./LibrarySheet";
+import { tutorials } from "../state/tutorials";
 import { openShortcutHelp } from "./ShortcutsHelp";
 import { useReducedMotion } from "./motion";
 import { BackgroundPage, EqPage, SoundControls, SwitchRow } from "./PlayerMenu";
@@ -15,6 +16,7 @@ export function SettingsView() {
   const shortcuts = useBackground((state) => state.shortcuts);
   const reduced = useReducedMotion();
   const [wiping, setWiping] = useState(false);
+  const [rewatched, setRewatched] = useState(false);
   return (
     <section className="view settings">
       <header className="view-header">
@@ -57,6 +59,14 @@ export function SettingsView() {
             <button className="link" onClick={openShortcutHelp} type="button">
               Ver la lista de atajos
             </button>
+          </section>
+          <section className="menu-group">
+            <button className="button" onClick={() => (tutorials.reset(), setRewatched(true))} type="button">
+              Ver tutoriales otra vez
+            </button>
+            <p className="hint" role="status">
+              {rewatched ? "Listo: cada aviso volverá a salir la próxima vez que encuentres esa función." : "Los avisos de primera vez, como el de deslizar una canción, vuelven a aparecer."}
+            </p>
           </section>
         </div>
       </section>

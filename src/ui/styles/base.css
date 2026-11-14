@@ -392,7 +392,7 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
    volver a abrir mientras cierra) sin salto, porque el navegador parte del valor que lleva en ese instante. Cada panel declara su pose de entrada
    (--t0 transform, --o0 opacidad) y de salida (--t1, --o1); la entrada dura --in (--base salvo que el panel diga otra cosa) y la salida siempre --exit.
    El componente marca [data-closing] (ui/motion.ts) y desmonta al terminar. Sin @starting-style el panel aparece sin entrada y la salida sigue funcionando. */
-:is(.dialog, .menu, .now-playing, .queue-panel, .toast) {
+:is(.dialog, .menu, .now-playing, .queue-panel, .toast, .tip) {
   --in: var(--base);
   transition:
     transform var(--in) var(--ease),
@@ -400,13 +400,13 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 }
 
 @starting-style {
-  :is(.dialog, .menu, .now-playing, .queue-panel, .toast) {
+  :is(.dialog, .menu, .now-playing, .queue-panel, .toast, .tip) {
     transform: var(--t0, none);
     opacity: var(--o0, 1);
   }
 }
 
-:is(.dialog, .menu, .now-playing, .queue-panel, .toast)[data-closing] {
+:is(.dialog, .menu, .now-playing, .queue-panel, .toast, .tip)[data-closing] {
   --in: var(--exit);
   transform: var(--t1, none);
   opacity: var(--o1, 1);

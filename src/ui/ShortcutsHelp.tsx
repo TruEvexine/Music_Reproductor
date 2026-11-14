@@ -2,12 +2,16 @@ import { Fragment } from "react";
 import { create } from "zustand";
 import { SHORTCUTS } from "../core/shortcuts";
 import { background, useBackground } from "../state/background";
+import { tutorials } from "../state/tutorials";
 import { SwitchRow } from "./PlayerMenu";
 import { Dialog } from "./parts";
 
 // Hoja de ayuda con la lista de atajos. Se abre con «?» o desde Ajustes → Accesibilidad.
 const useHelp = create<{ open: boolean }>(() => ({ open: false }));
-export const openShortcutHelp = () => useHelp.setState({ open: true });
+export const openShortcutHelp = () => {
+  tutorials.done("shortcuts"); // ya encontró la lista
+  useHelp.setState({ open: true });
+};
 
 /** La lista de atajos, leída de `SHORTCUTS` (el mismo mapa que usa el teclado). La comparten esta hoja y Ayuda. */
 export function ShortcutsList() {

@@ -1,7 +1,9 @@
 import { useLayoutEffect, useRef } from "react";
 import type { PointerEvent, ReactNode, RefObject } from "react";
 import { DISMISS_PX, LONG_PRESS_MS } from "../core/gestures";
+import { tutorials } from "../state/tutorials";
 import { buzz } from "./toast";
+import { useEncounter } from "./Tutorial";
 
 // Gestos con Pointer Events. Todos tienen alternativa sin gesto: botón de cerrar/Escape para arrastrar hacia abajo,
 // y menú contextual (clic derecho, tecla de menú) → hoja de acciones para deslizar y pulsar largo.
@@ -100,6 +102,7 @@ export function SwipeRow({
   onMenu: () => void;
   children: ReactNode;
 }) {
+  useEncounter("swipe");
   const row = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ x: number; y: number; mode: "idle" | "swipe" | "press"; dx: number; armed: boolean; timer: number } | null>(null);
 
@@ -114,7 +117,10 @@ export function SwipeRow({
     if (!g) return;
     window.clearTimeout(g.timer);
     if (g.mode === "swipe" && run && g.armed) (g.dx > 0 ? right : left)?.run();
-    if (g.mode !== "idle") swallowNextClick();
+    if (g.mode !== "idle") {
+      swallowNextClick();
+      tutorials.done("swipe"); // ya sabe deslizar o pulsar largo
+    }
     reset();
   };
 
@@ -239,6 +245,7 @@ export function useCoverSwipe(
     const commit = () => {
       if (done) return;
       done = true;
+      tutorials.done("player-touch"); // ya sabe deslizar la portada
       run();
     };
     track.current?.addEventListener("transitionend", commit, { once: true });
