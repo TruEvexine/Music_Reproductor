@@ -28,9 +28,9 @@ describe("comprobación de build", () => {
     expect(unfilledMarkers({ "assets/a.js": 'x="Ana, Calle 1"' })).toEqual([]);
   });
 
-  it("los documentos solo usan los tres marcadores que el build sabe completar", () => {
+  it("los documentos solo usan los marcadores que el build sabe completar", () => {
     const used = findMarkers(read("FAQ.md") + parseLegalAll());
-    expect(used.sort()).toEqual(["{{CORREO_PRIVACIDAD}}", "{{DOMICILIO}}", "{{RESPONSABLE}}"]);
+    expect(used.sort()).toEqual(["{{CORREO_PRIVACIDAD}}", "{{DOMICILIO}}", "{{FECHA_ACTUALIZACION}}", "{{NOMBRE_APP}}", "{{RESPONSABLE}}", "{{URL_APP}}"]);
   });
 });
 
@@ -72,5 +72,11 @@ describe("LEGAL_BORRADORES.md", () => {
     expect(stripNotes("Texto uno.\n\nPlazo de [30] días. **[Decides tú]** el plazo;\nmás nota. **[Abogado]** otra.\n\nTexto dos.")).toBe(
       "Texto uno.\n\nPlazo de [30] días.\n\nTexto dos.",
     );
+  });
+});
+
+describe("textos legales publicados", () => {
+  it("no llevan datos pendientes entre corchetes que el build no detectaría: nombre, fecha y URL son marcadores", () => {
+    expect(Object.values(parseLegal(read("LEGAL_BORRADORES.md"))).join("\n")).not.toMatch(/\[(Nombre de la app|fecha|URL|ciudad)\]/);
   });
 });

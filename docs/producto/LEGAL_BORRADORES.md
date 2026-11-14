@@ -4,7 +4,7 @@
 > código de la rama `desarrollo` (12 de noviembre de 2026) y del texto vigente de la ley. Todo lo marcado **[Decides tú]** necesita
 > una decisión tuya antes de la revisión; lo marcado **[Abogado]** es una duda jurídica que no puedo resolver con el texto de la ley.
 
-> **Hecho 2026-11-13:** la app **renderiza** estos borradores en `/privacidad` (§3.1), `/terminos` (§4) y `/almacenamiento` (§5) (`src/ui/LegalPage.tsx`; sin las notas internas «[Decides tú]» y «[Abogado]»). **No están enlazadas** desde ninguna navegación pública, llevan la marca «Borrador pendiente de revisión legal» y piden no indexarse (`<meta robots>` y `X-Robots-Tag` en `vercel.json`). Los `{{MARCADORES}}` se sustituyen al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO` y `LEGAL_CORREO_PRIVACIDAD` (entorno o `.env`, nunca en el repositorio) y **`npm run build` falla si queda alguno** en el resultado. Quedan sin comprobar los textos entre corchetes (`[Nombre de la app]`, `[fecha]`, `[URL]`, `[30]`, `[15]`).
+> **Hecho 2026-11-13:** la app **renderiza** estos borradores en `/privacidad` (§3.1), `/terminos` (§4) y `/almacenamiento` (§5) (`src/ui/LegalPage.tsx`; sin las notas internas «[Decides tú]» y «[Abogado]»). **No están enlazadas** desde ninguna navegación pública, llevan la marca «Borrador pendiente de revisión legal» y piden no indexarse (`<meta robots>` y `X-Robots-Tag` en `vercel.json`). Los `{{MARCADORES}}` se sustituyen al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO`, `LEGAL_CORREO_PRIVACIDAD`, `LEGAL_NOMBRE_APP`, `LEGAL_FECHA_ACTUALIZACION` y `LEGAL_URL_APP` (entorno o `.env`, nunca en el repositorio) y **`npm run build` falla si queda alguno** en el resultado. Quedan sin comprobar los plazos entre corchetes (`[30]`, `[15]`), que dependen de decisiones pendientes. El nombre, la fecha y la URL ya son marcadores (`{{NOMBRE_APP}}`, `{{FECHA_ACTUALIZACION}}`, `{{URL_APP}}`): no se sustituyen por «Satin» hasta que el nombre esté registrado.
 
 Los textos para publicar están en las secciones 3, 4 y 5. Las secciones 1 y 2 son la base que el abogado necesita para revisarlos.
 
@@ -94,11 +94,11 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 
 ### 3.1 Aviso de privacidad integral
 
-> **Aviso de privacidad de [Nombre de la app]**
-> Última actualización: [fecha]
+> **Aviso de privacidad de {{NOMBRE_APP}}**
+> Última actualización: {{FECHA_ACTUALIZACION}}
 >
 > **Quién es responsable.** {{RESPONSABLE}}, con domicilio en {{DOMICILIO}}, es responsable de los datos personales
-> que se tratan en [Nombre de la app] ("la app"). Contacto para cualquier asunto de privacidad: {{CORREO_PRIVACIDAD}}.
+> que se tratan en {{NOMBRE_APP}} ("la app"). Contacto para cualquier asunto de privacidad: {{CORREO_PRIVACIDAD}}.
 >
 > **Lo que no recabamos.** Tu música no sale de tu dispositivo: la app lee los archivos en tu navegador y no los sube a ningún
 > servidor. Tampoco usamos cookies, analítica, publicidad ni herramientas de rastreo.
@@ -139,23 +139,23 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 >
 > **Si no estás conforme** con nuestra respuesta, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno.
 >
-> **Cambios a este aviso.** Publicaremos cualquier cambio en [URL]/privacidad con su fecha. Si el cambio afecta a lo que hacemos con
+> **Cambios a este aviso.** Publicaremos cualquier cambio en {{URL_APP}}/privacidad con su fecha. Si el cambio afecta a lo que hacemos con
 > tus datos, te avisaremos por correo antes de aplicarlo.
 
 ### 3.2 Aviso simplificado (bajo el botón de registro)
 
 > {{RESPONSABLE}} usa tu correo, tu nombre visible y tus playlists sincronizadas solo para darte tu cuenta y sincronizar
 > entre dispositivos. Tu música no se sube. Puedes limitar el uso o borrar tus datos escribiendo a {{CORREO_PRIVACIDAD}}. Aviso completo:
-> [URL]/privacidad.
+> {{URL_APP}}/privacidad.
 
 ---
 
 ## 4. Términos y condiciones (borrador)
 
-> **Términos de uso de [Nombre de la app]**
-> Última actualización: [fecha]
+> **Términos de uso de {{NOMBRE_APP}}**
+> Última actualización: {{FECHA_ACTUALIZACION}}
 >
-> **1. Qué es.** [Nombre de la app] es un reproductor de música que funciona en tu navegador con archivos que ya tienes. La app no
+> **1. Qué es.** {{NOMBRE_APP}} es un reproductor de música que funciona en tu navegador con archivos que ya tienes. La app no
 > vende, presta ni distribuye música. La cuenta es opcional y solo sirve para sincronizar playlists.
 >
 > **2. Tu música es tu responsabilidad.** Solo debes reproducir archivos que tengas derecho a usar. La app no sube tus archivos ni
@@ -185,7 +185,7 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > prioritario ni reembolsos, salvo error en el cobro. **[Decides tú]** política de reembolso; **[Abogado]** tratamiento fiscal y de
 > consumo de las aportaciones (ver `MONETIZACION.md`).
 >
-> **8. Cambios.** Publicaremos los cambios con su fecha en [URL]/terminos. Si son relevantes, avisaremos por correo a quien tenga
+> **8. Cambios.** Publicaremos los cambios con su fecha en {{URL_APP}}/terminos. Si son relevantes, avisaremos por correo a quien tenga
 > cuenta con al menos [15] días de anticipación.
 >
 > **9. Ley y jurisdicción.** Estos términos se rigen por las leyes de México. **[Decides tú]** tribunales competentes (por ejemplo,
@@ -205,7 +205,7 @@ Basta con esta página, enlazada desde el pie de la landing y desde Ajustes:
 
 > **Cookies y almacenamiento local**
 >
-> [Nombre de la app] no usa cookies ni herramientas de rastreo.
+> {{NOMBRE_APP}} no usa cookies ni herramientas de rastreo.
 >
 > Para funcionar sin conexión y sin cuenta, guarda en el almacenamiento de tu navegador:
 >

@@ -1,7 +1,7 @@
 // Prueba de las páginas legales en Chromium. Uso: node scripts/prueba-legal.mjs <url-base> [esperado] [carpeta-capturas]
 //   esperado = "marcadores": servidor de desarrollo sin LEGAL_*: los {{MARCADORES}} se ven tal cual (el build de producción los rechaza).
 //   esperado = "completo": build servido con `vite preview` y LEGAL_RESPONSABLE="Persona de Prueba", LEGAL_DOMICILIO="Calle Falsa 123, Ciudad de Prueba",
-//              LEGAL_CORREO_PRIVACIDAD="prueba@example.com": se ven los valores y no queda ningún marcador.
+//              LEGAL_CORREO_PRIVACIDAD="prueba@example.com", LEGAL_NOMBRE_APP="App de Prueba", LEGAL_FECHA_ACTUALIZACION="1 de enero de 2030", LEGAL_URL_APP="https://prueba.example": se ven los valores y no queda ningún marcador.
 // En ambos casos: las tres páginas rinden sin las notas internas, no están enlazadas desde la navegación pública, piden no indexarse y caben en móvil.
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
@@ -45,9 +45,9 @@ for (const [label, viewport] of [["escritorio", { width: 1440, height: 900 }], [
     if (shots && label === "escritorio" && path === "/privacidad") await page.screenshot({ path: join(shots, "legal-privacidad-1440x900.png") });
     if (path === "/privacidad" && label === "escritorio") {
       if (expected === "completo") {
-        check("completo: se ven los valores y ningún marcador", text.includes("Persona de Prueba") && text.includes("Calle Falsa 123") && text.includes("prueba@example.com") && !/\{\{[A-Z_]+\}\}/.test(text));
+        check("completo: se ven los valores y ningún marcador", text.includes("Persona de Prueba") && text.includes("Calle Falsa 123") && text.includes("prueba@example.com") && text.includes("App de Prueba") && text.includes("https://prueba.example") && !/\{\{[A-Z_]+\}\}/.test(text));
       } else {
-        check("desarrollo: los marcadores se ven tal cual (nada inventado)", text.includes("{{RESPONSABLE}}") && text.includes("{{DOMICILIO}}") && text.includes("{{CORREO_PRIVACIDAD}}"));
+        check("desarrollo: los marcadores se ven tal cual (nada inventado)", text.includes("{{RESPONSABLE}}") && text.includes("{{DOMICILIO}}") && text.includes("{{CORREO_PRIVACIDAD}}") && text.includes("{{NOMBRE_APP}}") && text.includes("{{FECHA_ACTUALIZACION}}") && text.includes("{{URL_APP}}"));
       }
     }
   }

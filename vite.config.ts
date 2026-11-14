@@ -28,7 +28,7 @@ function buildGuard(mode: string): Plugin {
       const left = unfilledMarkers(files);
       if (left.length > 0) {
         this.error(
-          `El build contiene marcadores sin sustituir:\n- ${left.join("\n- ")}\nDefine LEGAL_RESPONSABLE, LEGAL_DOMICILIO y LEGAL_CORREO_PRIVACIDAD (variables de entorno del build; nunca en el repositorio) antes de compilar para publicar.`,
+          `El build contiene marcadores sin sustituir:\n- ${left.join("\n- ")}\nDefine LEGAL_RESPONSABLE, LEGAL_DOMICILIO, LEGAL_CORREO_PRIVACIDAD, LEGAL_NOMBRE_APP, LEGAL_FECHA_ACTUALIZACION y LEGAL_URL_APP (variables de entorno del build; nunca en el repositorio) antes de compilar para publicar.`,
         );
       }
     },
@@ -42,8 +42,8 @@ function buildGuard(mode: string): Plugin {
 }
 
 // `virtual:docs`: la FAQ y los borradores legales salen de docs/producto, así que la app y el documento no se desfasan. Los datos personales
-// ({{RESPONSABLE}}, {{DOMICILIO}}, {{CORREO_PRIVACIDAD}}) nunca están en el repositorio: se completan al compilar con LEGAL_RESPONSABLE,
-// LEGAL_DOMICILIO y LEGAL_CORREO_PRIVACIDAD (entorno o .env, ignorado por git).
+// ({{RESPONSABLE}}, {{DOMICILIO}}, {{CORREO_PRIVACIDAD}}) y los que dependen del nombre aún sin registrar ({{NOMBRE_APP}}, {{FECHA_ACTUALIZACION}}, {{URL_APP}}) se completan al compilar con LEGAL_RESPONSABLE,
+// LEGAL_DOMICILIO, LEGAL_CORREO_PRIVACIDAD, LEGAL_NOMBRE_APP, LEGAL_FECHA_ACTUALIZACION y LEGAL_URL_APP (entorno o .env, ignorado por git).
 function docsContent(mode: string): Plugin {
   const resolved = "\0virtual:docs";
   const files = ["FAQ.md", "LEGAL_BORRADORES.md"].map((name) => normalizePath(fileURLToPath(new URL(`./docs/producto/${name}`, import.meta.url))));
