@@ -18,14 +18,14 @@ y, con una consulta de solo lectura al esquema `auth` del proyecto de Supabase, 
 
 | Dónde | Qué guarda | Cuándo | Cómo se borra hoy |
 |---|---|---|---|
-| IndexedDB `reproductor`, almacén `kv` | `audio` (ecualizador, volumen, velocidad, fundidos, ReplayGain), `background` (fondo, HDR, reducir movimiento), `session` (cola de reproducción y posición), `position` (pista y segundo actuales) | Al cambiar un ajuste o al reproducir | Ajustes → Datos locales → Borrar datos locales |
-| IndexedDB, almacén `tracks` | Por pista: título, artista, álbum, artista del álbum, año, género, número de pista, duración, formato y calidad, ReplayGain, letras, nombre de archivo, ruta relativa dentro de la carpeta elegida, tamaño, fecha de modificación, huella `track:v2` (SHA-256 de partes del archivo), fecha en que se añadió y **fecha de la última reproducción** (`playedAt`, un solo valor por pista, no un historial) | Al añadir música o reproducir | Quitar la carpeta, o borrar datos locales |
+| IndexedDB `reproductor`, almacén `kv` | `audio` (ecualizador, volumen, velocidad, fundidos, ReplayGain), `background` (fondo, HDR, reducir movimiento), `session` (cola de reproducción y posición), `position` (pista y segundo actuales) | Al cambiar un ajuste o al reproducir | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
+| IndexedDB, almacén `tracks` | Por pista: título, artista, álbum, artista del álbum, año, género, número de pista, duración, formato y calidad, ReplayGain, letras, nombre de archivo, ruta relativa dentro de la carpeta elegida, tamaño, fecha de modificación, huella `track:v2` (SHA-256 de partes del archivo), fecha en que se añadió y **fecha de la última reproducción** (`playedAt`, un solo valor por pista, no un historial) | Al añadir música o reproducir | Quitar la carpeta, o borrar los datos del dispositivo |
 | IndexedDB, almacén `roots` | Nombre de cada carpeta elegida y su permiso de acceso (`FileSystemDirectoryHandle`) | Al elegir una carpeta | Ídem |
 | IndexedDB, almacén `covers` | Portadas extraídas de los archivos y sus miniaturas (96 y 600 px) | Al leer metadatos | Ídem |
-| IndexedDB, almacén `playlists` | Nombre de cada playlist, identidades de sus pistas, dueño (id de usuario o ninguno) | Al crear o editar playlists | Borrar datos locales (si hay sesión, las de la cuenta vuelven a bajar) |
-| IndexedDB, almacén `outbox` | Cambios de playlists pendientes de subir, con el id de usuario | Si hay sesión y el cambio aún no llega a Supabase | Se vacía al sincronizar o al borrar datos locales |
+| IndexedDB, almacén `playlists` | Nombre de cada playlist, identidades de sus pistas, dueño (id de usuario o ninguno) | Al crear o editar playlists | Borrar datos de este dispositivo (si la sesión sigue abierta, las de la cuenta vuelven a bajar) |
+| IndexedDB, almacén `outbox` | Cambios de playlists pendientes de subir, con el id de usuario | Si hay sesión y el cambio aún no llega a Supabase | Se vacía al sincronizar o al borrar los datos del dispositivo |
 | OPFS (almacenamiento privado del navegador), carpeta `biblioteca/` | **Copia de los archivos de audio**, solo cuando el navegador no permite recordar la carpeta original (Firefox, Safari) | Al añadir música en esos navegadores | Quitar la carpeta, o borrar datos locales |
-| `localStorage`, clave `sb-<proyecto>-auth-token` | Sesión de Supabase: token de acceso, token de renovación y datos de la cuenta, incluido el correo | Al iniciar sesión (comportamiento por defecto de `supabase-js` con `persistSession: true`; el código no define otro almacenamiento) | Cerrar sesión. **Borrar datos locales no la quita** (ver `AJUSTES_PRIVACIDAD.md`) |
+| `localStorage`, clave `sb-<proyecto>-auth-token` | Sesión de Supabase: token de acceso, token de renovación y datos de la cuenta, incluido el correo | Al iniciar sesión (comportamiento por defecto de `supabase-js` con `persistSession: true`; el código no define otro almacenamiento) | Cerrar sesión, o la casilla «Cerrar también la sesión» de Borrar datos de este dispositivo (`docs/producto/AJUSTES_PRIVACIDAD.md`) |
 | Memoria | Archivos añadidos sueltos cuando no se pueden guardar | Durante la sesión | Al recargar |
 | Sistema operativo (Media Session) | Título, artista, álbum y portada de la pista actual, para la pantalla de bloqueo y los controles del sistema | Al reproducir | Lo gestiona el sistema operativo; no pasa por ningún servidor |
 
@@ -101,7 +101,7 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > servidor. Tampoco usamos cookies, analítica, publicidad ni herramientas de rastreo.
 >
 > **Si usas la app sin cuenta,** no tratamos ningún dato personal tuyo. Tu biblioteca, playlists, cola y ajustes se guardan solo en
-> el almacenamiento de tu navegador y puedes borrarlos desde Ajustes → Datos locales.
+> el almacenamiento de tu navegador y puedes borrarlos desde Ajustes → Privacidad y datos.
 >
 > **Si creas una cuenta,** tratamos:
 > - Correo electrónico y contraseña (la contraseña se guarda cifrada; nadie puede leerla).
@@ -172,7 +172,7 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 >
 > **5. Disponibilidad.** La app se ofrece tal como está, sin garantía de que funcione en todos los navegadores o dispositivos ni de
 > que esté siempre disponible. Lo que guardas en tu navegador depende de él: si borras sus datos o el navegador libera espacio,
-> puede perderse. Usa la copia de seguridad (Ajustes → Datos locales) para conservar tus playlists y ajustes.
+> puede perderse. Usa la copia de seguridad (Ajustes → Privacidad y datos) para conservar tus playlists y ajustes.
 >
 > **6. Límite de responsabilidad.** En la medida en que la ley lo permita, no respondemos por pérdida de datos guardados en tu
 > dispositivo ni por fallos del navegador o del sistema operativo. **[Abogado]** alcance frente a la Ley Federal de Protección al
@@ -210,7 +210,7 @@ Basta con esta página, enlazada desde el pie de la landing y desde Ajustes:
 > |---|---|---|
 > | Tu biblioteca: datos de cada canción (título, artista, portada, ruta dentro de la carpeta que elegiste) y el permiso para leer esa carpeta | Que no tengas que volver a añadir tu música cada vez | Ajustes → Biblioteca → quitar la carpeta |
 > | Copias de tus archivos, solo en navegadores que no permiten recordar carpetas (Firefox, Safari) | Que tu música siga disponible al volver | Ídem |
-> | Playlists, cola, posición de reproducción y ajustes de sonido y fondo | Que la app esté como la dejaste | Ajustes → Datos locales → Borrar datos locales |
+> | Playlists, cola, posición de reproducción y ajustes de sonido y fondo | Que la app esté como la dejaste | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > | Tu sesión, si iniciaste sesión | No pedirte la contraseña cada vez | Cerrar sesión |
 >
 > Nada de esto se envía a nosotros, salvo tus playlists si tienes cuenta (ver el aviso de privacidad).

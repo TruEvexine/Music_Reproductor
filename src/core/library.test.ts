@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { audioTypeOf, diffScan, matchesAll, groupTracks, isFolderCover, recentTracks, searchTextOf, sortGroups, sortTracks, stemOf } from "./library";
+import { audioTypeOf, diffScan, matchesAll, groupTracks, isFolderCover, playedIds, recentTracks, searchTextOf, sortGroups, sortTracks, stemOf } from "./library";
 import { computeTrackV2, folderOf, UNKNOWN_ARTIST, V2_SAMPLE_BYTES, v2Ranges } from "./track";
 import type { Track } from "./track";
 
@@ -119,6 +119,13 @@ describe("vistas", () => {
   it("recientes: lo último que sonó o entró", () => {
     expect(recentTracks(tracks).map((item) => item.id)).toEqual(["3", "1", "2"]);
     expect(recentTracks(tracks, 1)).toHaveLength(1);
+  });
+
+  it("borrar el historial: Recientes se queda con lo añadido, del más nuevo al más viejo", () => {
+    expect(playedIds(tracks)).toEqual(["3"]);
+    const cleared = tracks.map((item) => (playedIds(tracks).includes(item.id) ? { ...item, playedAt: undefined } : item));
+    expect(playedIds(cleared)).toEqual([]);
+    expect(recentTracks(cleared).map((item) => item.id)).toEqual(["1", "2", "3"]); // la 3 ya no sube por haber sonado: queda por añadida (addedAt 1)
   });
 
   it("búsqueda sin acentos sobre el texto precalculado", () => {

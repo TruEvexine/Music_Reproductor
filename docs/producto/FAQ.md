@@ -39,11 +39,19 @@ No usa cookies, analítica, publicidad ni rastreo de ningún tipo.
 Comprobado en: `vercel.json` (CSP), búsqueda en `src/` de `document.cookie`, `gtag`, `analytics`, `sendBeacon` sin resultados.
 
 ### ¿Dónde se guardan mis datos y cómo los borro?
-En el almacenamiento de tu navegador. Para borrarlos: **Ajustes → Datos locales → Borrar datos locales**. Se borran tu biblioteca, las
-copias de música, tus playlists y tus ajustes; tus archivos originales no se tocan. Si tienes sesión iniciada, también conviene **cerrar
-sesión**: el borrado no la cierra, y tus playlists de la cuenta volverán a aparecer.
+En el almacenamiento de tu navegador. **Ajustes → Privacidad y datos** te enseña qué guarda la app en este dispositivo, con cifras reales.
+Para borrarlos: **Borrar datos de este dispositivo**. Se borran tu biblioteca, las copias de música, tus playlists y tus ajustes; tus
+archivos originales no se tocan. Si tienes sesión iniciada, el diálogo trae la casilla **Cerrar también la sesión**, marcada por defecto: si la
+desmarcas, la sesión sigue abierta y las playlists de tu cuenta vuelven a bajar. Aparte, **Borrar el historial de Recientes** olvida solo
+cuándo sonó cada canción.
 
-Comprobado en: `src/ui/SettingsView.tsx`, `src/state/library.ts` (`wipeAll`), `src/platform/web/db.ts` (`clearDatabase`).
+Comprobado en: `src/ui/PrivacySection.tsx`, `src/sync/account.ts` (`signOutForWipe`), `src/state/library.ts` (`wipeAll`, `clearPlayed`), `src/platform/web/db.ts` (`clearDatabase`).
+
+### ¿Puedo descargar lo que hay en mi cuenta?
+Sí, con la sesión iniciada: **Ajustes → Privacidad y datos → Datos de tu cuenta**. Descargas un archivo JSON con tu perfil (nombre visible y
+fecha de alta) y todas tus playlists tal como están guardadas; ese archivo también se puede importar como copia de seguridad.
+
+Comprobado en: `src/ui/PrivacySection.tsx` (`AccountExport`), `src/sync/account.ts` (`fetchAccountData`), `src/core/backup.ts` (`buildAccountExport`, con test de importación).
 
 ### ¿Cómo elimino mi cuenta?
 Todavía no se puede desde la app. Escribe a {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta y la eliminamos junto con tus playlists.
@@ -162,7 +170,7 @@ se queda quieto) o elegir el fondo **AMOLED** (negro puro).
 Comprobado en: `src/ui/Backdrop.tsx` (`visibilitychange`), `src/ui/SettingsView.tsx`, `src/core/background.ts`.
 
 ### ¿Cómo paso mis playlists a otro dispositivo sin cuenta?
-Con la copia de seguridad: **Ajustes → Datos locales → Exportar** y luego **Importar** en el otro dispositivo. Incluye playlists y
+Con la copia de seguridad: **Ajustes → Privacidad y datos → Copia de seguridad → Exportar** y luego **Importar** en el otro dispositivo. Incluye playlists y
 ajustes de sonido y fondo. Las canciones se reconocen por sus datos (título, artista, álbum y duración) o por su huella, así que el
 otro dispositivo necesita tener los mismos archivos.
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Download, FolderSync, RefreshCw, Trash2, Upload } from "lucide-react";
 import type { AudioSettings } from "../core/audio";
 import type { BackgroundSettings } from "../core/background";
+import { formatBytes } from "../core/format";
 import { buildBackup, MAX_BACKUP_BYTES, parseBackup } from "../core/backup";
 import { library, useLibrary } from "../state/library";
 import type { RootView } from "../state/library";
@@ -9,6 +10,7 @@ import { background, useBackground } from "../state/background";
 import { player, usePlayer } from "../state/player";
 import { playlists, usePlaylists, visiblePlaylists } from "../state/playlists";
 import { ConfirmDialog } from "./dialogs";
+import { downloadJson } from "./download";
 import { Dialog, IconButton, iconSmall } from "./parts";
 
 const kindText: Record<RootView["kind"], string> = {
@@ -16,16 +18,6 @@ const kindText: Record<RootView["kind"], string> = {
   copy: "Copia guardada en este navegador",
   session: "Solo hasta recargar la página",
 };
-
-function bytes(value: number) {
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit += 1;
-  }
-  return `${value.toLocaleString("es", { maximumFractionDigits: unit > 1 ? 1 : 0 })} ${units[unit]}`;
-}
 
 function accessText(root: RootView) {
   if (root.access === "prompt" || root.access === "denied") return "Necesita tu permiso";
@@ -80,7 +72,7 @@ export function FoldersSection() {
         )}
         {space && (
           <p className="subtitle">
-            Este navegador usa {bytes(space.usage)} de {bytes(space.quota)} disponibles.
+            Este navegador usa {formatBytes(space.usage)} de {formatBytes(space.quota)} disponibles.
           </p>
         )}
       </section>
@@ -101,7 +93,7 @@ export function FoldersSection() {
   );
 }
 
-/** Copia de seguridad (exportar e importar JSON). La comparten la hoja de la biblioteca y Ajustes → Datos locales. */
+/** Copia de seguridad (exportar e importar JSON). La comparten la hoja de la biblioteca y Ajustes → Privacidad y datos. */
 export function BackupSection() {
   const [status, setStatus] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
@@ -111,12 +103,7 @@ export function BackupSection() {
       audio: usePlayer.getState().audio,
       background: useBackground.getState(),
     });
-    const url = URL.createObjectURL(new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `reproductor-copia-${backup.exportedAt.slice(0, 10)}.json`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    downloadJson(`reproductor-copia-${backup.exportedAt.slice(0, 10)}.json`, backup);
     setStatus("Copia descargada.");
   }
 

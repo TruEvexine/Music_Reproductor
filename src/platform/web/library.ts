@@ -224,6 +224,19 @@ export const localLibrary: LocalLibrary = {
     }
   },
 
+  async copiesSize() {
+    const sum = async (dir: FileSystemDirectoryHandle): Promise<number> => {
+      let total = 0;
+      for await (const entry of dir.values()) total += entry.kind === "file" ? (await (entry as FileSystemFileHandle).getFile()).size : await sum(entry as FileSystemDirectoryHandle);
+      return total;
+    };
+    try {
+      return await sum(await (await navigator.storage.getDirectory()).getDirectoryHandle("biblioteca"));
+    } catch {
+      return 0; // sin OPFS o sin carpeta «biblioteca»: no hay copias
+    }
+  },
+
   async space() {
     try {
       const { usage = 0, quota = 0 } = await navigator.storage.estimate();

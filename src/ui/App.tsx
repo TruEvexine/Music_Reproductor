@@ -100,7 +100,7 @@ function Shell() {
           </button>
         </nav>
         <main className="main" inert={panel === "player"}>
-          {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : path === "/app/ajustes" ? <SettingsView /> : path === "/app/ayuda" ? <HelpView /> : <LibraryView path={path} />}
+          {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : path === "/app/ajustes" ? <SettingsView auth={auth} /> : path === "/app/ayuda" ? <HelpView /> : <LibraryView path={path} />}
         </main>
         <TutorialHint enabled={panel !== "player"} slot="dock" />
         {queuePanel.mounted && <QueuePanel closing={queuePanel.closing} />}

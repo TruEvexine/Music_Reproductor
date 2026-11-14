@@ -781,3 +781,52 @@ ol.track-list .row-album {
 .settings .help-list .hint {
   padding: 0;
 }
+
+/* Privacidad y datos: «Qué se guarda» (etiqueta a la izquierda, cifra a la derecha, como la hoja de atajos) y la casilla de borrar. */
+.stored {
+  display: grid;
+  gap: var(--s1);
+  margin: 0;
+}
+
+.stored > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  min-height: 36px;
+}
+
+.stored dt {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.stored dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-s);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--tap);
+  font-weight: 550;
+}
+
+.check-row input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+/* En Ajustes las explicaciones se parten en varias líneas en vez de cortarse con «…». */
+.settings .sheet-section .subtitle {
+  white-space: normal;
+  text-wrap: pretty;
+}

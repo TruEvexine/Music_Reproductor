@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { Check, Plus } from "lucide-react";
 import { matchesSearch } from "../core/format";
 import { trackV1Id } from "../core/track";
@@ -110,16 +110,20 @@ export function ConfirmDialog({
   confirmLabel,
   onConfirm,
   onClose,
+  children,
 }: {
   title: string;
   message: string;
   confirmLabel: string;
   onConfirm: () => void;
   onClose: () => void;
+  /** Opciones propias del diálogo (por ejemplo una casilla), entre el mensaje y los botones. */
+  children?: ReactNode;
 }) {
   return (
     <Dialog onClose={onClose} title={title}>
       <p>{message}</p>
+      {children}
       <div className="dialog-actions">
         <button autoFocus className="button" onClick={onClose} type="button">
           Cancelar

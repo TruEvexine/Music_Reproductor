@@ -1,6 +1,6 @@
 # Ajustes de privacidad: especificación
 
-Estado: **propuesta**, sin implementar. Parte del inventario de `LEGAL_BORRADORES.md` §1; si el inventario cambia, esta página cambia.
+Estado: **pasos 1 a 4 de §4 implementados el 2026-11-13** (sección «Privacidad y datos», `src/ui/PrivacySection.tsx`; prueba `scripts/prueba-privacidad.mjs`). **Pendiente y bloqueado: «Eliminar cuenta» (paso 5), la analítica (§2.4) y el historial de escucha (§2.5).** Parte del inventario de `LEGAL_BORRADORES.md` §1; si el inventario cambia, esta página cambia.
 Las decisiones tuyas están marcadas **[Decides tú]**.
 
 ## 1. Qué hay hoy
@@ -116,6 +116,8 @@ Lo especifica `PERFIL_Y_RECAPS.md`. En esta sección solo añade:
 | Botón | Eliminar mi cuenta |
 
 ## 4. Orden de implementación
+
+> **Hecho (2026-11-13):** 1 (casilla «Cerrar también la sesión», con `signOutForWipe`), 2 (`library.clearPlayed`, test en `core/library.test.ts`), 3 («Qué se guarda»; las cifras salen de `useLibrary`, `usePlaylists`, el almacén `covers`, `LocalLibrary.copiesSize` y `library.space`) y 4 («Datos de tu cuenta», `buildAccountExport` con test de importación). **No hecho: 5.** La captura del bloque no se añadió a la matriz de `scripts/capturas.mjs`.
 
 Del cambio más pequeño al más grande; cada uno es un commit con su prueba:
 

@@ -57,6 +57,8 @@ export interface LocalLibrary {
   copyIn(root: LibraryRoot, files: LibraryFile[], signal?: AbortSignal): Promise<"ok" | "space" | "unsupported">;
   forget(root: LibraryRoot): Promise<void>;
   space(): Promise<{ usage: number; quota: number } | undefined>;
+  /** Bytes de las copias privadas de música (OPFS); 0 si no hay o el navegador no las tiene. */
+  copiesSize(): Promise<number>;
   canPlay(fileName: string): boolean;
 }
 

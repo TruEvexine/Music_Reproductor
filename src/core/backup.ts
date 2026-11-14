@@ -29,6 +29,26 @@ export function buildBackup(
   };
 }
 
+/**
+ * «Datos de tu cuenta»: perfil y playlists tal como están en la nube. Las playlists van en el formato de la copia de seguridad, así que
+ * el archivo también se puede importar (`parseBackup`); `kind` y `profile` los ignora el importador.
+ */
+export function buildAccountExport(
+  profile: { displayName: string | null; createdAt: string | null },
+  playlists: { name: string; trackIdentifiers: string[] }[],
+  now = new Date(),
+) {
+  return {
+    app: BACKUP_APP,
+    kind: "account" as const,
+    version: BACKUP_VERSION,
+    exportedAt: now.toISOString(),
+    profile: { display_name: profile.displayName, created_at: profile.createdAt },
+    playlists: playlists.map((playlist) => ({ name: playlist.name, tracks: [...playlist.trackIdentifiers] })),
+    settings: {},
+  };
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const identity = /^track:v[12]:[^\s]{1,2000}$/;
 

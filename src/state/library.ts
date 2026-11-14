@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { newId } from "../core/id";
-import { diffScan, isAudioFile, isFolderCover, isLyricsFile, stemOf } from "../core/library";
+import { diffScan, isAudioFile, isFolderCover, isLyricsFile, playedIds, stemOf } from "../core/library";
 import { parseLrc } from "../core/lyrics";
 import { folderOf, titleFromFileName, UNKNOWN_ALBUM, UNKNOWN_ARTIST } from "../core/track";
 import type { Track } from "../core/track";
@@ -456,12 +456,20 @@ export const library = {
     await Promise.all([flush(), storage.write("roots", [], [rootId]), localLibrary.forget(root)]);
     publishRoots();
   },
-  /** Ajustes → Datos locales → Borrar: quita todas las carpetas (y las copias privadas) y vacía el almacenamiento local. La UI recarga después. */
+  /** Ajustes → Privacidad y datos → Borrar datos de este dispositivo: quita todas las carpetas (y las copias privadas) y vacía el almacenamiento local. La UI recarga después. */
   async wipeAll() {
     for (const root of [...roots.values()]) await library.removeRoot(root.id);
     await storage.clear();
   },
+  /** Ajustes → Privacidad y datos → Borrar el historial de Recientes: olvida cuándo sonó cada pista (las canciones siguen). */
+  clearPlayed() {
+    // También los «sonó ahora» que aún esperan su turno (250 ms): si no, resucitarían el historial.
+    const pending = [...patches].filter(([, change]) => change.playedAt !== undefined).map(([id]) => id);
+    for (const id of new Set([...playedIds(useLibrary.getState().tracks), ...pending])) patch(id, { playedAt: undefined });
+    applyPatches();
+  },
   space: () => localLibrary.space(),
+  copiesSize: () => localLibrary.copiesSize(),
   /** Permiso de la carpeta de una pista (para explicar por qué no suena). */
   accessFor(id: string): { access: FolderAccess; name: string } | undefined {
     const rootId = byId().get(id)?.rootId;

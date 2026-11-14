@@ -153,6 +153,9 @@ export function recentTracks(tracks: Track[], limit = RECENT_LIMIT): Track[] {
     .slice(0, limit);
 }
 
+/** Ids de las pistas con fecha de última reproducción: lo que «Borrar el historial de Recientes» olvida. Recientes queda con lo añadido. */
+export const playedIds = (tracks: Track[]): string[] => tracks.filter((track) => track.playedAt !== undefined).map((track) => track.id);
+
 /** Texto de búsqueda precalculado por pista (sin acentos ni mayúsculas): filtrar 5 000 pistas es un `includes`. */
 export function searchTextOf(track: Track): string {
   return searchKey([track.title, track.artist, track.album, track.albumArtist, track.genre, track.path].filter(Boolean).join("\u0001"));

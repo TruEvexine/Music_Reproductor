@@ -6,6 +6,23 @@ export function cssMs(value: string): number {
   return (parseFloat(text) * (text.endsWith("ms") ? 1 : 1000)) || 0;
 }
 
+/** Tamaño legible en español: «84 MB», «12,4 GB». */
+export function formatBytes(value: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value.toLocaleString("es", { maximumFractionDigits: unit > 1 ? 1 : 0 })} ${units[unit]}`;
+}
+
+/** Correo para mostrarlo sin enseñarlo entero: «r…@correo.com». */
+export function maskEmail(email: string): string {
+  const [name, domain] = email.split("@");
+  return domain ? `${[...name][0] ?? ""}…@${domain}` : email;
+}
+
 export function formatTime(seconds?: number): string {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return "--:--";
   const total = Math.floor(seconds);
