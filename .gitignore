@@ -54,3 +54,7 @@ tests/fixtures/landing/
 
 # Datos personales para completar marcadores al publicar (domicilio, correos): nunca se versionan
 docs/producto/privado/
+
+# Auditorías locales: no se versionan
+rendimiento_auditoria.md
+seguridad_auditoria.md
