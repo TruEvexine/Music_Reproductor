@@ -4,6 +4,7 @@ import { CircleHelp, CircleUser, Library, ListMusic, Settings } from "lucide-rea
 import { isNative } from "../platform";
 import { useBackground } from "../state/background";
 import { usePaletteOf } from "../state/covers";
+import { APP_NAME } from "../core/brand";
 import { trackCoverSeed } from "../core/coverArt";
 import { usePlayer } from "../state/player";
 import { useProfile } from "../state/profile";
@@ -81,7 +82,7 @@ function Shell() {
         {panel !== "player" && <Tint />}
         <Toaster /> {/* fijo en pantalla; va antes que las vistas para no ser el último role=status del DOM */}
         <nav aria-label="Secciones" className="nav">
-          <span className="brand">Reproductor</span>
+          <span className="brand">{APP_NAME}</span>
           <NavLink active={path !== "/app/playlists" && path !== "/app/ajustes" && path !== "/app/ayuda"} to="/app">
             <Library {...icon} />
             <span>Biblioteca</span>

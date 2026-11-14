@@ -1,5 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { faq } from "virtual:docs";
+import { APP_NAME } from "../core/brand";
 import { GESTURES } from "../core/gestures";
 import { Inline } from "./Markdown";
 import { icon } from "./parts";
@@ -61,7 +62,7 @@ export function HelpView() {
       <section aria-labelledby="help-about" className="settings-section">
         <h2 id="help-about">Nosotros</h2>
         <div className="help-about">
-          <p>Detrás de esta app hay una persona en México.</p>
+          <p>Detrás de {APP_NAME} hay una persona en México.</p>
           <p>La idea es sencilla: tu música es tuya. Se queda en tu dispositivo, no hay anuncios, cookies ni analítica, y la cuenta es opcional: solo sirve para sincronizar tus playlists.</p>
           <p>El código es público, bajo la licencia PolyForm Noncommercial 1.0.0, para que cualquiera pueda ver cómo funciona.</p>
         </div>

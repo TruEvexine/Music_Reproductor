@@ -5,6 +5,7 @@ import libraryPhone from "../assets/landing/biblioteca-movil.jpg";
 import equalizerPhone from "../assets/landing/ecualizador-movil.jpg";
 import playerDesktop from "../assets/landing/reproductor-escritorio.jpg";
 import playerPhone from "../assets/landing/reproductor-movil.jpg";
+import { APP_NAME } from "../core/brand";
 import { cssMs } from "../core/format";
 import { getSupabase, supabaseConfigured } from "../sync/supabaseClient";
 import { CafeButton } from "./CafeLink";
@@ -52,7 +53,6 @@ function openApp() {
 // Landing de transición: legible en móvil y escritorio, con capturas reales de la app (scripts/gen-landing.mjs) hechas con música
 // CC0 o de dominio público (scripts/descargar-musica-landing.mjs; créditos por archivo en CREDITOS.md y resumidos en el pie de esta página).
 // Cada frase del texto se puede comprobar en el código (docs/COPY_LANDING.md). La definitiva (prerenderizada, con SEO) es la Fase 7.
-// TODO(marca): "Reproductor" es un nombre provisional.
 export function Landing() {
   const open = (event: MouseEvent) => {
     event.preventDefault();
@@ -79,7 +79,7 @@ export function Landing() {
   return (
     <div className={ready ? "landing js" : "landing"} ref={root}>
       <header className="landing-bar">
-        <span className="brand">Reproductor</span>
+        <span className="brand">{APP_NAME}</span>
         <a className="button" href="/app" onClick={open}>
           Abrir
         </a>
@@ -91,7 +91,7 @@ export function Landing() {
               Tus FLAC y MP3, sin subirlos
             </h1>
             <p data-rise style={rise(1)}>
-              Elige una carpeta y el reproductor lee las etiquetas, las portadas y la calidad de cada archivo sin salir del navegador. Acepta
+              Elige una carpeta y {APP_NAME} lee las etiquetas, las portadas y la calidad de cada archivo sin salir del navegador. Acepta
               FLAC, WAV, MP3, M4A, OGG y Opus; no pide cuenta y no envía tu música a ningún servidor.
             </p>
             <a className="button primary" data-rise href="/app" onClick={open} style={rise(2)}>

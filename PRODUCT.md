@@ -47,8 +47,7 @@ de tus archivos, sin recompresión.
 - Gratis todo lo que corre en el dispositivo; apoyo voluntario; premium futuro solo para lo que cuesta servidor (`MONETIZACION.md`).
   Sin anuncios.
 - Técnicas: React 19 + Vite + TS; CSP cerrada (fuentes y recursos autoalojados, sin CDN); animar solo `transform`/`opacity`.
-- **Sin decidir:** dominio y redes (`docs/marca/MARCA_DEFINITIVA.md` §6). Los textos de la app dicen «Music Reproductor» hasta
-  registrar «Satin».
+- **Sin decidir:** dominio y redes (`docs/marca/MARCA_DEFINITIVA.md` §6). Los textos de la app ya dicen «Satin» (2026-11-14); el registro en el IMPI sigue pendiente.
 
 ## Brand Commitments
 

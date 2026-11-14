@@ -15,7 +15,7 @@ nombre y dominio antes de invertir en SEO, tiendas o redes.
 
 | Tema | Estado |
 |---|---|
-| **Nombre** | **Satin** (decidido el 2026-11-13, entre las finalistas Legato, Satin y Overtone; `docs/marca/NOMBRE.md`). **Pendiente:** IMPI y abogado (`MARCA_DEFINITIVA.md` §6). Hasta registrarlo, los textos de la app siguen diciendo «Music Reproductor» |
+| **Nombre** | **Satin** (decidido el 2026-11-13, entre las finalistas Legato, Satin y Overtone; `docs/marca/NOMBRE.md`). **Pendiente:** IMPI y abogado (`MARCA_DEFINITIVA.md` §6). Los textos de la app ya dicen «Satin» desde el 2026-11-14 (el registro sigue pendiente) |
 | **Ambiente del logo** | **Decidido el 2026-11-13:** Trama al bies, elegida entre tres rutas con la skill `logo-design` (`docs/marca/MARCA_DEFINITIVA.md` §2) |
 | **Colores a evitar** | **Verde** (2026-11-13). Color del logo: oro arena `#e6c686` sobre negro cálido `#0b0a08` |
 | **Referencias que gustan y que no** | No se dieron; el usuario descartó las rutas Pliegue y Brillo por «meh» (2026-11-13) |

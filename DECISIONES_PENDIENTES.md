@@ -82,7 +82,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 
 ### D20 — Completar marcadores de datos personales al publicar (tanda de documentos, 2026-11-12)
 - **Qué:** los documentos públicos usan `{{RESPONSABLE}}`, `{{DOMICILIO}}` y `{{CORREO_PRIVACIDAD}}`. Los valores reales están en `docs/producto/privado/DATOS_PUBLICACION.md` (ignorado por git).
-- **Hecho 2026-11-13:** la sustitución es automática al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO`, `LEGAL_CORREO_PRIVACIDAD`, `LEGAL_NOMBRE_APP`, `LEGAL_FECHA_ACTUALIZACION` y `LEGAL_URL_APP` (los tres últimos esperan a que el nombre esté registrado; no se sustituyen por Satin hasta entonces) (variables de entorno del build o `.env`, ver `.env.example`); si falta alguna, `npm run build` falla. Para compilar en local sin los valores reales hay que pasar valores de prueba.
+- **Hecho 2026-11-13:** la sustitución es automática al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO`, `LEGAL_CORREO_PRIVACIDAD`, `LEGAL_NOMBRE_APP`, `LEGAL_FECHA_ACTUALIZACION` y `LEGAL_URL_APP` (`LEGAL_NOMBRE_APP` es «Satin»; `LEGAL_URL_APP` queda vacía hasta comprar el dominio, así que el build sigue fallando a propósito mientras no exista) (variables de entorno del build o `.env`, ver `.env.example`); si falta alguna, `npm run build` falla. Para compilar en local sin los valores reales hay que pasar valores de prueba.
 - **Pendiente:** definir esas tres variables en Vercel en el momento de publicar (nunca commitear los valores); cambiar el correo temporal de Gmail por uno del dominio propio cuando exista; que un abogado confirme que publicar el domicilio particular basta (art. 15, fr. I).
 
 ### D21 — Consulta con contador antes de recibir aportaciones (M3)
@@ -94,7 +94,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 
 ### D22 — Nombre y logo sin decidir (2026-11-12)
 - **Qué:** el nombre se elegirá más adelante. Criterio del usuario: simple y en inglés; nada común ni «tonto» como Surco o Aguja (descartadas). El ambiente del logo se elegirá después con una skill de diseño; colores a evitar y referencias, sin pensar aún.
-- **Bloquea:** Fase 2 del ROADMAP (nombre, dominio, landing, logo), el correo de privacidad en dominio propio (D20) y las cuentas en redes. Hasta entonces la app sigue como «Music Reproductor».
+- **Bloquea:** Fase 2 del ROADMAP (nombre, dominio, landing, logo), el correo de privacidad en dominio propio (D20) y las cuentas en redes. **Actualizado 2026-11-14:** el nombre visible de la app, el título y la ayuda ya son «Satin» (`src/core/brand.ts`); falta el registro en el IMPI y el dominio (`satinplayer.com` previsto, sin comprar).
 - **Siguiente paso:** una lista nueva de nombres con el criterio en inglés (la de `MARCA.md` §2 quedó desfasada), y la verificación en IMPI, dominios y redes del elegido.
 - **Avance 2026-11-13:** nombre **Satin**, logo «Trama al bies» y animación de carga decididos (`docs/marca/MARCA_DEFINITIVA.md`). **Sigue pendiente (usuario):** IMPI, abogado, redes sin verificar, dominio (`MARCA_DEFINITIVA.md` §6).
 
