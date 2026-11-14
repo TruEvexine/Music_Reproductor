@@ -52,8 +52,8 @@ export function AuthDialog({ auth, onClose }: { auth: AuthController; onClose: (
       <form className="form" onSubmit={submit}>
         {registering && (
           <label>
-            Nombre
-            <input autoComplete="name" maxLength={60} onChange={(event) => setName(event.currentTarget.value)} required value={name} />
+            Nombre visible (opcional)
+            <input autoComplete="name" maxLength={60} onChange={(event) => setName(event.currentTarget.value)} value={name} />
           </label>
         )}
         <label>

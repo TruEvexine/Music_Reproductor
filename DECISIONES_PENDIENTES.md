@@ -111,7 +111,8 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 ### D25 — Perfil y recaps: decisiones y un punto por reconciliar (2026-11-12)
 - **Decidido:** nombre visible vacío por defecto; foto local y, con cuenta, en bucket privado; solo nombre y foto como datos de perfil; recaps compartidos como imagen generada en el dispositivo (sin enlace público).
 - **Hecho 2026-11-13:** Ajustes → Perfil guarda nombre (vacío por defecto) y foto solo en el dispositivo. El nombre local **no** se sincroniza con `profiles.display_name` mientras esto siga por reconciliar.
-- **Por reconciliar:** `useAuthController.signUp` recibe `displayName` y lo guarda como `display_name` al registrarse, así que con cuenta el nombre **no** nace vacío. Decidir al implementar: dejar ese campo opcional en el registro, o aceptar que el nombre del registro sea el nombre del perfil.
+- **Decidido 2026-11-14:** el registro pide el nombre como campo **opcional** (vacío por defecto); si se escribe, se guarda como `profiles.display_name`. El nombre local de Ajustes → Perfil sigue siendo solo local y nunca se sube por sí solo (la FAQ ya dice que son dos nombres aparte).
+- **Límite conocido:** si el campo queda vacío, el disparador `create_profile_for_new_user` (migración `20261014120000_hardening_limits.sql`) rellena `display_name` con la parte del correo antes de la «@». Hacerlo `null` exige una migración nueva en el proyecto Supabase compartido (probada en un Postgres local, sin aplicar al remoto sin documentarlo); no se tocó.
 - **Sin decidir todavía:** retención del historial (24 meses propuestos), si `hours` se sube a la nube, D19 de `docs/DISENO_ESTADISTICAS.md`.
 
 ### D26 — «Nosotros» y FAQ (2026-11-12)
