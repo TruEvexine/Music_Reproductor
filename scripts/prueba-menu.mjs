@@ -124,21 +124,34 @@ const smallTargets = (page) =>
 
   // Un arrastre vertical que empieza en un deslizador mueve el cuerpo del menú, nunca la página de detrás (con ella desplazable a propósito).
   await page.evaluate(() => document.querySelector(".main").append(Object.assign(document.createElement("div"), { id: "relleno", style: "height: 4000px" })));
+  const rootHeight = (await menu(page).boundingBox()).height;
   await menu(page).getByRole("button", { name: /^Fondo/ }).tap();
   await page.waitForTimeout(400);
-  const slider = await menu(page).locator(".range:not([data-vertical])").first().boundingBox();
+  check("móvil: la hoja no cambia de alto al cambiar de página (sin salto)", Math.abs((await menu(page).boundingBox()).height - rootHeight) < 1, `${rootHeight} → ${(await menu(page).boundingBox()).height}`);
+  // Menú desplazado hasta el final y página a mitad: un arrastre hacia abajo sobre un deslizador sube el menú y, de encadenarse, también la página.
+  await page.evaluate(() => {
+    const body = document.querySelector("dialog.menu .menu-body");
+    body.scrollTop = body.scrollHeight;
+    document.querySelector(".main").scrollTop = 1000;
+  });
+  const bodyBox = await menu(page).locator(".menu-body").boundingBox();
+  let slider;
+  for (const range of await menu(page).locator(".range:not([data-vertical])").all()) {
+    const box = await range.boundingBox();
+    if (box && box.y >= bodyBox.y && box.y + box.height <= bodyBox.y + bodyBox.height) slider = box;
+  }
   const touch = await page.context().newCDPSession(page);
   let at = slider.y + slider.height / 2;
   await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: slider.x + slider.width / 2, y: at }] });
-  for (let step = 0; step < 40; step++) {
-    at -= 12;
+  for (let step = 0; step < 60; step++) {
+    at += 12;
     await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: slider.x + slider.width / 2, y: at }] });
     await page.waitForTimeout(16);
   }
   await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await page.waitForTimeout(500);
   const scrolled = await page.evaluate(() => ({ page: document.querySelector(".main").scrollTop, menu: document.querySelector("dialog.menu .menu-body").scrollTop }));
-  check("móvil: arrastre vertical desde un deslizador del menú: no desplaza la página y sí el cuerpo del menú", scrolled.page === 0 && scrolled.menu > 0, JSON.stringify(scrolled));
+  check("móvil: arrastre vertical desde un deslizador del menú: no desplaza la página y sí el cuerpo del menú", scrolled.page === 1000 && scrolled.menu === 0, JSON.stringify(scrolled));
   await page.evaluate(() => document.getElementById("relleno").remove());
   await menu(page).getByRole("button", { name: "Volver a Menú" }).tap();
 

@@ -498,13 +498,9 @@ function popoverStyle(anchor: HTMLElement | null): CSSProperties {
   const width = Math.min(22 * 16, window.innerWidth - 2 * margin);
   const right = Math.min(Math.max(window.innerWidth - rect.right, margin), window.innerWidth - width - margin);
   const up = rect.top > window.innerHeight / 2;
-  return {
-    width,
-    right,
-    ...(up
-      ? { bottom: window.innerHeight - rect.top + margin, maxHeight: rect.top - 2 * margin }
-      : { top: rect.bottom + margin, maxHeight: window.innerHeight - rect.bottom - 2 * margin }),
-  };
+  const free = up ? rect.top - 2 * margin : window.innerHeight - rect.bottom - 2 * margin;
+  // Alto fijo (el mismo de la hoja, 34 rem): cambiar de página no mueve el borde del panel; lo que sobra se desplaza dentro.
+  return { width, right, height: Math.min(34 * 16, free), ...(up ? { bottom: window.innerHeight - rect.top + margin } : { top: rect.bottom + margin }) };
 }
 
 function MenuPanel({ anchor, onClose }: { anchor: RefObject<HTMLButtonElement | null>; onClose: () => void }) {
