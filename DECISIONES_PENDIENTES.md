@@ -88,6 +88,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Qué:** no se ha consultado a un contador sobre régimen fiscal, RFC y retenciones de plataformas para recibir aportaciones por Stripe.
 - **Contexto (2026-11-12):** se decidió usar Stripe Payment Links y abrir el café ya. Eso choca con este pendiente: recibir dinero sin régimen dado de alta es el riesgo más concreto de `MONETIZACION.md`.
 - **Recomendación:** construir el enlace, pero no publicar el Payment Link real hasta resolver esto. Preguntas para el contador: `MONETIZACION.md` §2.3.
+- **Hecho 2026-11-13:** el botón existe y se activa con `VITE_CAFE_URL` (Ajustes y landing); sin la variable no aparece. No hay enlace real en el repositorio: al crear el Payment Link, ponerlo solo en las variables de entorno de Vercel, **después** de resolver esto.
 - **También pendientes (sin decidir):** montos sugeridos (M2), política de reembolso (M4), precio de premium (M5).
 
 ### D22 — Nombre y logo sin decidir (2026-11-12)

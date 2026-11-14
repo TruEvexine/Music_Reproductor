@@ -826,7 +826,8 @@ ol.track-list .row-album {
 }
 
 /* En Ajustes las explicaciones se parten en varias líneas en vez de cortarse con «…». */
-.settings .sheet-section .subtitle {
+.settings .sheet-section .subtitle,
+.settings .settings-section > .subtitle {
   white-space: normal;
   text-wrap: pretty;
 }
@@ -869,4 +870,8 @@ ol.track-list .row-album {
   .profile {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+.cafe-actions {
+  justify-content: flex-start;
 }

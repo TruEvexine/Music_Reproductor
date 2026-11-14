@@ -828,6 +828,8 @@ Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMT
 
 4. **Perfil básico, solo local** (`ProfileSection.tsx`, `state/profile.ts`, `core/profile.ts`): nombre opcional (empieza vacío, ≤ 60) y foto (≤ 12 MB, mismas reglas de MIME que las portadas, recortada a 256 px y recodificada, así que sin EXIF/GPS) en `kv` (`profile.name`, `profile.avatar`). No se sincroniza con la cuenta; el nombre del registro (D25) sigue sin reconciliar. Prueba: `scripts/prueba-perfil.mjs` (foto con EXIF de prueba) y `core/profile.test.ts`.
 
+5. **Botón «Comprar un café»** (`CafeLink.tsx`, `core/support.ts`): solo existe si el build trae `VITE_CAFE_URL` (https; cualquier otra cosa se ignora). Ajustes y pie de la landing; enlace en otra pestaña con `noopener noreferrer`, sin SDK ni CSP nueva. **No hay ningún enlace real en el repositorio**; sigue pendiente M3/D21 antes de poner uno en producción. Prueba: `scripts/prueba-cafe.mjs` (dos servidores, con y sin variable).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

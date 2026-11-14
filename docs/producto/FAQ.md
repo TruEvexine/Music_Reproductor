@@ -185,9 +185,9 @@ otro dispositivo necesita tener los mismos archivos.
 Comprobado en: `src/core/backup.ts`, `src/ui/LibrarySheet.tsx` (`BackupSection`).
 
 ### ¿Cuánto cuesta?
-Nada. No hay funciones de pago.
+Nada: la app es gratis y no hay funciones de pago. Si ves un botón «Comprar un café» en Ajustes, es un apoyo voluntario que no desbloquea nada.
 
-Comprobado en: no hay pagos en el código. (Actualizar si se activa el apoyo voluntario: `MONETIZACION.md`.)
+Comprobado en: no hay pagos en el código; `src/ui/CafeLink.tsx` solo pinta un enlace si el build trae `VITE_CAFE_URL` (https). Si se activa premium, actualizar: `MONETIZACION.md`.
 
 ---
 

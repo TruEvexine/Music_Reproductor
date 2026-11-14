@@ -5,6 +5,7 @@ import libraryPhone from "../assets/landing/biblioteca-movil.jpg";
 import equalizerPhone from "../assets/landing/ecualizador-movil.jpg";
 import playerDesktop from "../assets/landing/reproductor-escritorio.jpg";
 import playerPhone from "../assets/landing/reproductor-movil.jpg";
+import { CafeButton } from "./CafeLink";
 import { navigate } from "./router";
 
 // Landing de transición: legible en móvil y escritorio, con capturas reales de la app (scripts/gen-landing.mjs) hechas con música
@@ -102,6 +103,7 @@ export function Landing() {
           Música y portadas de las capturas, en CC0 o dominio público (Wikimedia Commons): Kimiko Ishizaka, Luke Faulkner, Olga Gurevich, Diana
           Hughes y Scott Joplin; retratos de Bach, Chopin y Delacroix y la partitura de Maple Leaf Rag.
         </p>
+        <CafeButton />
       </footer>
     </div>
   );

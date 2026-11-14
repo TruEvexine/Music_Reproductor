@@ -208,3 +208,7 @@ body:has(.landing) {
   font-size: var(--text-s);
   line-height: 1.5;
 }
+
+.landing-credits .button {
+  margin-top: var(--s4);
+}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useBackground, background } from "../state/background";
 import type { AuthController } from "../sync/useAuthController";
+import { CafeSection } from "./CafeLink";
 import { FoldersSection } from "./LibrarySheet";
 import { tutorials } from "../state/tutorials";
 import { PrivacySection } from "./PrivacySection";
@@ -71,6 +72,7 @@ export function SettingsView({ auth }: { auth: AuthController }) {
           </section>
         </div>
       </section>
+      <CafeSection />
       <PrivacySection auth={auth} />
     </section>
   );

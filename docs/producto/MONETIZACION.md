@@ -11,6 +11,8 @@ oficial o no. Las decisiones tuyas están marcadas **[Decides tú]**.
 > **Decisiones de esa fecha:** pasarela del café = **Stripe Payment Links**; se quiere **abrir el café ya**; **todavía no se ha
 > consultado a un contador** → **[Pendiente: consulta con contador (M3)]**. Las dos últimas chocan entre sí: ver §6, primer riesgo.
 
+> **Hecho 2026-11-13 (solo el botón, sin enlace real):** `src/ui/CafeLink.tsx` pinta «Comprar un café» en Ajustes y en el pie de la landing **solo si** el build trae `VITE_CAFE_URL` con un `https:` (`core/support.ts`, con test). Sin la variable no aparece en ningún sitio. Es un enlace en otra pestaña: sin SDK ni cambios en la CSP. Prueba: `scripts/prueba-cafe.mjs`. **Sigue pendiente M3 (contador) antes de poner un enlace real en producción.**
+
 ## 1. El modelo
 
 | Nivel | Precio | Qué incluye |
