@@ -144,6 +144,11 @@ body:has(.landing) {
     gap: var(--s7);
     align-items: center;
   }
+  .landing-free {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: var(--s7);
+    align-items: start;
+  }
   .landing-close {
     grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
     align-items: end;

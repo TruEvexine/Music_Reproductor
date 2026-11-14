@@ -22,8 +22,17 @@ verdad», «experiencia», «potente», «intuitivo», «sin complicaciones»).
 | «colores de la portada, sigue el ritmo… negro puro para pantallas OLED» | Modos Portada, Ritmo, AMOLED | `core/background.ts` |
 | «La cuenta es opcional y solo sincroniza tus playlists» | Supabase solo para playlists | SUPABASE.md, `sync/playlistSync.ts` |
 | «Los archivos se quedan en el dispositivo donde están» | Los archivos se leen al reproducir | AGENTS.md §3 («los archivos se leen solo al reproducir»), README |
+| «Todo lo que corre en tu dispositivo… es gratis» (sección «Qué es gratis hoy») | Nada de lo local tiene precio ni límite de pago | `docs/producto/MONETIZACION.md` §1 («Todo lo que corre en tu dispositivo es gratis», decidido 2026-11-12); no hay código de compra ni de licencias en `src/` |
+| «reproducir» · «la biblioteca» | Reproducción local y biblioteca persistente con vistas y búsqueda | `engine/PlayerEngine.ts`, `core/library.ts`, `ui/LibraryView.tsx` |
+| «el ecualizador» | Diez bandas, ajustes de partida y ReplayGain | `core/audio.ts` (`EQ_BANDS`, `EQ_PRESETS`) |
+| «los fondos» | Modos Portada, Ritmo, Estático y AMOLED | `core/background.ts` (`BackgroundMode`) |
+| «las playlists» | Playlists locales primero, en IndexedDB y sin cuenta | `state/playlists.ts` (cabecera: «Playlists locales primero… funciona sin cuenta ni red»). No se dice «ilimitadas»: hay tope de 5 000 pistas por playlist (`MAX_PLAYLIST_TRACKS`) |
+| «la copia de seguridad en un archivo» | Exportar e importar JSON | `ui/LibrarySheet.tsx` (`Copia de seguridad`), `core/backup.ts` |
+| «No hace falta cuenta» | Todo lo anterior funciona sin sesión; «Entrar» es opcional | `ui/App.tsx` (`auth.session ? "Cuenta" : "Entrar"`), AGENTS.md §4 («funciona completo sin cuenta») |
+| «no hay anuncios» | Ni código ni dominios de anuncios | Búsqueda en `src/` e `index.html` sin ningún SDK publicitario; CSP de `vercel.json` (`script-src 'self'`, `connect-src` solo el propio dominio y Supabase) los bloquearía; `MONETIZACION.md` §1 («Sin anuncios») |
+| «Si más adelante hay extras que cuesten servidor, serán opcionales» | Intención decidida, sin fecha, precio ni plan | `MONETIZACION.md` §1 (Premium futuro solo para funciones con costo recurrente, §4). No existe ninguna de esas funciones hoy, por eso es condicional («si… hay») |
 
-**Lo que no se afirma porque no está verificado:** funcionamiento sin conexión como PWA (no hay service worker todavía), controles en la
+**Lo que no se afirma porque no está verificado:** planes, precios, contador o nombre registrado (no existen aún), funcionamiento sin conexión como PWA (no hay service worker todavía), controles en la
 pantalla de bloqueo en un móvil real (código y prueba en Chromium de escritorio; falta el dispositivo), apps de Android o iPhone (no
 existen aún), fidelidad «bit-perfect» (el audio pasa por Web Audio).
 

@@ -116,6 +116,17 @@ export function Landing() {
           </div>
         </section>
 
+        <section className="landing-free">
+          <h2 data-reveal>Qué es gratis hoy</h2>
+          <div className="landing-copy">
+            <p data-reveal style={rise(1)}>
+              Todo lo que corre en tu dispositivo: reproducir, la biblioteca, el ecualizador, los fondos, las playlists y la copia de seguridad en un archivo. No hace
+              falta cuenta y no hay anuncios.
+            </p>
+            <p data-reveal style={rise(2)}>Si más adelante hay extras que cuesten servidor, serán opcionales.</p>
+          </div>
+        </section>
+
         <section className="landing-close">
           <h2 data-reveal>Elige una carpeta y dale a play</h2>
           <a className="button primary" data-reveal href="/app" onClick={open} style={rise(1)}>
