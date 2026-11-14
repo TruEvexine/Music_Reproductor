@@ -20,7 +20,7 @@ export function findSecretEnv(env: Record<string, string | undefined>): string[]
       problems.push(`${name}: el nombre indica un secreto`);
     } else if (/service_role|sb_secret_/i.test(value) || jwtRole(value) === "service_role") {
       problems.push(`${name}: el valor es una clave secreta de Supabase`);
-    } else if (/^\s*postgres(ql)?:\/\//i.test(value)) {
+    } else if (/postgres(ql)?:\/\//i.test(value)) {
       problems.push(`${name}: el valor es una URI de PostgreSQL`);
     }
   }

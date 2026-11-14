@@ -25,6 +25,7 @@ describe("findSecretEnv", () => {
     expect(findSecretEnv({ VITE_KEY: "sb_secret_abc" })).toHaveLength(1);
     expect(findSecretEnv({ VITE_KEY: jwt("service_role") })).toHaveLength(1);
     expect(findSecretEnv({ VITE_DB: postgresUri })).toHaveLength(1);
+    expect(findSecretEnv({ VITE_DB: `db=${postgresUri}` })).toHaveLength(1);
   });
 });
 
