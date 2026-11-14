@@ -20,7 +20,7 @@
 .menu[open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  height: min(34rem, 88dvh); /* alto fijo: cada página tenía el suyo y la hoja saltaba al cambiar; lo que sobra se desplaza dentro (.menu-body) */
+  height: min(36rem, 88dvh); /* alto fijo (el de Temporizador, la página más alta que cabe sin desplazar): cada página tenía el suyo y la hoja saltaba al cambiar; lo que sobra se desplaza dentro (.menu-body) */
 }
 
 .menu[data-presentation="sheet"]::backdrop {
