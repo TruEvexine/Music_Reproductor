@@ -87,11 +87,12 @@ Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba
 | Hover (solo `@media (hover: hover)`) | Un paso de tono (`--surface-2` → `-3`, tinta secundaria → plena) | No: es de lo más frecuente |
 | Activo (pulsar) | `scale(--press)` en botones, iconos y opciones; `--press-wide` en filas del menú | `--fast`. No en transporte, pestañas ni filas de lista, ni por teclado |
 | Foco | Aro de tinta con halo de acento (`:focus-visible`), solo si lo último fue una tecla | No |
-| Entrada | Hoja: `enter-sheet`; diálogo ancho y popover: `enter-pop`; paneles y avisos: `enter-rise` | `--fast` / `--base` / `--slow` según el recorrido |
-| Salida | `exit-sheet` (hojas), `exit-pop` (diálogos anchos, popover), `exit-fade` (paneles y avisos). El componente marca `[data-closing]`, espera `--exit` y se desmonta (`ui/motion.ts`) | `--exit`. Un arrastre que ya animó la salida, o la cola en columna fija, cierran al instante |
+| Entrada | Transición desde `@starting-style` (`base.css`): hoja desde abajo; diálogo ancho y popover con `translateY(4px) scale(0.98)` y fundido; paneles y avisos suben 8–24 px y se funden. Cada panel declara su pose con `--t0`/`--o0` | `--fast` / `--base` / `--slow` según el recorrido (`--in`) |
+| Salida | El componente marca `[data-closing]`, que lleva el panel a su pose de salida (`--t1`/`--o1`), espera `--exit` y se desmonta (`ui/motion.ts`, que lee el token con `cssMs`: el build lo minifica a `.14s`) | `--exit`. Un arrastre que ya animó la salida, o la cola en columna fija, cierran al instante |
+| Interrupción | Son transiciones, no keyframes: cerrar mientras abre o reabrir mientras cierra revierte desde el valor actual, sin salto | — |
 | Deshabilitado | Opacidad 0.38, sin hover ni pulsación | No |
 
-`prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista: fundido de portada y paleta 700–900 ms (Fase 4).
+`prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista sin gesto (botón o fin de pista): la portada anterior se disuelve sobre la nueva (`--base`) y el título se funde (`--fast`); ni con teclado, ni tras el gesto del carrusel, ni con movimiento reducido. El color (acento) cambia de golpe: animarlo exigiría `color` en la transición. Inventario, medición y límites: `docs/ANIMACIONES.md`.
 
 Puerta de frecuencia: transporte, teclado, pestañas y filas de lista → sin animación. Abrir y cerrar reproductor, cola, menú y diálogos → sí. Primer uso y estados vacíos → se permite algo más expresivo (`--page`).
 
@@ -138,7 +139,7 @@ Unidades: `dvh` (nunca `100vh`), `env(safe-area-inset-*)` en barra, pestañas, r
 
 | Componente | Regla |
 |---|---|
-| Fila de pista | Tocar la fila reproduce (la cola pasa a ser la lista visible). 64 px de alto, portada 48 px. Desde 700 px añade álbum, calidad y duración en columnas. Pista actual: título en acento **y** barra a la izquierda |
+| Fila de pista | Tocar la fila reproduce (la cola pasa a ser la lista visible). 64 px de alto, portada 48 px. Desde 700 px añade álbum, calidad y duración en columnas. Pista actual: título en acento, estado escrito junto al artista («Sonando» o «En pausa», con icono) y una pastilla de `--surface-3` que cubre la fila entera, sin barra de color; las ya sonadas de la cola, `--ink-3`. Mismo lenguaje que la fila de cola |
 | Portada | Siempre 1:1. Sin imagen: **arte generativo** estable por canción, nunca gris plano ni un glifo (abajo). Las portadas grandes se sirven al tamaño real de pantalla (`ui/parts.tsx`, `platform/web/coverScale.ts`) |
 | Botón | Uno primario por pantalla (relleno de acento). El resto, tono `--surface-2` o enlace |
 | Carrusel de portadas | Reproductor grande, solo dedo: deslizar la portada a la izquierda pasa a la siguiente y a la derecha vuelve a la anterior (la entrada anterior de la cola, sin la regla de «pasados 3 s reinicia»). La portada sigue al dedo y la vecina asoma desde el borde de la pantalla; se completa pasado un tercio del recorrido o con un gesto rápido (> 0,45 px/ms), si no vuelve (`--base`, `--ease`); al completarse, la vecina llega al centro con `--ease-move`. Sin vecina hacia ese lado, resiste al 20 % y vuelve. Eje bloqueado tras 10 px: vertical es cerrar la hoja. El fondo interpola hacia la paleta de la vecina según el avance (solo el lienzo; Estático y movimiento reducido cambian de golpe al completar; AMOLED sigue negro; HDR con su gama). Sin carátula o portada sin color: el fondo por defecto. Alternativa: anterior y siguiente del transporte |

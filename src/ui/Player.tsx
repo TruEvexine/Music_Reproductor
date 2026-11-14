@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowDown,
@@ -217,8 +217,8 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
   const previousPalette = usePaletteOf(neighbors.previous?.coverHash);
   const carousel = useRef<HTMLDivElement>(null);
   const swipe = useCoverSwipe(carousel, {
-    onNext: neighbors.next && player.next,
-    onPrevious: neighbors.previous && neighbors.previousKey ? () => player.playEntry(neighbors.previousKey!) : undefined,
+    onNext: neighbors.next && (() => ((swiped.current = true), player.next())),
+    onPrevious: neighbors.previous && neighbors.previousKey ? () => ((swiped.current = true), player.playEntry(neighbors.previousKey!)) : undefined,
     onProgress: (progress) => {
       backdropPreview.palette = progress < 0 ? nextPalette : progress > 0 ? previousPalette : null;
       backdropPreview.amount = Math.abs(progress);
@@ -228,6 +228,16 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
   const [lyrics, setLyrics] = useState(false);
   const sheet = useRef<HTMLElement>(null);
   const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
+  // Portada que se va al cambiar de pista sin gesto (botón, atajo o fin de pista): se disuelve sobre la nueva. Tras un gesto no hace falta: la portada ya llegó deslizando.
+  const swiped = useRef(false);
+  const shown = useRef(track);
+  const [leaving, setLeaving] = useState<Track | null>(null);
+  useLayoutEffect(() => {
+    const before = shown.current;
+    shown.current = track;
+    if (swiped.current) swiped.current = false;
+    else if (before && track && before.id !== track.id && !motionReduced() && document.documentElement.dataset.input !== "key") setLeaving(before);
+  }, [neighbors.key]);
   const wide = useMedia("(min-width: 1000px)");
   const isPlaying = usePlayer((state) => state.isPlaying);
   if (!track) return null;
@@ -270,6 +280,11 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
           al centro es el mismo nodo, sin parpadeo de imagen. Las vecinas esperan fuera del recorte hasta que el gesto las trae. */}
       <div className="now-art" {...swipe}>
         <div className="now-track" ref={carousel}>
+          {leaving && (
+            <span aria-hidden="true" className="now-leaving" key={leaving.id} onAnimationEnd={() => setLeaving(null)}>
+              <Cover className="now-cover" hash={leaving.coverHash} seed={coverSeed(leaving.title, leaving.artist)} size="large" artist={leaving.artist} title={leaving.title} />
+            </span>
+          )}
           {/* Claves de entrada de la cola (una pista puede repetirse); con dos entradas y «repetir cola», la misma es anterior y siguiente. */}
           {([
             ["prev", neighbors.previous, neighbors.previousKey === neighbors.nextKey ? `prev:${neighbors.previousKey}` : neighbors.previousKey],
@@ -297,7 +312,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         </div>
       </div>
       <div className="now-controls">
-        <div className="now-copy">
+        <div className="now-copy" key={neighbors.key}>
           <h2 className="now-title">
             <Marquee>{track.title}</Marquee>
           </h2>

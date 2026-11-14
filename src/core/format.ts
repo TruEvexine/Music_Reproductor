@@ -1,5 +1,11 @@
 import type { Track } from "./track";
 
+/** Duración CSS en milisegundos. El build minifica `140ms` como `.14s`, así que hay que leer la unidad (`parseFloat` a secas daba 0,14). */
+export function cssMs(value: string): number {
+  const text = value.trim();
+  return (parseFloat(text) * (text.endsWith("ms") ? 1 : 1000)) || 0;
+}
+
 export function formatTime(seconds?: number): string {
   if (seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return "--:--";
   const total = Math.floor(seconds);

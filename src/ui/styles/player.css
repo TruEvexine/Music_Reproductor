@@ -160,12 +160,10 @@
   padding: var(--safe-top) calc(var(--gutter) + var(--safe-right)) calc(var(--s5) + var(--safe-bottom))
     calc(var(--gutter) + var(--safe-left));
   background: var(--bg); /* el fondo animado (Backdrop) va detrás del contenido, ver backdrop.css */
-  --rise: 24px;
-  animation: enter-rise var(--slow) var(--ease);
-}
-
-.now-playing[data-closing] {
-  animation: exit-fade var(--exit) var(--ease) forwards;
+  --in: var(--slow);
+  --t0: translateY(24px);
+  --o0: 0;
+  --o1: 0;
 }
 
 .now-header {
@@ -233,6 +231,26 @@
   display: grid;
   gap: var(--s1);
   min-width: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+/* Cambio de pista: el título nuevo se funde (el bloque se remonta con la pista) y la portada anterior se disuelve encima de la nueva. Ni con teclado
+   ni con movimiento reducido: el gesto del carrusel ya movió la portada y los atajos no se animan (principio 5). */
+@starting-style {
+  .now-copy {
+    opacity: 0;
+  }
+}
+
+.now-leaving {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: exit-fade var(--base) var(--ease) forwards;
+}
+
+html[data-input="key"] .now-copy {
+  transition: none;
 }
 
 .now-title {
@@ -283,12 +301,9 @@
   grid-template-rows: auto minmax(0, 1fr);
   padding: var(--safe-top) calc(var(--s3) + var(--safe-right)) var(--safe-bottom) calc(var(--s3) + var(--safe-left));
   background: var(--surface-1);
-  --rise: 24px;
-  animation: enter-rise var(--base) var(--ease);
-}
-
-.queue-panel[data-closing] {
-  animation: exit-fade var(--exit) var(--ease) forwards;
+  --t0: translateY(24px);
+  --o0: 0;
+  --o1: 0;
 }
 
 .queue-header {
@@ -323,7 +338,7 @@
     grid-area: queue;
     width: 22rem;
     min-height: 0;
-    animation: none;
+    transition: none; /* columna fija: sin entrada ni salida */
   }
   /* Con el reproductor grande abierto la cola es un cajón encima de él, no una columna oculta detrás. */
   .shell[data-panel="player"] .queue-panel {
@@ -331,10 +346,9 @@
     inset: 0 0 0 auto;
     z-index: 20;
     box-shadow: 0 0 48px oklch(0 0 0 / 0.45);
-    animation: enter-rise var(--base) var(--ease);
-  }
-  .shell[data-panel="player"] .queue-panel[data-closing] {
-    animation: exit-fade var(--exit) var(--ease) forwards;
+    transition:
+      transform var(--in) var(--ease),
+      opacity var(--in) var(--ease);
   }
   /* El reproductor cede el ancho del cajón para que sus controles no queden tapados. */
   .shell[data-panel="player"][data-queue] .now-playing {
@@ -371,11 +385,11 @@
 
 @media (max-width: 999px) {
   .now-playing {
-    animation: enter-sheet var(--slow) var(--ease);
+    --t0: translateY(100%);
+    --t1: translateY(100%);
+    --o0: 1;
+    --o1: 1;
     overscroll-behavior: none;
-  }
-  .now-playing[data-closing] {
-    animation: exit-sheet var(--exit) var(--ease) forwards;
   }
 }
 

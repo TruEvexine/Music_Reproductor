@@ -60,10 +60,17 @@ describe("movimiento", () => {
     }
   });
 
-  it("existe la regla global de prefers-reduced-motion y entradas y salidas comparten keyframes", () => {
+  it("existe la regla global de prefers-reduced-motion", () => {
     const base = sheets.find(({ name }) => name === "base.css")!.css;
     expect(base).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*\*[^}]*\{[^}]*animation-duration: 0\.01ms !important;[^}]*transition-duration: 0\.01ms !important/s);
-    for (const keyframes of ["enter-sheet", "enter-pop", "enter-rise", "enter-fade", "exit-sheet", "exit-pop", "exit-fade"]) expect(base).toContain(`@keyframes ${keyframes}`);
+  });
+
+  it("los paneles entran y salen con transiciones interrumpibles (@starting-style y [data-closing]), no con keyframes de entrada", () => {
+    const base = sheets.find(({ name }) => name === "base.css")!.css;
+    expect(base).toContain("@starting-style");
+    expect(base).toContain("[data-closing] {");
+    for (const panel of [".dialog", ".menu", ".now-playing", ".queue-panel", ".toast"]) expect(base).toContain(panel);
+    for (const { name, css } of sheets) expect(css, name).not.toMatch(/@keyframes\s+(enter|exit)-(sheet|pop|rise)/);
   });
 
   it("los tokens de movimiento existen", () => {

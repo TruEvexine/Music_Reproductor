@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTime, isHiRes, matchesSearch, qualityLabel, searchKey } from "./format";
+import { cssMs, formatTime, isHiRes, matchesSearch, qualityLabel, searchKey } from "./format";
 import { APP_BACKGROUND_L, colorsFromHue, contrastOfLightness, fallbackPalette, oklchToRgb, paletteColors, paletteFromPixels, rgbToOklch } from "./palette";
 import { fileTrackId, titleFromFileName, trackV1Id } from "./track";
 
@@ -22,6 +22,11 @@ describe("identidad de pista", () => {
 });
 
 describe("formato", () => {
+  it("cssMs lee tanto 140ms como la forma minificada .14s", () => {
+    expect([cssMs("140ms"), cssMs(" 140ms"), cssMs(".14s"), cssMs("0.14s"), cssMs("1s")]).toEqual([140, 140, 140, 140, 1000]);
+    expect([cssMs(""), cssMs("none")]).toEqual([0, 0]);
+  });
+
   it("formatTime", () => {
     expect(formatTime(0)).toBe("0:00");
     expect(formatTime(65.9)).toBe("1:05");

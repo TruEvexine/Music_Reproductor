@@ -388,47 +388,50 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   background: oklch(0 0 0 / 0.6);
 }
 
-/* Entradas y salidas (ver DESIGN.md §3): tres movimientos con la misma curva. La entrada dura --fast/--base/--slow según el recorrido;
-   la salida dura siempre --exit y la marca el componente con [data-closing] (ui/motion.ts), que espera a que termine para desmontar. */
-@keyframes enter-sheet {
-  from {
-    transform: translateY(100%);
+/* Entradas y salidas (ver DESIGN.md §3). Son transiciones, no keyframes: se pueden interrumpir y revertir a mitad de camino (cerrar mientras abre,
+   volver a abrir mientras cierra) sin salto, porque el navegador parte del valor que lleva en ese instante. Cada panel declara su pose de entrada
+   (--t0 transform, --o0 opacidad) y de salida (--t1, --o1); la entrada dura --in (--base salvo que el panel diga otra cosa) y la salida siempre --exit.
+   El componente marca [data-closing] (ui/motion.ts) y desmonta al terminar. Sin @starting-style el panel aparece sin entrada y la salida sigue funcionando. */
+:is(.dialog, .menu, .now-playing, .queue-panel, .toast) {
+  --in: var(--base);
+  transition:
+    transform var(--in) var(--ease),
+    opacity var(--in) var(--ease);
+}
+
+@starting-style {
+  :is(.dialog, .menu, .now-playing, .queue-panel, .toast) {
+    transform: var(--t0, none);
+    opacity: var(--o0, 1);
   }
 }
 
-@keyframes enter-pop {
-  from {
+:is(.dialog, .menu, .now-playing, .queue-panel, .toast)[data-closing] {
+  --in: var(--exit);
+  transform: var(--t1, none);
+  opacity: var(--o1, 1);
+}
+
+/* Telón de los diálogos y hojas: se funde con la misma duración que el panel. */
+.dialog::backdrop,
+.menu::backdrop {
+  transition: opacity var(--base) var(--ease);
+}
+
+@starting-style {
+  .dialog::backdrop,
+  .menu::backdrop {
     opacity: 0;
-    transform: translateY(4px) scale(0.98);
   }
 }
 
-@keyframes enter-rise {
-  from {
-    opacity: 0;
-    transform: translateY(var(--rise, 8px));
-  }
+.dialog[data-closing]::backdrop,
+.menu[data-closing]::backdrop {
+  opacity: 0;
+  transition: opacity var(--exit) var(--ease);
 }
 
-@keyframes enter-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes exit-sheet {
-  to {
-    transform: translateY(100%);
-  }
-}
-
-@keyframes exit-pop {
-  to {
-    opacity: 0;
-    transform: translateY(4px) scale(0.98);
-  }
-}
-
+/* Salida de una sola vez (sin pose de partida que revertir): la portada anterior al cambiar de pista (player.css). */
 @keyframes exit-fade {
   to {
     opacity: 0;
@@ -436,19 +439,8 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 }
 
 .dialog {
-  animation: enter-sheet var(--base) var(--ease);
-}
-
-.dialog::backdrop {
-  animation: enter-fade var(--base) var(--ease);
-}
-
-.dialog[data-closing] {
-  animation: exit-sheet var(--exit) var(--ease) forwards;
-}
-
-.dialog[data-closing]::backdrop {
-  animation: exit-fade var(--exit) var(--ease) forwards;
+  --t0: translateY(100%);
+  --t1: translateY(100%);
 }
 
 .dialog-body {
@@ -514,13 +506,13 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 
 @media (min-width: 600px) {
   .dialog {
+    --t0: translateY(4px) scale(0.98);
+    --t1: translateY(4px) scale(0.98);
+    --o0: 0;
+    --o1: 0;
     width: min(440px, 100% - 2 * var(--s5));
     margin: auto;
     border-radius: var(--radius-m);
-    animation-name: enter-pop;
-  }
-  .dialog[data-closing] {
-    animation-name: exit-pop;
   }
   .dialog-body {
     padding: var(--s5);
@@ -653,11 +645,9 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
   font-weight: 550;
   pointer-events: auto;
-  animation: enter-rise var(--base) var(--ease);
-}
-
-.toast[data-closing] {
-  animation: exit-fade var(--exit) var(--ease) forwards;
+  --t0: translateY(8px);
+  --o0: 0;
+  --o1: 0;
 }
 
 @media (min-width: 1000px) {

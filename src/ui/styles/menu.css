@@ -12,24 +12,19 @@
   color: var(--ink);
 }
 
+.menu {
+  --t0: translateY(100%);
+  --t1: translateY(100%);
+}
+
 .menu[open] {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-height: min(26rem, 60dvh);
-  animation: enter-sheet var(--base) var(--ease);
-}
-
-.menu[data-closing] {
-  animation: exit-sheet var(--exit) var(--ease) forwards;
 }
 
 .menu[data-presentation="sheet"]::backdrop {
   background: oklch(0 0 0 / 0.6);
-  animation: enter-fade var(--base) var(--ease);
-}
-
-.menu[data-closing]::backdrop {
-  animation: exit-fade var(--exit) var(--ease) forwards;
 }
 
 /* Lo único que flota en la app: lleva sombra. La posición la calcula el componente desde el icono. */
@@ -39,11 +34,14 @@
   min-height: 0;
   border-radius: var(--radius-m);
   box-shadow: 0 16px 48px oklch(0 0 0 / 0.55);
-  animation: enter-pop var(--fast) var(--ease);
+  --t0: translateY(4px) scale(0.98);
+  --t1: translateY(4px) scale(0.98);
+  --o0: 0;
+  --o1: 0;
 }
 
-.menu[data-presentation="popover"][data-closing] {
-  animation: exit-pop var(--exit) var(--ease) forwards;
+.menu[data-presentation="popover"]:not([data-closing]) {
+  --in: var(--fast);
 }
 
 .menu[data-presentation="popover"]::backdrop {
