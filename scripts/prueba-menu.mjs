@@ -122,6 +122,26 @@ const smallTargets = (page) =>
   await menu(page).getByRole("button", { name: "Cancelar temporizador" }).tap();
   await menu(page).getByRole("button", { name: "Volver a Menú" }).tap();
 
+  // Un arrastre vertical que empieza en un deslizador mueve el cuerpo del menú, nunca la página de detrás (con ella desplazable a propósito).
+  await page.evaluate(() => document.querySelector(".main").append(Object.assign(document.createElement("div"), { id: "relleno", style: "height: 4000px" })));
+  await menu(page).getByRole("button", { name: /^Fondo/ }).tap();
+  await page.waitForTimeout(400);
+  const slider = await menu(page).locator(".range:not([data-vertical])").first().boundingBox();
+  const touch = await page.context().newCDPSession(page);
+  let at = slider.y + slider.height / 2;
+  await touch.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: slider.x + slider.width / 2, y: at }] });
+  for (let step = 0; step < 40; step++) {
+    at -= 12;
+    await touch.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: slider.x + slider.width / 2, y: at }] });
+    await page.waitForTimeout(16);
+  }
+  await touch.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(500);
+  const scrolled = await page.evaluate(() => ({ page: document.querySelector(".main").scrollTop, menu: document.querySelector("dialog.menu .menu-body").scrollTop }));
+  check("móvil: arrastre vertical desde un deslizador del menú: no desplaza la página y sí el cuerpo del menú", scrolled.page === 0 && scrolled.menu > 0, JSON.stringify(scrolled));
+  await page.evaluate(() => document.getElementById("relleno").remove());
+  await menu(page).getByRole("button", { name: "Volver a Menú" }).tap();
+
   // Arrastre de la cabecera: cierra la hoja.
   const grabber = await menu(page).locator(".menu-grabber").boundingBox();
   await page.mouse.move(grabber.x + grabber.width / 2, grabber.y + 2);

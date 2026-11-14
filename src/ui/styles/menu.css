@@ -82,6 +82,12 @@
   margin-left: calc(var(--s2) * -1);
 }
 
+/* Con el menú abierto la página de detrás no se desplaza: un arrastre vertical que empieza en un deslizador (touch-action: pan-y) solo mueve el cuerpo del menú, también donde
+   overscroll-behavior no frena el encadenado (Safari y Firefox con un cuerpo que no desborda). */
+:root:has(dialog.menu[open]) .main {
+  overflow: hidden;
+}
+
 .menu-body {
   overflow-y: auto;
   overscroll-behavior: contain;
