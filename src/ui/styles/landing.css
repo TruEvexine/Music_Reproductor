@@ -212,3 +212,69 @@ body:has(.landing) {
 .landing-credits .button {
   margin-top: var(--s4);
 }
+
+/* Paso de marca al abrir la app desde la landing (Landing.tsx): el símbolo de la carga de index.html sobre el fondo, ~600 ms.
+   Entra (--fast), un brillo recorre los hilos una vez y los deja encendidos (--base cada uno, 60 ms entre hilos) y sale (--exit). Solo opacidad. Con movimiento reducido, un fundido
+   corto sin brillo: la regla global dejaría la entrada y la salida en 0,01 ms, por eso aquí se restauran sus tokens. */
+.satin-carga.satin-paso {
+  z-index: 50;
+  background: var(--bg);
+  opacity: 1;
+  animation: paso-entra var(--fast) var(--ease) both;
+}
+
+.satin-carga.satin-paso[data-closing] {
+  animation: paso-sale var(--exit) var(--ease) forwards;
+}
+
+.satin-carga.satin-paso g {
+  opacity: 0.38;
+  animation: paso-brillo var(--base) var(--ease) both;
+  animation-delay: calc(var(--i) * 60ms);
+}
+
+@keyframes paso-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes paso-sale {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes paso-brillo {
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .satin-carga.satin-paso {
+    animation-duration: var(--fast) !important;
+  }
+
+  .satin-carga.satin-paso[data-closing] {
+    animation-duration: var(--exit) !important;
+  }
+
+  .satin-carga.satin-paso g {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+:root[data-motion="reduce"] .satin-carga.satin-paso {
+  animation-duration: var(--fast) !important;
+}
+
+:root[data-motion="reduce"] .satin-carga.satin-paso[data-closing] {
+  animation-duration: var(--exit) !important;
+}
+
+:root[data-motion="reduce"] .satin-carga.satin-paso g {
+  animation: none;
+  opacity: 1;
+}

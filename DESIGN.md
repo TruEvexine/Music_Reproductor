@@ -94,6 +94,8 @@ Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba
 
 `prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista sin gesto (botón o fin de pista): la portada anterior se disuelve sobre la nueva (`--base`) y el título se funde (`--fast`); ni con teclado, ni tras el gesto del carrusel, ni con movimiento reducido. El color (acento) cambia de golpe: animarlo exigiría `color` en la transición. Inventario, medición y límites: `docs/ANIMACIONES.md`.
 
+**Carga y paso de marca.** El símbolo de `index.html` aparece solo si la carga en frío pasa de 300 ms (`docs/marca/MARCA_DEFINITIVA.md` §3). Al pulsar «Abrir» o «Abrir el reproductor» en la landing, el mismo símbolo cubre el paso a la app durante 600 ms (entra con `--fast`, un brillo deja encendidos los hilos uno a uno con `--base`, sale con `--exit`) mientras la app monta debajo y se descarga el SDK de cuentas; con movimiento reducido es solo un fundido de entrada y salida (`--fast` + `--exit`), la única excepción a la regla global de 0,01 ms. Nunca en la landing ni en /app directo: no retrasa el LCP.
+
 Puerta de frecuencia: transporte, teclado, pestañas y filas de lista → sin animación. Abrir y cerrar reproductor, cola, menú y diálogos → sí. Primer uso y estados vacíos → se permite algo más expresivo (`--page`).
 
 ### Portada generativa

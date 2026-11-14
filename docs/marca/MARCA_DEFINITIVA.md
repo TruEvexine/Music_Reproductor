@@ -91,6 +91,7 @@ Las fuentes SVG de cada icono están en `logo/iconos/fuente/`.
 - **Solo mientras carga de verdad:** vive dentro de `#root` en `index.html`; React lo sustituye al montar. Empieza invisible y
   aparece a los **300 ms**: si la app monta antes, no se ve nada. No retrasa nada: la app nunca espera a la animación.
 - **Movimiento reducido:** aparece a los 300 ms y queda quieta, sin brillo.
+- **Paso de marca (2026-11-13):** al pulsar «Abrir el reproductor» en la landing, el mismo símbolo cubre 600 ms el paso a la app (`DESIGN.md` §3, Movimiento).
 - **De paso:** `html{background:#0b0a08}` quita el destello blanco antes de que cargue el CSS.
 - **Tamaño:** `clamp(88px, 24vmin, 136px)` (≈ 94 px en un móvil de 390 px; 136 px en escritorio). Ampliado a petición del usuario.
 - **Solo el símbolo:** no muestra textos, porcentajes ni tiempos. El panel de botones de `demo.html` es solo para simular cargas y no

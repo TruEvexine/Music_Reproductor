@@ -5,8 +5,34 @@ import libraryPhone from "../assets/landing/biblioteca-movil.jpg";
 import equalizerPhone from "../assets/landing/ecualizador-movil.jpg";
 import playerDesktop from "../assets/landing/reproductor-escritorio.jpg";
 import playerPhone from "../assets/landing/reproductor-movil.jpg";
+import { cssMs } from "../core/format";
+import { getSupabase, supabaseConfigured } from "../sync/supabaseClient";
 import { CafeButton } from "./CafeLink";
+import { motionReduced } from "./motion";
 import { navigate } from "./router";
+
+const BRAND_MS = 600; // paso de marca al abrir la app
+
+// El símbolo de la carga vive en index.html (dentro de #root; React lo sustituye al montar). Este módulo se evalúa antes del montaje:
+// se guarda una copia para el paso de marca y así el SVG existe en un solo sitio.
+const brandMark = document.querySelector(".satin-carga")?.cloneNode(true) as HTMLElement | undefined;
+
+/**
+ * Paso de la landing a la app: el símbolo entra (--fast) sobre el fondo, la app monta debajo y el SDK de cuentas se descarga mientras
+ * tanto; a los BRAND_MS sale (--exit). Con movimiento reducido, solo un fundido corto: entra, cambia y sale, sin brillo ni espera.
+ */
+function openApp() {
+  if (supabaseConfigured) void getSupabase().catch(() => {}); // la app lo pide al montar; así empieza ya
+  if (!brandMark || document.querySelector(".satin-paso")) return navigate("/app");
+  const token = (name: string) => cssMs(getComputedStyle(document.documentElement).getPropertyValue(name));
+  const overlay = brandMark.cloneNode(true) as HTMLElement;
+  overlay.classList.add("satin-paso");
+  document.body.append(overlay);
+  const total = motionReduced() ? token("--fast") + token("--exit") : BRAND_MS;
+  setTimeout(() => navigate("/app"), token("--fast")); // cuando ya tapa la landing
+  setTimeout(() => overlay.setAttribute("data-closing", ""), total - token("--exit"));
+  setTimeout(() => overlay.remove(), total);
+}
 
 // Landing de transición: legible en móvil y escritorio, con capturas reales de la app (scripts/gen-landing.mjs) hechas con música
 // CC0 o de dominio público (scripts/descargar-musica-landing.mjs; créditos por archivo en CREDITOS.md y resumidos en el pie de esta página).
@@ -15,7 +41,7 @@ import { navigate } from "./router";
 export function Landing() {
   const open = (event: MouseEvent) => {
     event.preventDefault();
-    navigate("/app");
+    openApp();
   };
   const rise = (index: number) => ({ "--i": index }) as CSSProperties;
   // Las secciones de más abajo aparecen al llegar a la vista, una sola vez. Sin script (o sin la clase "js") ya están visibles.
