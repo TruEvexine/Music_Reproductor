@@ -168,7 +168,7 @@ describe("shuffle", () => {
     expect(q.order[0].id).toBe("t5");
     const played = [cur(q)];
     for (let i = 1; i < tracks.length; i++) {
-      q = nextInQueue(q, true, seeded(i));
+      q = nextInQueue(q, true);
       played.push(cur(q));
     }
     expect(new Set(played).size).toBe(tracks.length);
@@ -184,13 +184,14 @@ describe("shuffle", () => {
     expect(ids(toggleShuffle(on))).toEqual(["a", "b", "c", "a", "b"]);
   });
 
-  it("con repetir cola rebaraja sin empezar por la que acaba de sonar", () => {
+  it("con repetir cola, al final del aleatorio pasa a la primera del mismo orden", () => {
     for (let seed = 1; seed < 30; seed++) {
       let q = toggleShuffle({ ...replaceQueue(emptyQueue, ["a", "b", "c"], "a"), repeat: "queue" }, seeded(seed));
       q = { ...q, current: q.order[2] };
-      const wrapped = nextInQueue(q, true, seeded(seed + 100));
+      const wrapped = nextInQueue(q, true);
+      expect(wrapped.current).toBe(q.order[0]);
+      expect(wrapped.order).toBe(q.order); // la portada siguiente que ve el reproductor es la que sonará
       expect(wrapped.current).not.toBe(q.current);
-      expect(ids(wrapped).sort()).toEqual(["a", "b", "c"]);
     }
   });
 

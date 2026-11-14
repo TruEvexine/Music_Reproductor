@@ -202,12 +202,12 @@ function LyricsDialog({ lyrics, title, onClose }: { lyrics: Lyrics; title: strin
   );
 }
 
-/** Las entradas vecinas de la actual tal como las tomarían «siguiente» y «anterior» (sin la vuelta barajada, que aún no existe). */
+/** Las entradas vecinas de la actual tal como las tomarían «siguiente» y «anterior». */
 function useNeighbors() {
   const queue = usePlayer((state) => state.queue);
   const tracks = useLibrary((state) => state.tracks);
   const at = currentIndex(queue);
-  const next = at < 0 ? undefined : (queue.order[at + 1] ?? (queue.repeat === "queue" && !queue.shuffle ? queue.order[0] : undefined));
+  const next = at < 0 ? undefined : (queue.order[at + 1] ?? (queue.repeat === "queue" ? queue.order[0] : undefined));
   const previous = previousInQueue(queue).current ?? undefined;
   const find = (entry?: QueueEntry) => (entry && entry.key !== queue.current?.key ? tracks.find((track) => track.id === entry.id) : undefined);
   return { key: queue.current?.key, nextKey: next?.key, previousKey: previous?.key, next: find(next), previous: find(previous) };
