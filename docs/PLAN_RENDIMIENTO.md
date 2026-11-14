@@ -200,7 +200,7 @@ Necesitas el móvil con cable USB, la **depuración USB** activada (Ajustes → 
 
 Script: `npm run build && node scripts/lighthouse.mjs [--pasadas 5] [--solo landing|app] [--etiqueta texto]`. Sirve `dist` con `vite preview`, abre Chrome instalado con perfil temporal vacío y sin extensiones, móvil simulado (Slow 4G, CPU ×4, valores por defecto de Lighthouse 13 vía `npx lighthouse@13`) y da la mediana de 5 pasadas. Los avisos de «JS sin minificar» no aparecen: sin extensiones no hay JS ajeno.
 
-**Línea base** (2026-11-14, `desarrollo` en `768f40a`+2, Windows 11, Chrome 157, sin variables de Supabase en el build):
+**Línea base** (2026-11-14, `desarrollo` en `768f40a`+2, Windows 11, Chrome 157, build con las variables de Supabase de `.env`):
 
 | Página | Puntos | FCP ms | LCP ms (mediana) | LCP mín–máx | TBT ms | CLS | KB transferidos |
 |---|---|---|---|---|---|---|---|
@@ -208,3 +208,17 @@ Script: `npm run build && node scripts/lighthouse.mjs [--pasadas 5] [--solo land
 | /app | 97 | 754 | 2 499 | 2 451–2 557 | 22 | 0 | 278 |
 
 Ojo con la landing: es **bimodal**. En 2 de 5 pasadas el LCP fue 754 ms (100 puntos) porque el candidato fue `span.brand` (la cabecera), y en las otras 3 fue el `h1` a ~3 440–3 530 ms. Con 5 pasadas la mediana cae en el modo lento; si salen 3 del modo rápido, la mediana se desploma sin que nada haya mejorado. Por eso se mira también el mínimo–máximo. Sin extensiones el FCP baja de 1,7 s (tu medida) a 0,75 s; el LCP del `h1` sigue en 3,4 s.
+
+### 9.1 Landing sin el reproductor (shell con carga diferida): medido y descartado
+
+Probado y **no se conserva** (el parche queda fuera del repositorio): `Shell` (la app de `/app`) en su propio módulo, con `import()` precargado al acercarse, enfocar o pulsar «Abrir», y el arranque del reproductor (`initSession` y demás) dentro de ese módulo. La entrada bajó de 457,6 a 274 kB (150 → 90 kB gzip) y la landing de 564 a 500 KB transferidos.
+
+| Variante | Landing LCP | /app LCP | Nota |
+|---|---|---|---|
+| Línea base | 3 440 (754–3 531) | 2 499 (2 451–2 557) | |
+| Shell diferido, `import()` desde `main.tsx` | **3 306** (3 305–3 308), 92 puntos, TBT 0 | **2 598** (2 298–2 600) | /app +100 ms |
+| + `import()` lo primero de la entrada | = | 2 601 | sin efecto |
+| + SDK de Supabase pedido a la vez | = | 2 750 | peor: compite por el ancho de banda |
+| `app.html` como entrada de `/app` (Shell estático y precargado) y CSS único | = | 2 707 | peor; FCP 754 con CSS único |
+
+Causa: Lighthouse simula la carga con el gráfico de dependencias por iniciador, así que cualquier módulo pedido desde otro módulo (el `import()` del Shell, o los de `app.html` desde su mini-entrada) añade un viaje de ida y vuelta (~150 ms) a /app aunque el navegador los pida en paralelo; el LCP observado sin simulación no cambia (112 → 108 ms). El requisito era no empeorar /app, y con una sola `index.html` no hay forma de cumplirlo sin que la landing cargue también el reproductor. La ganancia en la landing (−134 ms) no compensa. Se retoma si se prerrenderiza la landing o si `/app` pasa a tener su propio HTML con el reproductor dentro de la entrada (no un mini-módulo que importe el resto); sin probar.
