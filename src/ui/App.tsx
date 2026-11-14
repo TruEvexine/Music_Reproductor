@@ -4,6 +4,7 @@ import { CircleHelp, CircleUser, Library, ListMusic, Settings } from "lucide-rea
 import { isNative } from "../platform";
 import { useBackground } from "../state/background";
 import { usePaletteOf } from "../state/covers";
+import { trackCoverSeed } from "../core/coverArt";
 import { usePlayer } from "../state/player";
 import { useProfile } from "../state/profile";
 import { setSyncUser } from "../sync/playlistSync";
@@ -45,7 +46,7 @@ function Shell() {
   const avatarUrl = useProfile((state) => state.avatarUrl);
   const [account, setAccount] = useState(false);
   const track = useCurrentTrack();
-  const palette = usePaletteOf(track?.coverHash);
+  const palette = usePaletteOf(track?.coverHash, track && trackCoverSeed(track));
   // Los paneles salen con animación (--exit): se mantienen montados mientras salen. La cola en columna fija (escritorio, sin
   // reproductor grande) no se anima, así que se desmonta al instante.
   const playerPanel = usePresence(panel === "player");

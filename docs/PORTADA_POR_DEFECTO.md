@@ -1,5 +1,7 @@
 # Portada por defecto: tres propuestas (2026-11-13)
 
+> **Decidido 2026-11-14 (D27): ninguna de las tres.** Se adoptó una funda de forma de onda, estática y mate, a partir de una guía propia del usuario; el diseño vigente está en `DESIGN.md` («Funda generada»). Se borró el código de «campos», inicial, nota y tarjeta, `COVER_STYLE` y `scripts/portadas-propuestas.mjs`. Este documento y las láminas de `docs/capturas/portadas/` quedan como historia de la comparación.
+
 Las portadas generativas actuales («campos de color») se descartan por parecer formas al azar. Hay tres propuestas implementadas en el código real, sin formas aleatorias: un **tono plano que sale del título** (mismo título, mismo tono; luminosidad y croma fijos, solo cambia el matiz) y, encima, otra cosa. Sin degradados, sin sombras, sin movimiento.
 
 Cómo verlas: `ESTILOS=inicial,nota,tarjeta node scripts/portadas-propuestas.mjs <carpeta>` contra `npm run dev` (reescribe la constante `COVER_STYLE` al servir el módulo; no hay interruptores en la app). Capturas ya hechas en `docs/capturas/portadas/` (láminas por estilo: lista de 48 px y reproductor grande en los 9 tamaños de la matriz; AMOLED y HDR simulado a 390×844 y 1440×900; y comparativas `comparar-390.jpg` y `comparar-1440.jpg`).

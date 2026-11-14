@@ -38,7 +38,7 @@ No es copia de ninguna, ni de Spotify. **Elemento firma:** el reproductor expand
 | `--danger` | `0.76 0.14 25` | Errores y pistas que no se pueden reproducir (siempre con icono) |
 | `--accent`, `--on-accent`, `--glow` | dinámicos | Los calcula `src/core/palette.ts` desde la portada |
 
-**Color dinámico.** Portada → 32×32 px (en el worker de portadas, una vez por portada; se guarda con ella) → media ponderada por croma → se fuerza a rangos seguros: `--accent` L 0.82 y C 0.07–0.14 (contraste ≥ 4.5:1 sobre `--bg`, comprobado por test), `--glow` L 0.32 (ambiente del reproductor), `--on-accent` L 0.2. Portada gris o ausente → paleta neutra cálida. El acento aparece solo en: pista actual, botón primario/play, estados activos, progreso.
+**Color dinámico.** Portada → 32×32 px (en el worker de portadas, una vez por portada; se guarda con ella) → media ponderada por croma → se fuerza a rangos seguros: `--accent` L 0.82 y C 0.07–0.14 (contraste ≥ 4.5:1 sobre `--bg`, comprobado por test), `--glow` L 0.32 (ambiente del reproductor), `--on-accent` L 0.2. Portada gris → paleta neutra cálida; sin portada, el acento es el neutro y el ambiente toma el tono de la funda generada (ver «Funda generada»). El acento aparece solo en: pista actual, botón primario/play, estados activos, progreso.
 
 **Fondo del reproductor.** Es el ambiente (`ui/Backdrop.tsx`): hasta 4 manchas de tonos distintos de la portada con L 0.28–0.46 en OKLCH, intensidad 60 % por defecto, banda inferior más oscura donde están los controles. Solo vive con el reproductor expandido; colapsado, un tinte CSS al 18 %. Modos Portada, Ritmo, Estático y AMOLED (negro puro). El **HDR simulado** es un interruptor aparte que afecta a toda la app (negro puro, acentos, portadas, brillos y fondo con más croma y tope, en Display P3 si la pantalla lo tiene; no es HDR real, ver `docs/DISENO_HDR.md`); con movimiento reducido o sin WebGL, el mismo gradiente en CSS sin animar. El modo Ritmo se adapta a cada canción (ajuste «Sensibilidad», Auto por defecto) y no parpadea: máximo 3 destellos por segundo y cambios de brillo acotados (`docs/LUCES_REACTIVAS.md`).
 
@@ -75,7 +75,6 @@ Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba
 | `--slow` | 280 ms | Abrir el reproductor |
 | `--exit` | 140 ms | **Toda salida** (≈ 60 % de su entrada) |
 | `--page` | 560 ms | Solo landing y primer uso |
-| `--drift` | 48 s | Vaivén del arte generativo del reproductor grande (ver Portada). Solo mientras suena; nunca con movimiento reducido |
 | `--ease` | `cubic-bezier(0.2, 0.8, 0.2, 1)` | Entradas, salidas y pulsación (decelera) |
 | `--ease-move` | `cubic-bezier(0.65, 0, 0.35, 1)` | Moverse entre dos posiciones ya en pantalla (cambio de página del menú, fila que vuelve) |
 | `--press` / `--press-wide` | 0.96 / 0.985 | Escala al pulsar controles compactos / filas anchas (nunca por debajo de 0.95) |
@@ -98,16 +97,17 @@ Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba
 
 Puerta de frecuencia: transporte, teclado, pestañas y filas de lista → sin animación. Abrir y cerrar reproductor, cola, menú y diálogos → sí. Primer uso y estados vacíos → se permite algo más expresivo (`--page`).
 
-### Portada generativa
+### Funda generada
 
-Cuando una pista no trae carátula, su portada sale de un hash del título y el artista (`core/coverArt.ts`): la misma canción siempre tiene la misma y dos canciones casi nunca se parecen. Elegida entre tres propuestas (`docs/capturas/portada-generativa-propuesta-*.jpg`):
-aurora (luces difusas), horizonte (capas de crestas) y **campos de color** (la elegida). Campos de color son rectángulos planos de bordes duros sobre un tono profundo, en tres composiciones que reparte el hash (bloque con bloque dentro, dos mitades con un cuadrado en la costura, un horizonte con un bloque).
+Cuando una pista no trae carátula, la app pinta una **funda** (`core/coverArt.ts`, `ui/parts.tsx`). Decidida el 2026-11-14 (D27) a partir de una guía propia, revisada contra este sistema; sustituye a «campos de color» y a las propuestas inicial, nota y tarjeta.
 
-- **Por qué esa.** No usa degradados ni sombras (principio 3 y «Prohibido»: el único degradado permitido es el ambiente); se distingue del fondo del reproductor, que ya es una luz difusa (la aurora se fundía con él); se lee a 48 px; y es lo más barato de pintar. La aurora era la más bonita en grande pero se perdía contra el fondo y en listas eran manchas iguales; el horizonte se lee como un paisaje genérico.
-- **Tonos.** Tres (claro, medio y profundo) con luminosidad 0,24–0,82 y croma ≤ 0,14, los rangos del acento; nada más oscuro que las superficies, así que se ve sobre el negro de AMOLED. En HDR recibe el mismo filtro de `.cover`.
-- **Barata en listas:** un `background` de dos o tres capas por fila, calculado del hash (sin canvas, sin imágenes). **Rica en el reproductor grande:** una capa más y, mientras suena y la pestaña está visible, un vaivén lento de `transform` (`--drift`); con `prefers-reduced-motion` o «Reducir movimiento» esa capa no existe.
-- **Original:** formas geométricas planas; sin personajes, marcas ni obras reconocibles (la composición «bloque dentro de bloque» recuerda a la abstracción geométrica en general, no a una obra concreta).
-- **Accesible:** en el reproductor grande y la cabecera de grupo, `role="img"` y «Portada generada para «Título», de Artista»; en listas es decorativa (el título está al lado). Las portadas reales llevan `alt` «Portada de …».
+- **Qué es.** Un cuadrado **estático y mate** con un solo motivo: una forma de onda de nueve barras simétricas, centrada, con márgenes de 18 % a cada lado. Tono de fondo `oklch(0.34 0.045 --h)`, barras `oklch(0.78 0.07 --h)` (contraste ≈ 5:1; las barras son gráfico, no texto). Sin degradados, sin sombras, sin movimiento.
+- **Estable por álbum o por pista suelta.** El matiz (`--h`) y las alturas de las barras salen de un hash: de la clave del álbum (la misma que agrupa en Álbumes, así que la cabecera del álbum y sus pistas se parecen) o, sin álbum, de título y artista. El mismo texto da siempre la misma funda.
+- **Sin texto.** La guía pedía el título al pie y el artista en segundo plano «donde no dupliquen el texto de la interfaz»; en esta app el título y el artista están siempre junto a la portada (fila, mini, reproductor grande, cabecera), así que no hay ningún sitio donde no dupliquen y la funda no lleva texto. Miniaturas y grande son la misma funda: solo color y motivo.
+- **El movimiento vive en el fondo.** El tono de la funda tiñe el ambiente del reproductor (`sleevePalette`: `--glow` y las manchas; el acento sigue siendo el neutro porque la funda no es una carátula). Ese ambiente es lo único que se mueve (modo Ritmo y compañía).
+- **Solo para las fundas.** En cuanto hay carátula real se muestra ella y la funda desaparece; las carátulas reales no cambian. En HDR recibe el mismo filtro de `.cover`.
+- **Barata:** un SVG de nueve `<rect>` por fila, sin canvas ni imágenes. **Accesible:** en el reproductor grande y la cabecera de grupo, `role="img"` y «Portada generada para «Título», de Artista»; en listas es decorativa.
+- **Original:** barras de onda genéricas; sin personajes, marcas ni obras reconocibles. (El rechazo a las ondas de audio de `MARCA.md` §3 es para el **logo**, no para esta funda.)
 
 ### Iconos
 
@@ -142,7 +142,7 @@ Unidades: `dvh` (nunca `100vh`), `env(safe-area-inset-*)` en barra, pestañas, r
 | Componente | Regla |
 |---|---|
 | Fila de pista | Tocar la fila reproduce (la cola pasa a ser la lista visible). 64 px de alto, portada 48 px. Desde 700 px añade álbum, calidad y duración en columnas. Pista actual: título en acento, estado escrito junto al artista («Sonando» o «En pausa», con icono) y una pastilla de `--surface-3` que cubre la fila entera, sin barra de color; las ya sonadas de la cola, `--ink-3`. Mismo lenguaje que la fila de cola |
-| Portada | Siempre 1:1. Sin imagen: **arte generativo** estable por canción, nunca gris plano ni un glifo (abajo). Las portadas grandes se sirven al tamaño real de pantalla (`ui/parts.tsx`, `platform/web/coverScale.ts`) |
+| Portada | Siempre 1:1. Sin imagen: la **funda generada** (abajo), estable por álbum o por pista, nunca gris plano ni un glifo. Las portadas grandes se sirven al tamaño real de pantalla (`ui/parts.tsx`, `platform/web/coverScale.ts`) |
 | Botón | Uno primario por pantalla (relleno de acento). El resto, tono `--surface-2` o enlace |
 | Carrusel de portadas | Reproductor grande, solo dedo: deslizar la portada a la izquierda pasa a la siguiente y a la derecha vuelve a la anterior (la entrada anterior de la cola, sin la regla de «pasados 3 s reinicia»). La portada sigue al dedo y la vecina asoma desde el borde de la pantalla; se completa pasado un tercio del recorrido o con un gesto rápido (> 0,45 px/ms), si no vuelve (`--base`, `--ease`); al completarse, la vecina llega al centro con `--ease-move`. Sin vecina hacia ese lado, resiste al 20 % y vuelve. Eje bloqueado tras 10 px: vertical es cerrar la hoja. El fondo interpola hacia la paleta de la vecina según el avance (solo el lienzo; Estático y movimiento reducido cambian de golpe al completar; AMOLED sigue negro; HDR con su gama). Sin carátula o portada sin color: el fondo por defecto. Alternativa: anterior y siguiente del transporte |
 | Menú del reproductor (≡) | Una sola entrada para lo avanzado (repetir, sonido, temporizador, fondo). Móvil: hoja inferior con grabber y arrastre (<600 px); ancho: popover anclado al icono. Los submenús se abren dentro del mismo panel con flecha de volver, nunca menús flotantes anidados. Filas de 52 px, opciones con marca ✓ además del color, interruptores cuya posición comunica el estado. Los controles de uso constante (aleatorio, repetir) siguen a un toque en el reproductor |

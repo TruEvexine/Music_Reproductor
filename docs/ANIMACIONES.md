@@ -25,7 +25,6 @@ Criterio: simples pero fluidas y reactivas; solo `transform` y `opacity`; interr
 | Salto de canción: color | El acento cambia al instante en toda la interfaz; el fondo WebGL ya se acerca al color nuevo con suavizado | **Sin cambio.** Animar un color exige `color` en la transición y rompe «solo `transform`/`opacity`». Queda como límite | n/a |
 | Cambio de pestaña (biblioteca y navegación) | Sin animación | **Sin cambio, a propósito**: puerta de frecuencia («pestañas y filas de lista → sin animación») | n/a |
 | Filas deslizables | `transform` con `--base` y `--ease-move` al volver; sin transición mientras se arrastra | Sin cambio (ya era interrumpible) | Sin movimiento |
-| Portada generativa del reproductor grande | `art-drift` (vaivén lento, `--drift`) solo mientras suena | Sin cambio | No existe |
 | Landing | `landing-rise` y reveladores con `--page` | Fuera de alcance (no es la app) | Sin movimiento |
 
 Con teclado (`html[data-input="key"]`) tampoco se anima el fundido del título ni la portada que se disuelve: los atajos no animan.

@@ -1,7 +1,7 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
 import { AudioLines, ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Pause, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
-import { coverSeed } from "../core/coverArt";
+import { trackCoverSeed } from "../core/coverArt";
 import { SWIPE_LABELS } from "../core/gestures";
 import { hasPlayed } from "../core/queue";
 import { formatTime, isHiRes, qualityLabel, searchKey } from "../core/format";
@@ -87,7 +87,7 @@ export function TrackRow({ track, number, onPlay }: { track: Track; number?: num
             {track.trackNumber ?? number}
           </span>
         ) : (
-          <Cover artist={track.artist} className="row-cover" hash={track.coverHash} seed={coverSeed(track.title, track.artist)} title={track.title} />
+          <Cover className="row-cover" hash={track.coverHash} seed={trackCoverSeed(track)} />
         )}
         <span className="row-copy">
           <span className="title">
@@ -150,7 +150,7 @@ function GroupRows({ groups, tab }: { groups: TrackGroup[]; tab: Tab }) {
         const to = `${tabPath(tab)}/${encodeURIComponent(group.key)}`;
         return (
           <a className="row-main group-row" href={isNative ? `#${to}` : to} onClick={follow(to)}>
-            <Cover className="row-cover" hash={group.coverHash} seed={group.key} title={group.label} />
+            <Cover className="row-cover" hash={group.coverHash} seed={group.key} />
             <span className="row-copy">
               <span className="title">{group.label}</span>
               <span className="subtitle">{group.subtitle}</span>
@@ -186,7 +186,7 @@ function AlbumGrid({ groups }: { groups: TrackGroup[] }) {
                 const to = `/app/albumes/${encodeURIComponent(group.key)}`;
                 return (
                   <a className="album-tile" href={isNative ? `#${to}` : to} key={group.key} onClick={follow(to)}>
-                    <Cover hash={group.coverHash} seed={group.key} size={tile > 120 ? "large" : "small"} title={group.label} />
+                    <Cover hash={group.coverHash} seed={group.key} size={tile > 120 ? "large" : "small"} />
                     <span className="title">{group.label}</span>
                     <span className="subtitle">{group.subtitle}</span>
                   </a>
@@ -210,7 +210,7 @@ function GroupDetail({ group, tab, tracks }: { group: TrackGroup; tab: Tab; trac
   return (
     <>
       <header className="group-header">
-        <Cover className="group-cover" hash={group.coverHash} label={`«${group.label}»`} seed={group.key} sharp size="large" title={group.label} />
+        <Cover className="group-cover" hash={group.coverHash} label={`«${group.label}»`} seed={group.key} sharp size="large" />
         <div className="group-copy">
           <h2>{group.label}</h2>
           <p className="subtitle">{facts.join(" · ")}</p>

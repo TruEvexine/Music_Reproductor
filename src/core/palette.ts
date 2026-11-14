@@ -197,3 +197,15 @@ export function paletteFromPixels(rgba: ArrayLike<number>): Palette {
     swatches: swatches ?? hueSwatches(hue),
   };
 }
+
+const sleevePalettes = new Map<number, Palette>();
+
+/** Paleta de una funda generada: el acento sigue siendo el neutro (la funda no es una carátula), pero el ambiente del reproductor toma el tono de la funda. Una por tono, memorizada. */
+export function sleevePalette(hue: number): Palette {
+  let palette = sleevePalettes.get(hue);
+  if (!palette) {
+    palette = { ...fallbackPalette, glow: css(0.3, 0.05, hue), hue, colors: colorsFromHue(hue, 0.07), swatches: hueSwatches(hue, 0.07) };
+    sleevePalettes.set(hue, palette);
+  }
+  return palette;
+}

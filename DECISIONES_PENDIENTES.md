@@ -119,7 +119,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Pendiente:** seudónimo (si lo quiere), redes o contacto públicos, y la historia en sus palabras si más adelante quiere añadirla (no se redacta por el usuario).
 - **Efecto en la FAQ:** el texto ya está en tono cercano; solo falta el nombre (D22) y completar `{{CORREO_PRIVACIDAD}}` (D20) para publicarla.
 
-### D27 — Portada por defecto: elegir una de tres (2026-11-13)
-- **Qué:** las portadas generativas actuales no gustan. Hay tres propuestas implementadas (inicial, nota, tarjeta) y capturas en `docs/capturas/portadas/`; `COVER_STYLE` sigue en `"campos"` hasta que se decida. Detalle, comparación y la valoración de Cover Art Archive en `docs/PORTADA_POR_DEFECTO.md`.
-- **Bloquea:** nada.
-- **Recomendación:** A · Inicial. Adoptarla es cambiar la constante y borrar las otras dos ramas y, si se descarta «campos», su código y la sección de `DESIGN.md`.
+### D27 — Portada por defecto (2026-11-13, decidida 2026-11-14)
+- **Decidido:** ninguna de las tres propuestas. El usuario aportó una guía propia (funda cuadrada, estática y mate; un solo motivo de forma de onda; márgenes amplios; solo color y motivo en miniaturas; el tono tiñe el fondo reactivo, que concentra el movimiento; solo para fundas generadas). Implementada y revisada contra `DESIGN.md`: `core/coverArt.ts`, `ui/parts.tsx`, `sleevePalette` en `core/palette.ts`.
+- **Revisión de la guía:** estable «por álbum o por pista suelta» (misma clave que Álbumes); **sin título ni artista en la funda** porque la interfaz ya los muestra junto a ella en todos los sitios (no hay dónde no duplicarlos); el acento sigue siendo el neutro y solo el ambiente toma el tono. Borrados «campos», inicial, nota, tarjeta, `COVER_STYLE` y `--drift`.
+- **Pendiente:** que la mires en un dispositivo real; las capturas de `docs/capturas/` se regeneran al final de la tanda.

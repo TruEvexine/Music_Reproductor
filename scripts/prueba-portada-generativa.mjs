@@ -1,7 +1,6 @@
-// Prueba de la portada generativa (pistas sin carátula) en Chromium contra `npm run dev`. Uso: node scripts/prueba-portada-generativa.mjs [url-base] [carpeta-de-capturas]
-// Comprueba: estable por pista y distinta entre pistas, barata en listas (un background, sin canvas ni imágenes), texto alternativo en el reproductor grande,
-// movimiento solo mientras suena y con la pestaña visible, sin capa móvil con movimiento reducido (sistema o Ajustes), y que AMOLED y HDR la respetan.
-// Las portadas reales no cambian.
+// Prueba de la funda generada (pistas sin carátula) en Chromium contra `npm run dev`. Uso: node scripts/prueba-portada-generativa.mjs [url-base] [carpeta-de-capturas]
+// Comprueba: estable por pista y distinta entre pistas, un solo SVG barato por fila, estática (ninguna animación, tampoco con la pista sonando), texto alternativo en el
+// reproductor grande, ninguna copia del título dentro de la funda, el tono de la funda tiñe el ambiente, AMOLED y HDR la respetan, y la carátula real la sustituye.
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -31,141 +30,84 @@ async function open(files, options = {}) {
   await page.waitForTimeout(2300);
   return { page, errors, context };
 }
-const backgrounds = (page) => page.locator(".track-row .row-cover").evaluateAll((nodes) => nodes.map((node) => node.style.background));
-const drift = (page) =>
-  page.evaluate(() => ({
-    layers: document.querySelectorAll(".now-slot:not([data-side]) > .now-cover .art-drift").length,
-    live: document.querySelector(".now-slot:not([data-side]) > .now-cover")?.hasAttribute("data-live"),
-    states: document.querySelector(".now-slot:not([data-side]) > .now-cover .art-drift")?.getAnimations().map((a) => a.playState) ?? [],
-  }));
+const sleeves = (page) => page.locator(".track-row .row-cover").evaluateAll((nodes) => nodes.map((node) => `${node.style.getPropertyValue("--h")}|${[...node.querySelectorAll("rect")].map((rect) => rect.getAttribute("height")).join()}`));
 const wait = (page, ms = 300) => page.waitForTimeout(ms);
-const idle = (page) => page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur()); // Espacio sobre un botón enfocado lo activa a él, no la reproducción
+const current = ".now-slot:not([data-side]) > .now-cover";
 
 // 1. Listas: estables, distintas y baratas.
 {
   const { page, errors } = await open(bare);
-  const first = await backgrounds(page);
-  check("cada pista sin portada tiene la suya (7 pistas, 7 fondos distintos)", first.length >= 7 && new Set(first).size === first.length, `${new Set(first).size} de ${first.length}`);
+  const first = await sleeves(page);
+  // Las 7 pistas son 5 álbumes de verdad (dos pistas comparten álbum) y dos sueltas sin álbum: el reparto exacto por álbum lo prueba coverArt.test.ts.
+  check("pistas de álbumes distintos y pistas sueltas tienen funda distinta (7 pistas, 6 fundas: dos comparten álbum)", first.length >= 7 && new Set(first).size === first.length - 1, `${new Set(first).size} fundas en ${first.length} pistas`);
   check(
-    "en las filas el arte es un solo background: sin canvas, sin imágenes y sin capa que se mueva",
-    (await page.locator(".track-row .row-cover canvas, .track-row .row-cover img, .track-row .row-cover .art-drift").count()) === 0 && first.every((css) => css.includes("no-repeat")),
+    "en las filas la funda es un solo SVG de 9 barras: sin canvas ni imágenes",
+    (await page.locator(".track-row .row-cover canvas, .track-row .row-cover img").count()) === 0 && (await page.locator(".track-row .row-cover svg.art rect").count()) === first.length * 9,
   );
+  check("la funda no lleva texto: título y artista ya están al lado", (await page.locator(".track-row .row-cover").evaluateAll((nodes) => nodes.every((node) => node.textContent.trim() === ""))) === true);
   await page.reload();
   await wait(page, 1500);
-  const second = await backgrounds(page);
-  check("tras recargar cada pista conserva exactamente la misma portada", JSON.stringify(first.slice().sort()) === JSON.stringify(second.slice().sort()));
+  const second = await sleeves(page);
+  check("tras recargar cada pista conserva exactamente la misma funda", JSON.stringify(first.slice().sort()) === JSON.stringify(second.slice().sort()));
   check("sin errores en la lista", errors.length === 0, errors.join(" | "));
+  if (out) await page.screenshot({ path: join(out, "funda-lista-1440.png") });
 
-  // 2. Reproductor grande.
+  // 2. Reproductor grande, sonando: estática y con el tono en el ambiente.
   await page.locator(".track-row .row-main").first().click();
   await wait(page, 500);
   await page.locator(".bar-track").click();
   await wait(page, 1000);
-  const cover = page.locator(".now-slot:not([data-side]) > .now-cover");
+  const cover = page.locator(current);
   const label = (await cover.getAttribute("aria-label")) ?? "";
-  check("el reproductor grande describe la portada generada para lectores de pantalla", (await cover.getAttribute("role")) === "img" && /^Portada generada para «.+», de .+/.test(label), label);
-  const playing = await drift(page);
-  check("suena: la capa se mueve (animación en marcha)", playing.layers === 1 && playing.live === true && playing.states.join() === "running", JSON.stringify(playing));
-  check(
-    "el movimiento solo usa transform (sin animar color ni tamaño)",
-    await page.evaluate(() =>
-      document
-        .getAnimations()
-        .filter((a) => a.animationName === "art-drift")
-        .every((a) => a.effect.getKeyframes().every((k) => Object.keys(k).filter((p) => !["offset", "easing", "composite", "computedOffset"].includes(p)).every((p) => p === "transform"))),
-    ),
-  );
-  await idle(page);
-  await page.keyboard.press("Space");
-  await wait(page, 400);
-  const paused = await drift(page);
-  check("en pausa se detiene", paused.live === false && paused.states.join() === "paused", JSON.stringify(paused));
-  await page.keyboard.press("Space");
-  await wait(page, 400);
-  check("al reanudar vuelve a moverse", (await drift(page)).states.join() === "running");
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  await wait(page, 300);
-  const hidden = await drift(page);
-  check("con la pestaña oculta se detiene aunque suene", hidden.live === false && hidden.states.join() === "paused", JSON.stringify(hidden));
-  await page.evaluate(() => {
-    Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
-    document.dispatchEvent(new Event("visibilitychange"));
-  });
-  await wait(page, 300);
-  check("al volver a la pestaña continúa", (await drift(page)).states.join() === "running");
-  if (out) await page.screenshot({ path: join(out, "generativa-reproductor-1440.png") });
-
-  // Reducir movimiento desde Ajustes: la capa deja de existir (no solo se pausa).
-  await page.keyboard.press("Escape");
-  await wait(page, 400);
-  await page.getByRole("link", { name: "Ajustes", exact: true }).click();
-  await wait(page, 400);
-  await page.locator(".settings").getByRole("switch", { name: "Reducir movimiento" }).click();
-  await wait(page, 300);
-  await page.locator(".bar-track").click();
-  await wait(page, 600);
-  const reduced = await drift(page);
-  check("con «Reducir movimiento» de Ajustes la capa móvil no existe y el arte sigue pintado", reduced.layers === 0 && (await page.locator(".now-slot:not([data-side]) > .now-cover").evaluate((node) => node.style.background.includes("no-repeat"))));
+  check("el reproductor grande describe la funda para lectores de pantalla", (await cover.getAttribute("role")) === "img" && /^Portada generada para «.+», de .+/.test(label), label);
+  check("suena y la funda no tiene ninguna animación", (await page.evaluate((selector) => document.querySelector(selector).getAnimations({ subtree: true }).length, current)) === 0);
+  check("el título no se repite dentro de la funda grande", (await cover.evaluate((node) => node.textContent.trim())) === "");
+  const hue = await cover.evaluate((node) => Number(node.style.getPropertyValue("--h")));
+  const ambient = await page.evaluate(() => getComputedStyle(document.querySelector(".shell")).getPropertyValue("--glow").trim());
+  const glowHue = Number(/oklch\([\d.]+ [\d.]+ ([\d.]+)\)/.exec(ambient)?.[1]);
+  check("el ambiente del reproductor toma el tono de la funda", Math.abs(((glowHue - hue + 540) % 360) - 180) < 1, `funda ${hue}, ambiente ${ambient}`);
+  if (out) await page.screenshot({ path: join(out, "funda-reproductor-1440.png") });
   await page.keyboard.press("Escape");
   await wait(page, 400);
 
   // 3. AMOLED y HDR desde los controles reales.
-  await page.locator(".settings").getByRole("switch", { name: "Reducir movimiento" }).click();
+  await page.getByRole("link", { name: "Ajustes", exact: true }).click();
+  await wait(page, 400);
   await page.locator(".settings").getByRole("radio", { name: /AMOLED/ }).click();
   await wait(page, 300);
   await page.locator(".bar-track").click();
   await wait(page, 700);
-  const amoled = await page.evaluate(() => ({
+  const amoled = await page.evaluate((selector) => ({
     bg: document.documentElement.dataset.bg,
     color: getComputedStyle(document.querySelector(".shell")).getPropertyValue("--bg").trim(),
-    cover: document.querySelector(".now-slot:not([data-side]) > .now-cover").getBoundingClientRect().width,
-  }));
-  check("AMOLED: fondo negro puro y la portada sigue ahí", amoled.bg === "amoled" && /oklch\(0 0 0\)/.test(amoled.color) && amoled.cover > 200, JSON.stringify(amoled));
-  if (out) await page.screenshot({ path: join(out, "generativa-amoled-1440.png") });
+    cover: document.querySelector(selector).getBoundingClientRect().width,
+  }), current);
+  check("AMOLED: fondo negro puro y la funda sigue ahí", amoled.bg === "amoled" && /oklch\(0 0 0\)/.test(amoled.color) && amoled.cover > 200, JSON.stringify(amoled));
+  if (out) await page.screenshot({ path: join(out, "funda-amoled-1440.png") });
   await page.keyboard.press("Escape");
   await wait(page, 400);
   await page.locator(".settings").getByRole("switch", { name: "HDR simulado en toda la app" }).click();
   await wait(page, 300);
   await page.locator(".bar-track").click();
   await wait(page, 700);
-  const hdr = await page.evaluate(() => ({ hdr: document.documentElement.hasAttribute("data-hdr"), filter: getComputedStyle(document.querySelector(".now-slot:not([data-side]) > .now-cover")).filter }));
-  check("HDR global: la portada generada recibe el mismo realce que las demás", hdr.hdr && hdr.filter !== "none", JSON.stringify(hdr));
-  if (out) await page.screenshot({ path: join(out, "generativa-hdr-1440.png") });
+  const hdr = await page.evaluate((selector) => ({ hdr: document.documentElement.hasAttribute("data-hdr"), filter: getComputedStyle(document.querySelector(selector)).filter }), current);
+  check("HDR global: la funda recibe el mismo realce que las demás portadas", hdr.hdr && hdr.filter !== "none", JSON.stringify(hdr));
   await page.context().close();
 }
 
-// 4. Movimiento reducido del sistema: la capa no existe.
-{
-  const { page, context } = await open(bare, { reducedMotion: "reduce" });
-  await page.locator(".track-row .row-main").first().click();
-  await wait(page, 500);
-  await page.locator(".bar-track").click();
-  await wait(page, 800);
-  const state = await drift(page);
-  check(
-    "prefers-reduced-motion: no hay capa que se mueva y no hay ninguna animación del arte",
-    state.layers === 0 && (await page.evaluate(() => document.getAnimations().filter((a) => a.animationName === "art-drift").length)) === 0,
-    JSON.stringify(state),
-  );
-  await context.close();
-}
-
-// 5. Las portadas reales no cambian.
+// 4. Las portadas reales sustituyen a la funda.
 {
   const { page, context } = await open(withCover);
   await page.locator(".track-row .row-main").first().click();
   await wait(page, 600);
   await page.locator(".bar-track").click();
   await wait(page, 1500);
-  const real = await page.evaluate(() => ({
-    img: document.querySelector(".now-slot:not([data-side]) > .now-cover img")?.getAttribute("alt"),
-    role: document.querySelector(".now-slot:not([data-side]) > .now-cover")?.getAttribute("role"),
-    layer: document.querySelectorAll(".now-slot:not([data-side]) > .now-cover .art-drift").length,
-  }));
-  check("con carátula real se ve la imagen, con su texto alternativo, y no hay arte debajo animándose", /^Portada de «.+»/.test(real.img ?? "") && real.role === null && real.layer === 0, JSON.stringify(real));
+  const real = await page.evaluate((selector) => ({
+    img: document.querySelector(`${selector} img`)?.getAttribute("alt"),
+    role: document.querySelector(selector)?.getAttribute("role"),
+    sleeve: document.querySelectorAll(`${selector} svg.art`).length,
+  }), current);
+  check("con carátula real se ve la imagen, con su texto alternativo, y no queda funda debajo", /^Portada de «.+»/.test(real.img ?? "") && real.role === null && real.sleeve === 0, JSON.stringify(real));
   await context.close();
 }
 

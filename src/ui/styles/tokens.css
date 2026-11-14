@@ -44,7 +44,6 @@
   --slow: 280ms; /* abrir el reproductor */
   --exit: 140ms; /* toda salida: más rápida que su entrada */
   --page: 560ms; /* solo landing y primer uso */
-  --drift: 48s; /* vaivén del arte generativo del reproductor grande: solo mientras suena, nunca con movimiento reducido */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* entradas, salidas y pulsación: decelera */
   --ease-move: cubic-bezier(0.65, 0, 0.35, 1); /* de una posición a otra ya en pantalla: cambio de página, fila que vuelve */
   --press: 0.96; /* controles compactos al pulsar (nunca por debajo de 0.95) */

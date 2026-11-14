@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
-import { artBackground, artOf, COVER_STYLE, hueOf, initialOf } from "../core/coverArt";
+import { barsOf, BARS, hueOf } from "../core/coverArt";
 import { coverBucket } from "../core/resample";
 import { useCover } from "../state/covers";
 import type { CoverSize } from "../state/covers";
 import { useDragDismiss } from "./gestures";
-import { useExit, useReducedMotion } from "./motion";
+import { useExit } from "./motion";
 
 /** Tamaño y trazo únicos para todos los iconos (Lucide). */
 export const icon = { size: 22, strokeWidth: 1.75, "aria-hidden": true } as const;
@@ -52,87 +52,41 @@ function useDevicePixels(enabled: boolean) {
   return [px, ref] as const;
 }
 
-const pageVisible = () => document.visibilityState === "visible";
-const watchVisibility = (listener: () => void) => {
-  document.addEventListener("visibilitychange", listener);
-  return () => document.removeEventListener("visibilitychange", listener);
-};
-
 /**
- * Portada. Sin carátula (o mientras carga) se pinta arte generativo estable por pista (core/coverArt.ts): en listas, un `background` estático barato.
- * `sharp`: portada grande que se sirve al tamaño real de pantalla (reproductor grande, cabecera de álbum) y cuyo arte, además, se mueve despacio
- * mientras `playing`, solo con la pestaña visible y nunca con movimiento reducido (entonces la capa que se mueve ni existe).
+ * Portada. Sin carátula (o mientras carga) se pinta la funda generada (core/coverArt.ts): estática, del tono y el motivo de su semilla, y se sustituye por la carátula en cuanto hay una.
+ * `sharp`: portada grande que se sirve al tamaño real de pantalla (reproductor grande, cabecera de álbum).
  * `label` describe la portada para lectores de pantalla; sin él es decorativa (el título está al lado).
  */
-export function Cover({
-  hash,
-  size = "small",
-  seed,
-  className = "",
-  sharp = false,
-  playing = false,
-  label,
-  title,
-  artist,
-}: {
-  hash?: string;
-  size?: CoverSize;
-  seed: string;
-  className?: string;
-  sharp?: boolean;
-  playing?: boolean;
-  label?: string;
-  title?: string;
-  artist?: string;
-}) {
+export function Cover({ hash, size = "small", seed, className = "", sharp = false, label }: { hash?: string; size?: CoverSize; seed: string; className?: string; sharp?: boolean; label?: string }) {
   const [px, ref] = useDevicePixels(sharp);
   const src = useCover(hash, size, px);
-  const reduced = useReducedMotion();
-  const visible = useSyncExternalStore(watchVisibility, pageVisible);
-  const flat = COVER_STYLE !== "campos";
-  const art = useMemo(() => (flat ? "" : artBackground(artOf(seed), sharp)), [seed, sharp, flat]);
-  const moving = !flat && sharp && !reduced && !src;
+  const bars = useMemo(() => barsOf(seed), [seed]);
   const generated = !hash && Boolean(label);
   return (
     <span
       aria-label={generated ? `Portada generada para ${label}` : undefined}
       className={`cover ${className}`}
-      data-art={moving ? "drift" : undefined}
-      data-cover={flat ? COVER_STYLE : undefined}
-      data-live={(moving && playing && visible) || undefined}
+      data-sleeve=""
       ref={ref}
       role={generated ? "img" : undefined}
-      style={flat ? ({ "--h": hueOf(seed) } as CSSProperties) : moving ? undefined : { background: art }}
+      style={{ "--h": hueOf(seed) } as CSSProperties}
     >
-      {flat && !src && <FlatArt artist={artist} seed={seed} title={title} />}
-      {moving && <span aria-hidden="true" className="art-drift" style={{ background: art }} />}
+      {!src && <Sleeve bars={bars} />}
       {src && <img alt={label ? `Portada de ${label}` : ""} decoding="async" loading="lazy" src={src} />}
     </span>
   );
 }
 
-/** Contenido de la portada plana (el tono lo pone el CSS). Es decorativo: el título ya está al lado o en `aria-label`. */
-function FlatArt({ seed, title, artist }: { seed: string; title?: string; artist?: string }) {
-  const name = title ?? seed.split("\u0000")[0];
-  return (
-    <span aria-hidden="true" className="art">
-      {COVER_STYLE === "inicial" && <span className="art-initial">{initialOf(name)}</span>}
-      {COVER_STYLE === "nota" && (
-        <svg className="art-note" fill="currentColor" viewBox="0 0 100 100">
-          <ellipse cx="30" cy="72" rx="14" ry="10" transform="rotate(-20 30 72)" />
-          <ellipse cx="73" cy="62" rx="14" ry="10" transform="rotate(-20 73 62)" />
-          <path d="M38 24 87 14v15L38 39zM38 24h6v48h-6zM81 14h6v48h-6z" />
-        </svg>
-      )}
-      {COVER_STYLE === "tarjeta" && (
-        <>
-          <span className="art-title">{name}</span>
-          {artist && <span className="art-artist">{artist}</span>}
-        </>
-      )}
-    </span>
-  );
-}
+// Nueve barras de 4,6 u con márgenes de 18 u a cada lado (en un lienzo de 100): el motivo se lee igual a 48 px que a pantalla completa.
+const BAR = 4.6;
+const PITCH = (64 - BAR) / (BARS - 1); // reparte las barras en el ancho útil de 64 u
+const Sleeve = ({ bars }: { bars: number[] }) => (
+  <svg aria-hidden="true" className="art" fill="currentColor" viewBox="0 0 100 100">
+    {bars.map((bar, i) => (
+      <rect height={bar * 64} key={i} rx={BAR / 2} width={BAR} x={18 + i * PITCH} y={50 - bar * 32} />
+    ))}
+  </svg>
+);
 
 /** Diálogo modal nativo: atrapa el foco, cierra con Escape y con clic fuera. En móvil es una hoja inferior. */
 export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {

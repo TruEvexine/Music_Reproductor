@@ -21,7 +21,7 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import { coverSeed } from "../core/coverArt";
+import { trackCoverSeed } from "../core/coverArt";
 import { SWIPE_LABELS } from "../core/gestures";
 import { formatTime, isHiRes, qualityLabel } from "../core/format";
 import { lineAt } from "../core/lyrics";
@@ -137,7 +137,7 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
     <footer aria-label="Reproductor" className="player-bar">
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
       <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
-        <Cover artist={track.artist} className="bar-cover" seed={coverSeed(track.title, track.artist)} hash={track.coverHash} title={track.title} />
+        <Cover className="bar-cover" seed={trackCoverSeed(track)} hash={track.coverHash} />
         <span className="bar-copy">
           <span className="title">
             <Marquee>{track.title}</Marquee>
@@ -216,8 +216,8 @@ function useNeighbors() {
 export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNode; closing?: true; queueOpen: boolean }) {
   const track = useCurrentTrack();
   const neighbors = useNeighbors();
-  const nextPalette = usePaletteOf(neighbors.next?.coverHash);
-  const previousPalette = usePaletteOf(neighbors.previous?.coverHash);
+  const nextPalette = usePaletteOf(neighbors.next?.coverHash, neighbors.next && trackCoverSeed(neighbors.next));
+  const previousPalette = usePaletteOf(neighbors.previous?.coverHash, neighbors.previous && trackCoverSeed(neighbors.previous));
   const carousel = useRef<HTMLDivElement>(null);
   const swipe = useCoverSwipe(carousel, {
     onNext: neighbors.next && (() => ((swiped.current = true), player.next())),
@@ -242,7 +242,6 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
     else if (before && track && before.id !== track.id && !motionReduced() && document.documentElement.dataset.input !== "key") setLeaving(before);
   }, [neighbors.key]);
   const wide = useMedia("(min-width: 1000px)");
-  const isPlaying = usePlayer((state) => state.isPlaying);
   useEncounter("player-touch");
   useEncounter("player-pointer");
   if (!track) return null;
@@ -287,7 +286,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         <div className="now-track" ref={carousel}>
           {leaving && (
             <span aria-hidden="true" className="now-leaving" key={leaving.id} onAnimationEnd={() => setLeaving(null)}>
-              <Cover className="now-cover" hash={leaving.coverHash} seed={coverSeed(leaving.title, leaving.artist)} size="large" artist={leaving.artist} title={leaving.title} />
+              <Cover className="now-cover" hash={leaving.coverHash} seed={trackCoverSeed(leaving)} size="large" />
             </span>
           )}
           {/* Claves de entrada de la cola (una pista puede repetirse); con dos entradas y «repetir cola», la misma es anterior y siguiente. */}
@@ -301,15 +300,12 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
             return (
               <span aria-hidden={current ? undefined : true} className="now-slot" data-side={current ? undefined : side} key={key}>
                 <Cover
-                  artist={item.artist}
                   className="now-cover"
                   hash={item.coverHash}
                   label={current ? `«${item.title}», de ${item.artist}` : undefined}
-                  playing={current && isPlaying}
-                  seed={coverSeed(item.title, item.artist)}
+                  seed={trackCoverSeed(item)}
                   sharp={current}
                   size="large"
-                  title={item.title}
                 />
               </span>
             );
@@ -365,7 +361,7 @@ function QueueRow({ entryKey, track, index, first, last, state, repeated }: { en
     >
       <button className="row-main" data-state={state} onClick={() => player.playEntry(entryKey)} type="button">
         <span className="row-coverbox">
-          <Cover artist={track.artist} className="row-cover" hash={track.coverHash} seed={coverSeed(track.title, track.artist)} title={track.title} />
+          <Cover className="row-cover" hash={track.coverHash} seed={trackCoverSeed(track)} />
         </span>
         <span className="row-copy">
           <span className="title">

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { storage } from "../platform";
 import { coverPalette, scaleCover } from "../platform/web/covers";
-import { fallbackPalette } from "../core/palette";
+import { hueOf } from "../core/coverArt";
+import { fallbackPalette, sleevePalette } from "../core/palette";
 import type { Palette } from "../core/palette";
 
 // Portadas guardadas en IndexedDB → URLs blob: con conteo de uso. Al dejar de usarse se conservan unas pocas
@@ -136,8 +137,8 @@ function paletteOf(hash: string): Promise<Palette> {
   return found;
 }
 
-/** Paleta de la portada `hash`. Sin portada (arte generativo) o portada sin color: la neutra, que da el fondo por defecto. */
-export function usePaletteOf(hash: string | undefined): Palette {
+/** Paleta de la portada `hash`. Sin portada, la de la funda generada (`seed`: su tono tiñe el ambiente; el acento es el neutro); sin semilla o con portada sin color, la neutra. */
+export function usePaletteOf(hash: string | undefined, seed?: string): Palette {
   const [loaded, setLoaded] = useState(fallbackPalette);
   useEffect(() => {
     if (!hash) return;
@@ -149,5 +150,5 @@ export function usePaletteOf(hash: string | undefined): Palette {
   }, [hash]);
   // Ya resuelta en memoria: sin esperar a un render más (al terminar el gesto, la nueva pista estrena su color en el mismo cuadro).
   // Mientras se calcula una nueva, sigue la anterior (sin destello a la neutra).
-  return hash ? (resolved.get(hash) ?? loaded) : fallbackPalette;
+  return hash ? (resolved.get(hash) ?? loaded) : seed ? sleevePalette(hueOf(seed)) : fallbackPalette;
 }
