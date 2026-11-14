@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { SHORTCUTS } from "../src/core/shortcuts";
 import { fillMarkers, findMarkers, parseFaq, parseLegal, stripNotes, unfilledMarkers } from "./docsContent";
 
 const read = (name: string) => readFileSync(new URL(`../docs/producto/${name}`, import.meta.url), "utf8");
@@ -80,3 +81,20 @@ describe("textos legales publicados", () => {
     expect(Object.values(parseLegal(read("LEGAL_BORRADORES.md"))).join("\n")).not.toMatch(/\[(Nombre de la app|fecha|URL|ciudad)\]/);
   });
 });
+
+describe("FAQ de atajos", () => {
+  it("nombra exactamente las teclas de SHORTCUTS: si el mapa cambia y la FAQ no, falla", () => {
+    const answer = questionsOf("FAQ.md").find(({ question }) => question.includes("atajos"))?.answer.join(" ") ?? "";
+    // «**Mayús + ← / →**» → «Mayús + ←», «Mayús + →»
+    const inFaq = [...answer.matchAll(/\*\*([^*]+)\*\*/g)].flatMap(([, keys]) => {
+      const parts = keys.split(" + ");
+      const last = parts.pop() ?? "";
+      return last.split(" / ").map((key) => [...parts, key].join(" + "));
+    });
+    expect(inFaq.sort()).toEqual(SHORTCUTS.map(({ keys }) => keys.join(" + ")).sort());
+  });
+});
+
+function questionsOf(name: string) {
+  return parseFaq(read(name)).flatMap((group) => group.items);
+}
