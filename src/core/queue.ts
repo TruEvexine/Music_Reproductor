@@ -17,6 +17,8 @@ export interface QueueState {
   current: QueueEntry | null;
   repeat: RepeatMode;
   shuffle: boolean;
+  /** Orden de la vuelta siguiente (aleatorio + repetir cola), calculado al entrar en la última pista. Vale solo mientras `base === order`. */
+  nextRound?: { base: QueueEntry[]; order: QueueEntry[] };
 }
 
 export type Rng = () => number;
@@ -143,18 +145,45 @@ export function clearQueue(state: QueueState): QueueState {
   return { ...state, order: [], original: [], current: null };
 }
 
+const planned = (state: QueueState) => (state.nextRound?.base === state.order && state.shuffle && state.repeat === "queue" ? state.nextRound.order : undefined);
+
+/** Nueva vuelta barajada que no empieza por la pista que acaba de sonar (con 2 o más). */
+function roundAfter(state: QueueState, rng: Rng): QueueEntry[] {
+  const order = shuffled(state.order, rng);
+  return order[0].key === state.current?.key ? [...order.slice(1), order[0]] : order;
+}
+
+/**
+ * Al entrar en la última pista con aleatorio + repetir cola fija el orden de la vuelta siguiente (para que la portada «siguiente»
+ * sea la que sonará); en cualquier otro caso lo descarta. Devuelve el mismo objeto si no cambia nada.
+ */
+export function planRound(state: QueueState, rng: Rng = Math.random): QueueState {
+  const wanted = state.shuffle && state.repeat === "queue" && state.order.length >= 2 && currentIndex(state) === state.order.length - 1;
+  if (!wanted) return state.nextRound === undefined ? state : { ...state, nextRound: undefined };
+  return planned(state) ? state : { ...state, nextRound: { base: state.order, order: roundAfter(state, rng) } };
+}
+
+/** Primera pista de la vuelta siguiente al final de la cola; con aleatorio solo existe una vez planeada (`planRound`). */
+export function wrapEntry(state: QueueState): QueueEntry | undefined {
+  if (state.repeat !== "queue") return undefined;
+  return state.shuffle && state.order.length >= 2 ? planned(state)?.[0] : state.order[0];
+}
+
 /**
  * Siguiente pista. `auto` = la pista terminó sola (respeta "repetir pista");
  * si el usuario pulsa "siguiente", avanza siempre.
- * Devuelve `current: null` cuando la cola se agotó y no hay repetición. Con «repetir cola», al final pasa a la primera del orden actual, también con aleatorio:
- * la vuelta repite el mismo orden (así la portada siguiente ya se conoce antes de llegar al final).
+ * Devuelve `current: null` cuando la cola se agotó y no hay repetición. Con «repetir cola» y aleatorio, la vuelta nueva
+ * usa el orden de `nextRound` (o uno recién barajado) y no empieza por la que acaba de sonar.
  */
-export function nextInQueue(state: QueueState, auto: boolean): QueueState {
+export function nextInQueue(state: QueueState, auto: boolean, rng: Rng = Math.random): QueueState {
   if (state.current === null || state.order.length === 0) return state;
   if (auto && state.repeat === "track") return state;
   const next = state.order[currentIndex(state) + 1];
   if (next !== undefined) return { ...state, current: next };
-  return state.repeat === "queue" ? { ...state, current: state.order[0] } : { ...state, current: null };
+  if (state.repeat !== "queue") return { ...state, current: null };
+  if (!state.shuffle || state.order.length < 2) return { ...state, current: state.order[0] };
+  const order = planned(state) ?? roundAfter(state, rng);
+  return { ...state, order, current: order[0], nextRound: undefined };
 }
 
 /** Pista anterior; al principio de la cola solo da la vuelta con "repetir cola". */

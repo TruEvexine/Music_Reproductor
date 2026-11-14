@@ -8,6 +8,7 @@ import {
   hasPlayed,
   moveInQueue,
   nextInQueue,
+  planRound,
   playEntry,
   playNext,
   previousInQueue,
@@ -16,6 +17,7 @@ import {
   restoreQueue,
   toggleShuffle,
   upgradeQueue,
+  wrapEntry,
 } from "./queue";
 import type { QueueState } from "./queue";
 
@@ -184,15 +186,37 @@ describe("shuffle", () => {
     expect(ids(toggleShuffle(on))).toEqual(["a", "b", "c", "a", "b"]);
   });
 
-  it("con repetir cola, al final del aleatorio pasa a la primera del mismo orden", () => {
+  it("con repetir cola rebaraja cada vuelta sin empezar por la que acaba de sonar, y la siguiente prevista es la que suena", () => {
     for (let seed = 1; seed < 30; seed++) {
       let q = toggleShuffle({ ...replaceQueue(emptyQueue, ["a", "b", "c"], "a"), repeat: "queue" }, seeded(seed));
-      q = { ...q, current: q.order[2] };
-      const wrapped = nextInQueue(q, true);
-      expect(wrapped.current).toBe(q.order[0]);
-      expect(wrapped.order).toBe(q.order); // la portada siguiente que ve el reproductor es la que sonará
-      expect(wrapped.current).not.toBe(q.current);
+      q = planRound({ ...q, current: q.order[2] }, seeded(seed + 50));
+      const promised = wrapEntry(q);
+      const wrapped = nextInQueue(q, true, seeded(seed + 100));
+      expect(wrapped.current).toBe(promised);
+      expect(wrapped.current).toBe(wrapped.order[0]);
+      expect(wrapped.current?.key).not.toBe(q.current?.key);
+      expect(ids(wrapped).sort()).toEqual(["a", "b", "c"]);
+      expect(wrapped.nextRound).toBeUndefined();
     }
+  });
+
+  it("el orden precalculado se descarta si cambia la cola, se apaga el aleatorio o se sale de la última", () => {
+    const q = planRound({ ...toggleShuffle({ ...replaceQueue(emptyQueue, ["a", "b", "c"], "a"), repeat: "queue" }, seeded(2)) }, seeded(1));
+    const last = planRound({ ...q, current: q.order[2] }, seeded(1));
+    expect(last.nextRound).toBeDefined();
+    expect(planRound(last)).toBe(last);
+    expect(wrapEntry(enqueue(last, "d"))).toBeUndefined(); // la cola cambió: no se confía en el plan viejo
+    expect(planRound(enqueue(last, "d")).nextRound).toBeUndefined();
+    expect(wrapEntry(toggleShuffle(last))).toBe(last.original[0]);
+    expect(planRound(toggleShuffle(last)).nextRound).toBeUndefined();
+    expect(planRound({ ...last, current: last.order[0] }).nextRound).toBeUndefined();
+  });
+
+  it("con una sola pista, repetir cola con aleatorio no se rompe", () => {
+    const q = planRound({ ...toggleShuffle({ ...replaceQueue(emptyQueue, ["a"], "a"), repeat: "queue" }), repeat: "queue" });
+    expect(q.nextRound).toBeUndefined();
+    expect(wrapEntry(q)).toBe(q.order[0]);
+    expect(nextInQueue(q, true).current).toBe(q.order[0]);
   });
 
   it("apagarlo devuelve el orden original y mantiene la pista", () => {

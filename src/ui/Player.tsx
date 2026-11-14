@@ -26,7 +26,7 @@ import { SWIPE_LABELS } from "../core/gestures";
 import { formatTime, isHiRes, qualityLabel } from "../core/format";
 import { lineAt } from "../core/lyrics";
 import type { Lyrics } from "../core/lyrics";
-import { currentIndex, previousInQueue } from "../core/queue";
+import { currentIndex, previousInQueue, wrapEntry } from "../core/queue";
 import type { QueueEntry } from "../core/queue";
 import type { Track } from "../core/track";
 import { usePaletteOf } from "../state/covers";
@@ -207,7 +207,7 @@ function useNeighbors() {
   const queue = usePlayer((state) => state.queue);
   const tracks = useLibrary((state) => state.tracks);
   const at = currentIndex(queue);
-  const next = at < 0 ? undefined : (queue.order[at + 1] ?? (queue.repeat === "queue" ? queue.order[0] : undefined));
+  const next = at < 0 ? undefined : (queue.order[at + 1] ?? wrapEntry(queue));
   const previous = previousInQueue(queue).current ?? undefined;
   const find = (entry?: QueueEntry) => (entry && entry.key !== queue.current?.key ? tracks.find((track) => track.id === entry.id) : undefined);
   return { key: queue.current?.key, nextKey: next?.key, previousKey: previous?.key, next: find(next), previous: find(previous) };

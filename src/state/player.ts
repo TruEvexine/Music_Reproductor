@@ -8,6 +8,7 @@ import {
   enqueue,
   moveInQueue,
   nextInQueue,
+  planRound,
   playEntry,
   playNext,
   previousInQueue,
@@ -353,7 +354,7 @@ const POSITION_EVERY_MS = 2000;
 // No se confía en pagehide: al recargar, la escritura asíncrona de IndexedDB puede no llegar a completarse.
 function saveQueue() {
   const { queue, position } = usePlayer.getState();
-  void storage.set("session", { queue, position } satisfies SavedSession);
+  void storage.set("session", { queue: { ...queue, nextRound: undefined }, position } satisfies SavedSession);
   savePosition();
 }
 
@@ -402,6 +403,8 @@ export async function initSession() {
   });
   usePlayer.subscribe((state, previous) => {
     syncSession(state, previous);
+    const round = planRound(state.queue); // la vuelta siguiente se fija al entrar en la última pista; el setState vuelve a pasar por aquí
+    if (round !== state.queue) usePlayer.setState({ queue: round });
     if (saved) return; // todavía esperando a que aparezcan las pistas guardadas: no pisar la sesión
     if (state.queue !== previous.queue) saveQueue();
     else if (state.position !== previous.position && Date.now() - lastPositionSave > POSITION_EVERY_MS) savePosition();
