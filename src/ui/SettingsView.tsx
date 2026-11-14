@@ -4,6 +4,7 @@ import type { AuthController } from "../sync/useAuthController";
 import { FoldersSection } from "./LibrarySheet";
 import { tutorials } from "../state/tutorials";
 import { PrivacySection } from "./PrivacySection";
+import { ProfileSection } from "./ProfileSection";
 import { openShortcutHelp } from "./ShortcutsHelp";
 import { useReducedMotion } from "./motion";
 import { BackgroundPage, EqPage, SoundControls, SwitchRow } from "./PlayerMenu";
@@ -24,6 +25,7 @@ export function SettingsView({ auth }: { auth: AuthController }) {
           <p className="subtitle">Se guardan en este dispositivo.</p>
         </div>
       </header>
+      <ProfileSection />
       <section aria-labelledby="set-look" className="settings-section">
         <h2 id="set-look">Apariencia y luces</h2>
         <div className="settings-stack">

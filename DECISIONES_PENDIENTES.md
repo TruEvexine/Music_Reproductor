@@ -108,6 +108,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 
 ### D25 — Perfil y recaps: decisiones y un punto por reconciliar (2026-11-12)
 - **Decidido:** nombre visible vacío por defecto; foto local y, con cuenta, en bucket privado; solo nombre y foto como datos de perfil; recaps compartidos como imagen generada en el dispositivo (sin enlace público).
+- **Hecho 2026-11-13:** Ajustes → Perfil guarda nombre (vacío por defecto) y foto solo en el dispositivo. El nombre local **no** se sincroniza con `profiles.display_name` mientras esto siga por reconciliar.
 - **Por reconciliar:** `useAuthController.signUp` recibe `displayName` y lo guarda como `display_name` al registrarse, así que con cuenta el nombre **no** nace vacío. Decidir al implementar: dejar ese campo opcional en el registro, o aceptar que el nombre del registro sea el nombre del perfil.
 - **Sin decidir todavía:** retención del historial (24 meses propuestos), si `hours` se sube a la nube, D19 de `docs/DISENO_ESTADISTICAS.md`.
 

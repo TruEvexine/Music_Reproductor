@@ -47,6 +47,14 @@ cuándo sonó cada canción.
 
 Comprobado en: `src/ui/PrivacySection.tsx`, `src/sync/account.ts` (`signOutForWipe`), `src/state/library.ts` (`wipeAll`, `clearPlayed`), `src/platform/web/db.ts` (`clearDatabase`).
 
+### ¿Puedo poner mi nombre y una foto?
+Sí, en **Ajustes → Perfil**. Los dos son opcionales y el nombre empieza vacío. Se guardan solo en tu dispositivo: no se suben ni se
+sincronizan con tu cuenta (el nombre del perfil es aparte del que escribes al crear la cuenta). La foto se recorta a un cuadrado y se
+guarda reducida a 256 píxeles; al reducirla se pierde la información oculta de la original, como la ubicación. Aceptamos JPG, PNG,
+WebP y GIF de hasta 12 MB.
+
+Comprobado en: `src/ui/ProfileSection.tsx`, `src/state/profile.ts` (`reencode`), `src/core/profile.ts` (`checkAvatar`, `AVATAR_PX`), `src/sync/` sin referencias al perfil local.
+
 ### ¿Puedo descargar lo que hay en mi cuenta?
 Sí, con la sesión iniciada: **Ajustes → Privacidad y datos → Datos de tu cuenta**. Descargas un archivo JSON con tu perfil (nombre visible y
 fecha de alta) y todas tus playlists tal como están guardadas; ese archivo también se puede importar como copia de seguridad.
@@ -185,7 +193,7 @@ Comprobado en: no hay pagos en el código. (Actualizar si se activa el apoyo vol
 
 ## Preguntas que quedan fuera hasta que exista la función
 
-No publicar respuestas sobre: recaps y estadísticas (`PERFIL_Y_RECAPS.md`), perfil y foto, eliminar cuenta desde la app
+No publicar respuestas sobre: recaps y estadísticas (`PERFIL_Y_RECAPS.md`), la foto en la nube, eliminar cuenta desde la app
 (`AJUSTES_PRIVACIDAD.md`), premium y apoyo (`MONETIZACION.md`), app instalable. Se añaden aquí cuando estén en el código.
 
 ## Riesgos

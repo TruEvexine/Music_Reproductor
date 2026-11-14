@@ -32,7 +32,7 @@ await page.getByRole("link", { name: "Ajustes", exact: true }).click();
 await wait(page, 500);
 check("la pestaña Ajustes abre /app/ajustes con su título", new URL(page.url()).pathname === "/app/ajustes" && (await page.getByRole("heading", { level: 1, name: "Ajustes" }).count()) === 1);
 const sections = await page.locator(".settings-section > h2").allInnerTexts();
-check("cinco secciones: apariencia, reproducción, biblioteca, accesibilidad y privacidad", sections.join("|") === "Apariencia y luces|Reproducción|Biblioteca|Accesibilidad|Privacidad y datos", sections.join("|"));
+check("seis secciones: perfil, apariencia, reproducción, biblioteca, accesibilidad y privacidad", sections.join("|") === "Perfil|Apariencia y luces|Reproducción|Biblioteca|Accesibilidad|Privacidad y datos", sections.join("|"));
 check("no hay ajustes de tema ni de idioma (la app no los tiene)", (await page.locator(".settings").getByText(/idioma|tema claro/i).count()) === 0);
 
 // HDR: un solo estado compartido con el menú del reproductor.

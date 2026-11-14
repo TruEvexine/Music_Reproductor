@@ -19,6 +19,7 @@ y, con una consulta de solo lectura al esquema `auth` del proyecto de Supabase, 
 | Dónde | Qué guarda | Cuándo | Cómo se borra hoy |
 |---|---|---|---|
 | IndexedDB `reproductor`, almacén `kv` | `audio` (ecualizador, volumen, velocidad, fundidos, ReplayGain), `background` (fondo, HDR, reducir movimiento), `session` (cola de reproducción y posición), `position` (pista y segundo actuales) | Al cambiar un ajuste o al reproducir | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
+| IndexedDB, almacén `kv`, claves `profile.name` y `profile.avatar` | **Nombre visible** (opcional, vacío por defecto, hasta 60 caracteres) y **foto de perfil** (opcional: un JPEG de 256 × 256 px que sale de recortar y volver a codificar la imagen elegida, sin sus metadatos). No se suben ni se sincronizan con la cuenta | Solo si la persona los escribe o los elige en Ajustes → Perfil | Quitar la foto y vaciar el nombre en Ajustes → Perfil, o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 | IndexedDB, almacén `tracks` | Por pista: título, artista, álbum, artista del álbum, año, género, número de pista, duración, formato y calidad, ReplayGain, letras, nombre de archivo, ruta relativa dentro de la carpeta elegida, tamaño, fecha de modificación, huella `track:v2` (SHA-256 de partes del archivo), fecha en que se añadió y **fecha de la última reproducción** (`playedAt`, un solo valor por pista, no un historial) | Al añadir música o reproducir | Quitar la carpeta, o borrar los datos del dispositivo |
 | IndexedDB, almacén `roots` | Nombre de cada carpeta elegida y su permiso de acceso (`FileSystemDirectoryHandle`) | Al elegir una carpeta | Ídem |
 | IndexedDB, almacén `covers` | Portadas extraídas de los archivos y sus miniaturas (96 y 600 px) | Al leer metadatos | Ídem |
@@ -48,8 +49,8 @@ Eso debe decirse en el aviso: revela gustos musicales.
   Supabase) impediría cualquier otra conexión aunque alguien añadiera el script.
 - **Fuentes, scripts o imágenes de terceros:** la tipografía va empaquetada (`@fontsource`) y todo se sirve desde el propio dominio.
 - **Audio en servidores:** los archivos se leen en el dispositivo y nunca se suben (`AGENTS.md` §5, `docs/COPY_LANDING.md`).
-- **Recuperación de contraseña, cambio de correo, borrado de cuenta y edición de perfil desde la app:** no están implementados.
-  Hoy el borrado de cuenta solo puede hacerse a mano desde el panel de Supabase.
+- **Recuperación de contraseña, cambio de correo, borrado de cuenta y edición del perfil de la cuenta desde la app:** no están implementados.
+  Hoy el borrado de cuenta solo puede hacerse a mano desde el panel de Supabase. (El nombre y la foto de Ajustes → Perfil existen, pero solo en el dispositivo: ver §1.1.)
 - **Datos sensibles** en el sentido del artículo 2, fracción VI, de la ley: no se piden. **[Abogado]** Los títulos de canciones
   de una playlist podrían revelar creencias religiosas o políticas (música religiosa, himnos de partido). Conviene que el abogado
   diga si eso basta para tratarlos como sensibles; mi lectura es que no, porque la app no los interpreta ni los clasifica.
@@ -100,7 +101,7 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > **Lo que no recabamos.** Tu música no sale de tu dispositivo: la app lee los archivos en tu navegador y no los sube a ningún
 > servidor. Tampoco usamos cookies, analítica, publicidad ni herramientas de rastreo.
 >
-> **Si usas la app sin cuenta,** no tratamos ningún dato personal tuyo. Tu biblioteca, playlists, cola y ajustes se guardan solo en
+> **Si usas la app sin cuenta,** no tratamos ningún dato personal tuyo. Tu biblioteca, playlists, cola y ajustes, y el nombre y la foto de perfil si los pones, se guardan solo en
 > el almacenamiento de tu navegador y puedes borrarlos desde Ajustes → Privacidad y datos.
 >
 > **Si creas una cuenta,** tratamos:
@@ -211,6 +212,7 @@ Basta con esta página, enlazada desde el pie de la landing y desde Ajustes:
 > | Tu biblioteca: datos de cada canción (título, artista, portada, ruta dentro de la carpeta que elegiste) y el permiso para leer esa carpeta | Que no tengas que volver a añadir tu música cada vez | Ajustes → Biblioteca → quitar la carpeta |
 > | Copias de tus archivos, solo en navegadores que no permiten recordar carpetas (Firefox, Safari) | Que tu música siga disponible al volver | Ídem |
 > | Playlists, cola, posición de reproducción y ajustes de sonido y fondo | Que la app esté como la dejaste | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
+> | Tu nombre y tu foto de perfil, si los pones (la foto se guarda reducida y sin sus metadatos) | Mostrarlos en la app | Ajustes → Perfil, o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > | Tu sesión, si iniciaste sesión | No pedirte la contraseña cada vez | Cerrar sesión |
 >
 > Nada de esto se envía a nosotros, salvo tus playlists si tienes cuenta (ver el aviso de privacidad).

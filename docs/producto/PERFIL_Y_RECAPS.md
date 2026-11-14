@@ -1,6 +1,6 @@
 # Perfil, historial de escucha y recaps
 
-Estado: **propuesta**, sin implementar. Amplía `docs/DISENO_ESTADISTICAS.md` (panel de estadísticas) con el perfil y los recaps, y
+Estado: **propuesta**. **Implementado el 2026-11-13 (paso 5 de §4, solo la parte local): nombre opcional y foto en el dispositivo** (`src/ui/ProfileSection.tsx`, `state/profile.ts`, `core/profile.ts`; prueba `scripts/prueba-perfil.mjs`). Sin implementar: historial, recaps, foto en Storage y `mp_play_daily`. Amplía `docs/DISENO_ESTADISTICAS.md` (panel de estadísticas) con el perfil y los recaps, y
 cambia una cosa de aquella propuesta: **el servidor no recibe eventos sueltos, solo resúmenes diarios** (§2.4). Las decisiones tuyas
 están marcadas **[Decides tú]**.
 

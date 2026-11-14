@@ -5,6 +5,7 @@ import { isNative } from "../platform";
 import { useBackground } from "../state/background";
 import { usePaletteOf } from "../state/covers";
 import { usePlayer } from "../state/player";
+import { useProfile } from "../state/profile";
 import { setSyncUser } from "../sync/playlistSync";
 import { useAuthController } from "../sync/useAuthController";
 import { Backdrop, Tint } from "./Backdrop";
@@ -40,6 +41,7 @@ function NavLink({ to, active, children }: { to: string; active: boolean; childr
 function Shell() {
   const { path, panel, queue } = useRoute();
   const auth = useAuthController();
+  const avatarUrl = useProfile((state) => state.avatarUrl);
   const [account, setAccount] = useState(false);
   const track = useCurrentTrack();
   const palette = usePaletteOf(track?.coverHash);
@@ -95,7 +97,7 @@ function Shell() {
             <span>Ayuda</span>
           </NavLink>
           <button className="nav-link" onClick={() => setAccount(true)} type="button">
-            <CircleUser {...icon} />
+            {avatarUrl ? <img alt="" className="nav-avatar" height={24} src={avatarUrl} width={24} /> : <CircleUser {...icon} />}
             <span>{auth.session ? "Cuenta" : "Entrar"}</span>
           </button>
         </nav>

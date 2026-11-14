@@ -4,6 +4,7 @@ import { formatBytes, maskEmail } from "../core/format";
 import { storage } from "../platform";
 import { library, useLibrary } from "../state/library";
 import { usePlaylists } from "../state/playlists";
+import { useProfile } from "../state/profile";
 import { fetchAccountData, signOutForWipe } from "../sync/account";
 import type { AuthController } from "../sync/useAuthController";
 import { ConfirmDialog } from "./dialogs";
@@ -38,6 +39,8 @@ function StoredList({ auth }: { auth: AuthController }) {
   const roots = useLibrary((state) => state.roots.length);
   const all = usePlaylists((state) => state.all);
   const pending = usePlaylists((state) => state.pending);
+  const hasName = useProfile((state) => state.name !== "");
+  const hasPhoto = useProfile((state) => state.avatarUrl !== null);
   const [stored, setStored] = useState<Stored>();
   useEffect(() => {
     void loadStored().then(setStored);
@@ -49,6 +52,7 @@ function StoredList({ auth }: { auth: AuthController }) {
     ["Portadas", stored ? (stored.covers.count === 0 ? "Ninguna" : `${count(stored.covers.count, "portada", "portadas")} · ${formatBytes(stored.covers.bytes)}`) : "Calculando…"],
     ["Copias de música", stored ? (stored.copies > 0 ? formatBytes(stored.copies) : "Ninguna: se lee de tus carpetas") : "Calculando…"],
     ["Playlists", `${count(all.length, "en este dispositivo", "en este dispositivo")} · ${count(synced, "sincronizada", "sincronizadas")}`],
+    ["Perfil", hasName && hasPhoto ? "Nombre y foto, solo aquí" : hasName ? "Solo el nombre, solo aquí" : hasPhoto ? "Solo la foto, solo aquí" : "Vacío"],
     ...(pending > 0 ? [["Cambios pendientes de subir", String(pending)] as [string, string]] : []),
     ["Espacio total usado", stored ? (stored.space ? `${formatBytes(stored.space.usage)} de ${formatBytes(stored.space.quota)} disponibles` : "El navegador no lo informa") : "Calculando…"],
     ["Cuenta", auth.session ? `Conectado como ${email ? maskEmail(email) : "tu cuenta"}` : "Sin cuenta: nada sale de este dispositivo"],

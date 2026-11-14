@@ -826,6 +826,8 @@ Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMT
 
 3. **Privacidad y datos** (`PrivacySection.tsx`, `sync/account.ts`; pasos 1–4 de `AJUSTES_PRIVACIDAD.md` §4): «Qué se guarda» con cifras reales, casilla «Cerrar también la sesión» al borrar los datos del dispositivo (sin ella, la sesión sigue), «Borrar el historial de Recientes» y «Datos de tu cuenta» (JSON importable). **Sin hacer: «Eliminar cuenta» (bloqueado, necesita Edge Function en el proyecto compartido).** La sección «Datos locales» pasó a llamarse «Privacidad y datos»: se actualizaron FAQ, borradores legales y `prueba-ajustes.mjs`. Prueba: `scripts/prueba-privacidad.mjs` (Supabase interceptado).
 
+4. **Perfil básico, solo local** (`ProfileSection.tsx`, `state/profile.ts`, `core/profile.ts`): nombre opcional (empieza vacío, ≤ 60) y foto (≤ 12 MB, mismas reglas de MIME que las portadas, recortada a 256 px y recodificada, así que sin EXIF/GPS) en `kv` (`profile.name`, `profile.avatar`). No se sincroniza con la cuenta; el nombre del registro (D25) sigue sin reconciliar. Prueba: `scripts/prueba-perfil.mjs` (foto con EXIF de prueba) y `core/profile.test.ts`.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

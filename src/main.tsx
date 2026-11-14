@@ -4,6 +4,7 @@ import "@fontsource-variable/instrument-sans/wdth.css";
 import { target } from "./platform";
 import { initBackground } from "./state/background";
 import { initSession } from "./state/player";
+import { initProfile } from "./state/profile";
 import { playlists } from "./state/playlists";
 import { initTutorials } from "./state/tutorials";
 import App from "./ui/App";
@@ -27,6 +28,7 @@ addEventListener("pointerdown", () => delete root.dataset.input, true);
 void initSession();
 void initBackground();
 void initTutorials();
+void initProfile();
 void playlists.init();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
