@@ -45,7 +45,7 @@ const stored = (page) =>
         const request = indexedDB.open("reproductor");
         request.onsuccess = () => {
           const all = request.result.transaction("tracks").objectStore("tracks").getAll();
-          all.onsuccess = () => resolve(all.result.map(({ title, metadataStatus, v2, coverHash, lyrics }) => ({ title, metadataStatus, v2, coverHash, lyrics: Boolean(lyrics) })));
+          all.onsuccess = () => resolve(all.result.map(({ title, metadataStatus, v2, coverHash, hasLyrics }) => ({ title, metadataStatus, v2, coverHash, lyrics: Boolean(hasLyrics) })));
         };
       }),
   );

@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { newId } from "../core/id";
 import { diffScan, isAudioFile, isFolderCover, isLyricsFile, playedIds, stemOf } from "../core/library";
 import { parseLrc } from "../core/lyrics";
+import type { Lyrics } from "../core/lyrics";
 import { folderOf, titleFromFileName, UNKNOWN_ALBUM, UNKNOWN_ARTIST } from "../core/track";
 import type { Track } from "../core/track";
 import { localLibrary, storage } from "../platform";
@@ -90,6 +91,7 @@ export async function flush() {
   dirty.clear();
   deleted.clear();
   if (put.length > 0 || remove.length > 0) await storage.write("tracks", put, remove);
+  if (remove.length > 0) await storage.write("lyrics", [], remove);
 }
 
 // --- Cambios agrupados en el estado: aplicar 5 000 parches de uno en uno congelaría la UI. ---
@@ -133,6 +135,18 @@ async function lyricsFile(file: File | undefined) {
   }
 }
 
+/** ¿Se guarda en IndexedDB? Lo que vive solo en memoria no sobrevive a una recarga (mismo criterio que `flush`). */
+const persisted = (track: Track) => Boolean(track.rootId) && roots.get(track.rootId!)?.kind !== "session";
+const sessionLyrics = new Map<string, Lyrics>(); // letras de pistas sueltas, solo de esta sesión
+
+async function storeLyrics(track: Track, lyrics: Lyrics | undefined) {
+  if (!persisted(track)) {
+    if (lyrics) sessionLyrics.set(track.id, lyrics);
+    else sessionLyrics.delete(track.id);
+  } else if (lyrics) await storage.write("lyrics", [{ id: track.id, lyrics }]);
+  else if (track.hasLyrics) await storage.write("lyrics", [], [track.id]);
+}
+
 async function applyMetadata(job: Job, reply: MetadataReply) {
   const track = byId().get(job.id);
   if (!track) return;
@@ -140,6 +154,8 @@ async function applyMetadata(job: Job, reply: MetadataReply) {
     const { hash, small, large, master, largeSide } = reply.cover;
     await storage.write("covers", [{ hash, small, large, master, largeSide }]);
   }
+  const lyrics = reply.lyrics ?? (await lyricsFile(job.lrc));
+  await storeLyrics(track, lyrics);
   const tags = reply.metadata ?? {};
   const useful = Boolean(tags.title || tags.artist || tags.album || reply.cover);
   patch(job.id, {
@@ -149,7 +165,7 @@ async function applyMetadata(job: Job, reply: MetadataReply) {
     album: tags.album ?? UNKNOWN_ALBUM,
     v2: reply.v2,
     coverHash: reply.cover?.hash,
-    lyrics: reply.lyrics ?? (await lyricsFile(job.lrc)),
+    hasLyrics: Boolean(lyrics),
     metadataStatus: !reply.ok ? "error" : useful ? "available" : "partial",
   });
 }
@@ -359,6 +375,10 @@ export async function ensureTrackUrl(id: string): Promise<string | undefined> {
 let lastFocusScan = 0;
 
 export const library = {
+  /** La letra de una pista (vive aparte de la pista): al abrir la ventana de letra, no al arrancar. */
+  async lyricsOf(id: string): Promise<Lyrics | undefined> {
+    return sessionLyrics.get(id) ?? (await storage.read<{ lyrics: Lyrics }>("lyrics", id))?.lyrics;
+  },
   /** Carga lo guardado. Rápido: una lectura de cada tabla, sin tocar archivos ni permisos de escritura. */
   async init() {
     const [savedRoots, savedTracks] = await Promise.all([storage.list<LibraryRoot>("roots"), storage.list<Track>("tracks")]);

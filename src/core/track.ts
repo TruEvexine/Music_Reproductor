@@ -1,5 +1,4 @@
 // Modelo de pista sin tipos del navegador: el archivo o la URL viven en la capa de plataforma.
-import type { Lyrics } from "./lyrics";
 
 export type MetadataStatus = "loading" | "available" | "partial" | "error";
 
@@ -20,7 +19,8 @@ export interface Track {
   coverHash?: string;
   /** Identidad por contenido: track:v2:<sha-256>. */
   v2?: string;
-  lyrics?: Lyrics;
+  /** Tiene letra (guardada aparte, en la tabla `lyrics`: así el arranque no lee las de toda la biblioteca). */
+  hasLyrics?: boolean;
   addedAt?: number;
   playedAt?: number;
   duration?: number;

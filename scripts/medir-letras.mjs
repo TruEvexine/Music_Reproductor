@@ -23,7 +23,9 @@ for (const kb of [0, 2, 6]) {
         const request = indexedDB.open("reproductor");
         request.onerror = () => ko(request.error);
         request.onsuccess = () => {
-          const tx = request.result.transaction("tracks", "readwrite");
+          // Esquema con almacén `lyrics` (v3): la letra va aparte y la pista lleva `hasLyrics`; sin él (v2), la letra va dentro de la pista.
+          const split = request.result.objectStoreNames.contains("lyrics");
+          const tx = request.result.transaction(split ? ["tracks", "lyrics"] : "tracks", "readwrite");
           const store = tx.objectStore("tracks");
           const now = Date.now();
           const lyrics = (i) => {
@@ -37,7 +39,8 @@ for (const kb of [0, 2, 6]) {
             return { synced };
           };
           for (let i = 0; i < count; i++) {
-            store.put({ id: `perf:${i}`, path: `Perf/Álbum ${i % 500}/${i}.flac`, fileName: `${i}.flac`, title: `Pista de prueba ${i}`, artist: `Artista ${i % 50}`, album: `Álbum ${i % 500}`, genre: "Prueba", year: 2020, duration: 240, trackNumber: (i % 10) + 1, size: 30000000, lastModified: now, addedAt: now - i, codec: "FLAC", lossless: true, sampleRate: 44100, bitsPerSample: 16, metadataStatus: "available", lyrics: lyrics(i) });
+            store.put({ id: `perf:${i}`, path: `Perf/Álbum ${i % 500}/${i}.flac`, fileName: `${i}.flac`, title: `Pista de prueba ${i}`, artist: `Artista ${i % 50}`, album: `Álbum ${i % 500}`, genre: "Prueba", year: 2020, duration: 240, trackNumber: (i % 10) + 1, size: 30000000, lastModified: now, addedAt: now - i, codec: "FLAC", lossless: true, sampleRate: 44100, bitsPerSample: 16, metadataStatus: "available", ...(split ? { hasLyrics: bytes > 0 } : { lyrics: lyrics(i) }) });
+            if (split && bytes > 0) tx.objectStore("lyrics").put({ id: `perf:${i}`, lyrics: lyrics(i) });
           }
           tx.oncomplete = ok;
           tx.onerror = () => ko(tx.error);

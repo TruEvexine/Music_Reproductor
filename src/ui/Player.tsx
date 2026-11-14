@@ -30,7 +30,7 @@ import { currentIndex, previousInQueue, wrapEntry } from "../core/queue";
 import type { QueueEntry } from "../core/queue";
 import type { Track } from "../core/track";
 import { usePaletteOf } from "../state/covers";
-import { useLibrary } from "../state/library";
+import { library, useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
 import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
@@ -177,6 +177,19 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
   );
 }
 
+/** Carga la letra (vive aparte de la pista) y abre su ventana; sin letra, no abre nada. */
+function LyricsLoader({ id, title, onClose }: { id: string; title: string; onClose: () => void }) {
+  const [lyrics, setLyrics] = useState<Lyrics>();
+  useEffect(() => {
+    let alive = true;
+    void library.lyricsOf(id).then((found) => alive && (found ? setLyrics(found) : onClose()));
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+  return lyrics ? <LyricsDialog lyrics={lyrics} onClose={onClose} title={title} /> : null;
+}
+
 /** Reproductor expandido a pantalla completa: portada protagonista y controles en la mitad inferior. */
 /** Letra: sincronizada (sigue la posición real del audio) o texto sin marcas de tiempo. */
 function LyricsDialog({ lyrics, title, onClose }: { lyrics: Lyrics; title: string; onClose: () => void }) {
@@ -264,7 +277,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
           <ChevronDown {...icon} />
         </IconButton>
         <div className="now-actions">
-          {track.lyrics && (
+          {track.hasLyrics && (
             <IconButton label="Letra" onClick={() => setLyrics(true)}>
               <MicVocal {...icon} />
             </IconButton>
@@ -329,7 +342,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         <Seek />
         <Transport large />
       </div>
-      {lyrics && track.lyrics && <LyricsDialog lyrics={track.lyrics} onClose={() => setLyrics(false)} title={track.title} />}
+      {lyrics && track.hasLyrics && <LyricsLoader id={track.id} onClose={() => setLyrics(false)} title={track.title} />}
     </section>
   );
 }

@@ -46,6 +46,23 @@ describe("esquema local versionado", () => {
     v2.close();
   });
 
+  it("v2 → v3 mueve las letras de cada pista a su almacén y marca hasLyrics, sin perder ninguna", async () => {
+    const v2 = await openDatabase("test-v3", migrations.slice(0, 2));
+    const lyrics = { synced: [{ time: 1.5, text: "verso" }] };
+    await v2.put("tracks", { id: "a", title: "Con letra", lyrics });
+    await v2.put("tracks", { id: "b", title: "Sin letra" });
+    await v2.put("tracks", { id: "c", title: "Letra plana", lyrics: { plain: "hola" } });
+    v2.close();
+    const v3 = await openDatabase("test-v3");
+    expect(v3.version).toBe(3);
+    expect(await v3.get("tracks", "a")).toEqual({ id: "a", title: "Con letra", hasLyrics: true });
+    expect(await v3.get("tracks", "b")).toEqual({ id: "b", title: "Sin letra" });
+    expect(await v3.get("lyrics", "a")).toEqual({ id: "a", lyrics });
+    expect(await v3.get("lyrics", "c")).toEqual({ id: "c", lyrics: { plain: "hola" } });
+    expect(await v3.count("lyrics")).toBe(2);
+    v3.close();
+  });
+
   it("clearDatabase vacía todos los almacenes y conserva el esquema", async () => {
     const db = await openDatabase("test-clear");
     await db.put("kv", { volume: 0.5 }, "settings");

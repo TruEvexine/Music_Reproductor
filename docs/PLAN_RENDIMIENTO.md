@@ -260,3 +260,13 @@ Sin mejora (la landing ya está en su suelo, que es el FCP; /app queda dentro de
 | 6 KB | 243 | 249 | 31,67 | **1 368** | 1 349–1 400 |
 
 Regla: hacer la Fase 4 si el arranque con 6 KB pasa de 1 s con CPU ×4 o si `getAll` supera 300 ms. **Se cumple la primera** (1 368 ms; `getAll` 249 ms no la cumple). La referencia sin letras es coherente con la tuya: 22 ms de `getAll` a CPU ×1 son ~130 ms a ×4. Matiz: 6 KB de letra en las 5 002 pistas (31 MB) es un caso extremo; con 2 KB el arranque es 885 ms.
+
+**Fase 4 hecha** (migración v3 en `platform/web/db.ts`, `hasLyrics` en la pista, `library.lyricsOf(id)` al abrir la ventana de letra; las letras de pistas sueltas, que no se guardan, viven en memoria en esta sesión). Mismas mediciones con el esquema nuevo:
+
+| Letra por pista | getAll mediana (ms) | Leído (MB) | Arranque mediana (ms) | Arranque mín–máx |
+|---|---|---|---|---|
+| 0 KB | 132 | 1,87 | 629 | 620–632 |
+| 2 KB | 131 | 1,87 | 663 | 647–672 |
+| 6 KB | 131 | 1,87 | **640** (antes 1 368) | 620–648 |
+
+Pruebas: `db.test.ts` (v2 → v3 mueve las letras, marca `hasLyrics`, deja intactas las pistas sin letra), y `prueba-biblioteca.mjs` (letra .lrc que sigue la posición, USLT y SYLT) en verde. Migración en Chromium real (no solo `fake-indexeddb`): base v2 con 5 002 pistas y letras de 6 KB dentro de cada pista, abierta con la app nueva en `/app`: pasa a v3, las 5 002 letras quedan en `lyrics`, ninguna pista conserva `lyrics`, 5 002 con `hasLyrics`, sin errores; la biblioteca se ve a los 3,0 s (única vez, sin CPU limitada). **Límites:** no se probó una migración interrumpida a medias; si fallara, `openDB` rechaza, la app funciona sin persistencia esa sesión y los datos antiguos siguen intactos (la transacción de actualización se aborta entera).

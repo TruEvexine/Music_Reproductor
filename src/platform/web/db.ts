@@ -20,6 +20,19 @@ export const migrations: Migration[] = [
     db.createObjectStore("playlists", { keyPath: "id" });
     db.createObjectStore("outbox", { keyPath: "seq", autoIncrement: true });
   },
+  // v3 (Rendimiento, Fase 4): las letras salen de cada pista (el arranque leía las de toda la biblioteca) a su propio almacén { id, lyrics };
+  // la pista conserva solo `hasLyrics`. Todo en la transacción de actualización: si algo falla, no se aplica y no se pierde ninguna letra.
+  async (db, tx) => {
+    db.createObjectStore("lyrics", { keyPath: "id" });
+    const lyrics = tx.objectStore("lyrics");
+    const tracks = tx.objectStore("tracks");
+    for (let cursor = await tracks.openCursor(); cursor; cursor = await cursor.continue()) {
+      const { lyrics: found, ...track } = cursor.value as { id: string; lyrics?: unknown };
+      if (!found) continue;
+      await lyrics.put({ id: track.id, lyrics: found });
+      await cursor.update({ ...track, hasLyrics: true });
+    }
+  },
 ];
 
 export const DB_NAME = "reproductor";
