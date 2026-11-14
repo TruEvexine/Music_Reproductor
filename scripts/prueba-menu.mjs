@@ -3,14 +3,13 @@
 // reproductor expandido, se navegan los submenús, se comprueba que no hay scroll horizontal y que cada ajuste llega al grafo
 // de audio real (`window.__engine.snapshot()`, solo existe en desarrollo). Sale con 1 si algo falla.
 import { chromium } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { args, carpetaCapturas } from "./salida.mjs";
 import { join } from "node:path";
 
-const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
-const shots = process.argv[3] ?? "docs/capturas";
+const base = (args[0] ?? "http://localhost:5173").replace(/\/$/, "");
+const shots = carpetaCapturas(args[1], "menu");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
 const files = ["01-amanecer.flac", "02-marea.flac"].map((name) => join(fixtures, name));
-mkdirSync(shots, { recursive: true });
 
 let failed = 0;
 const check = (name, ok, detail = "") => {

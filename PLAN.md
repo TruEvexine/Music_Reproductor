@@ -68,7 +68,8 @@ No es copia literal de ninguna: tomamos principios, no assets ni layouts pixel a
 - `vercel.json` con CSP y cabeceras, verificadas con `node scripts/verificar-csp.mjs`.
 - El catálogo demo de `src/assets/music/` solo existe en desarrollo: producción arranca vacía.
 - Primer código en `src/core/` (`coverMime`, `authMessages`) con Vitest (`npm test`). Errores de Auth genéricos y límite de intentos.
-- Herramientas de prueba: `npm run test:audio` (audio sintético con ffmpeg opcional), `node scripts/capturas.mjs <carpeta>` (capturas Playwright).
+- Herramientas de prueba: `npm run test:audio` (audio sintético con ffmpeg opcional), `node scripts/capturas.mjs [carpeta]` (capturas Playwright).
+- **Capturas: carpeta temporal por defecto.** `capturas.mjs`, `prueba-menu.mjs`, `prueba-fondo.mjs`, `prueba-hdr.mjs` y `medir-portada.mjs` escriben en una carpeta temporal del sistema (la ruta se imprime) si no se les pasa carpeta. `docs/capturas` solo se regenera con `--actualizar` (p. ej. `node scripts/capturas.mjs --actualizar`); pasar esa ruta a mano sin la bandera falla. Lógica en `scripts/salida.mjs`.
 
 ---
 

@@ -181,7 +181,7 @@ Si falla algo y no se arregla con ajustes menores, se diseña una **variante par
 
 ## 7. Verificación
 
-Ninguna tarea de UI está terminada sin `node scripts/capturas.mjs docs/capturas`: recorre 320×568, 360×800, 390×844, 412×915, 844×390, 768×1024, 1024×768, 1440×900 y 1920×1080, falla con scroll horizontal, áreas táctiles < 44 px o texto < 12 px, y deja capturas de 390×844 y 1440×900 que hay que **mirar** con criterio de diseño.
+Ninguna tarea de UI está terminada sin `node scripts/capturas.mjs` (carpeta temporal; `--actualizar` solo para regenerar `docs/capturas`): recorre 320×568, 360×800, 390×844, 412×915, 844×390, 768×1024, 1024×768, 1440×900 y 1920×1080, falla con scroll horizontal, áreas táctiles < 44 px o texto < 12 px, y deja capturas de 390×844 y 1440×900 que hay que **mirar** con criterio de diseño.
 
 ## 8. Pendiente de diseñar (Fase 4)
 

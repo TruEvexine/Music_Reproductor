@@ -6,14 +6,13 @@
 // color(display-p3 …) solo con P3; el brillo máximo del fondo deja el texto legible (≥ 4.5:1); movimiento reducido y sin WebGL degradan sin errores.
 // LO QUE ESTA PRUEBA NO PUEDE VER: cómo luce en una pantalla P3/HDR real. Emular el media query cambia las reglas, no la pantalla.
 import { chromium } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { args, carpetaCapturas } from "./salida.mjs";
 import { join } from "node:path";
 
-const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
-const shots = process.argv[3] ?? "docs/capturas";
+const base = (args[0] ?? "http://localhost:5173").replace(/\/$/, "");
+const shots = carpetaCapturas(args[1], "hdr");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
 const files = ["01-amanecer.flac", "02-marea.flac"].map((name) => join(fixtures, name));
-mkdirSync(shots, { recursive: true });
 
 let failed = 0;
 const check = (name, ok, detail = "") => {

@@ -4,14 +4,13 @@
 // oculta, el respaldo CSS aparece sin WebGL y al perder el contexto, y el coste de JavaScript por cuadro (≤ 2 ms).
 // Usa audio sintético y `window.__backdrop` (estadísticas del bucle, solo en desarrollo). Sale con 1 si algo falla.
 import { chromium } from "@playwright/test";
-import { mkdirSync } from "node:fs";
+import { args, carpetaCapturas } from "./salida.mjs";
 import { join } from "node:path";
 
-const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
-const shots = process.argv[3] ?? "docs/capturas";
+const base = (args[0] ?? "http://localhost:5173").replace(/\/$/, "");
+const shots = carpetaCapturas(args[1], "fondo");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
 const files = ["01-amanecer.flac", "02-marea.flac"].map((name) => join(fixtures, name));
-mkdirSync(shots, { recursive: true });
 
 let failed = 0;
 const check = (name, ok, detail = "") => {

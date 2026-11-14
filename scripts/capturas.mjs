@@ -1,21 +1,22 @@
-// Capturas y comprobación responsive. Uso: node scripts/capturas.mjs <carpeta-salida> [url-base]
+// Capturas y comprobación responsive. Uso: node scripts/capturas.mjs [carpeta-salida] [url-base] [--actualizar]
+// Sin carpeta, escribe en una temporal; docs/capturas solo se regenera con --actualizar.
 // Requiere `npm run dev` corriendo y `npm run test:audio` ejecutado antes.
 // Recorre TODA la matriz de viewports midiendo scroll horizontal y áreas táctiles < 44 px;
 // guarda capturas de 390x844 y 1440x900 (con --todas, de toda la matriz). Sale con código 1 si algo falla.
 // Nunca usa la música local: sustituye el catálogo de desarrollo por uno vacío e importa audio sintético.
 import { chromium } from "@playwright/test";
-import { mkdirSync, readdirSync } from "node:fs";
+import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { carpetaCapturas } from "./salida.mjs";
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const all = process.argv.includes("--todas");
-const outDir = args[0] ?? "docs/capturas";
+const outDir = carpetaCapturas(args[0], "capturas");
 const base = (args[1] ?? "http://localhost:5173").replace(/\/$/, "");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
 const files = readdirSync(fixtures)
   .filter((f) => /\.(flac|mp3|m4a|wav|ogg|opus)$/.test(f))
   .map((f) => join(fixtures, f));
-mkdirSync(outDir, { recursive: true });
 
 const matrix = ["320x568", "360x800", "390x844", "412x915", "844x390", "768x1024", "1024x768", "1440x900", "1920x1080"];
 const saved = new Set(["390x844", "1440x900"]);

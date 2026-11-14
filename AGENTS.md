@@ -72,7 +72,7 @@ Una base de código, tres destinos (web, Android, iPhone con Capacitor). Ver `PL
 - Gestos con Pointer Events y siempre con alternativa por botón y teclado.
 - Tipografía y espaciado fluidos; zoom de texto al 200 %; respetar `prefers-reduced-motion`, `prefers-color-scheme` y `prefers-contrast`.
 - Rendimiento en gama media: listas virtualizadas, animar solo `transform`/`opacity`, fondo dinámico pausado con la pestaña oculta.
-- **Verificado, no supuesto:** `node scripts/capturas.mjs docs/capturas` debe pasar en toda la matriz y las capturas se revisan con criterio de diseño, no solo "no se rompe".
+- **Verificado, no supuesto:** `node scripts/capturas.mjs` debe pasar en toda la matriz y las capturas se revisan con criterio de diseño, no solo "no se rompe".
 
 ## 7. Al terminar una tarea
 

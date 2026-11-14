@@ -10,11 +10,11 @@ import { chromium } from "@playwright/test";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { args, carpetaCapturas } from "./salida.mjs";
 
-const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
+const base = (args[0] ?? "http://localhost:5173").replace(/\/$/, "");
 const root = join(import.meta.dirname, "..");
-const out = process.argv[3] ?? join(root, "docs", "capturas");
-mkdirSync(out, { recursive: true });
+const out = carpetaCapturas(args[1], "portada");
 const covers = join(root, "tests", "fixtures", "landing");
 const sources = existsSync(covers) ? readdirSync(covers).filter((name) => /^cover-raw-\d\.jpe?g$/.test(name)) : [];
 if (sources.length === 0) throw new Error("Faltan las portadas de tests/fixtures/landing (npm run landing:musica).");
