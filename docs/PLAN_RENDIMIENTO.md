@@ -195,3 +195,16 @@ Necesitas el móvil con cable USB, la **depuración USB** activada (Ajustes → 
 | `prueba-movil.mjs`, pulsación larga | 6 de 10 | De la app, o de la emulación táctil de Chromium: la hoja se abre a los 500 ms, pero al soltar llega un `click` cuyo destino es el propio `<dialog>` y `parts.tsx:63` lo cierra como si fuera un toque en el fondo. `SwipeRow` solo descarta el clic dentro de la fila. No depende de cuánto se mantenga el dedo (falla con 600, 700 y 1 000 ms) | Sin arreglar (la causa no está en el script). Falta comprobarlo en un móvil real |
 | `prueba-biblioteca.mjs`, recarga tras importar | 1 de 10 > 1 s (3 322 ms; resto 391–494 ms) | §2: almacenamiento ocupado tras la importación | Ya solo informativa (Fase 1). La pestaña nueva: 10 de 10 < 1 s |
 | `prueba-biblioteca.mjs`, scroll p95 (hallado de paso) | 1 de 10 (53 ms, umbral 50) | Sin investigar | Nada |
+
+## 9. Lighthouse en producción local (línea base y seguimiento)
+
+Script: `npm run build && node scripts/lighthouse.mjs [--pasadas 5] [--solo landing|app] [--etiqueta texto]`. Sirve `dist` con `vite preview`, abre Chrome instalado con perfil temporal vacío y sin extensiones, móvil simulado (Slow 4G, CPU ×4, valores por defecto de Lighthouse 13 vía `npx lighthouse@13`) y da la mediana de 5 pasadas. Los avisos de «JS sin minificar» no aparecen: sin extensiones no hay JS ajeno.
+
+**Línea base** (2026-11-14, `desarrollo` en `768f40a`+2, Windows 11, Chrome 157, sin variables de Supabase en el build):
+
+| Página | Puntos | FCP ms | LCP ms (mediana) | LCP mín–máx | TBT ms | CLS | KB transferidos |
+|---|---|---|---|---|---|---|---|
+| landing | 91 | 754 | 3 440 | 754–3 531 | 11 | 0 | 564 |
+| /app | 97 | 754 | 2 499 | 2 451–2 557 | 22 | 0 | 278 |
+
+Ojo con la landing: es **bimodal**. En 2 de 5 pasadas el LCP fue 754 ms (100 puntos) porque el candidato fue `span.brand` (la cabecera), y en las otras 3 fue el `h1` a ~3 440–3 530 ms. Con 5 pasadas la mediana cae en el modo lento; si salen 3 del modo rápido, la mediana se desploma sin que nada haya mejorado. Por eso se mira también el mínimo–máximo. Sin extensiones el FCP baja de 1,7 s (tu medida) a 0,75 s; el LCP del `h1` sigue en 3,4 s.
