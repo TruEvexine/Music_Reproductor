@@ -14,7 +14,7 @@ for f in $(git diff --cached --name-only --diff-filter=ACMR); do
     .env|.env.*) block "$f (archivo .env)" ;;
   esac
   case "$lower" in
-    *.flac|*.mp3|*.m4a|*.wav|*.ogg|*.opus|*.aac|*.alac|*.aiff) block "$f (audio)" ;;
+    *.flac|*.mp3|*.m4a|*.wav|*.ogg|*.oga|*.opus|*.webm|*.aac|*.alac|*.aiff) block "$f (audio)" ;;
     *.keystore|*.jks|*.pem|*.key|*.p12) block "$f (clave o keystore)" ;;
     supabase/.temp/*|supabase/.branches/*) block "$f (archivos de la CLI de Supabase)" ;;
   esac

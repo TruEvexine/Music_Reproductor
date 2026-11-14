@@ -33,6 +33,8 @@ local.properties
 *.aac
 *.alac
 *.aiff
+*.oga
+*.webm
 src/assets/music/*
 !src/assets/music/README.md
 tests/fixtures/audio/

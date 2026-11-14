@@ -30,9 +30,11 @@ describe("findSecretEnv", () => {
 
 describe("findBundledAudio", () => {
   it("detecta audio en la salida del build", () => {
-    expect(findBundledAudio(["assets/index-abc.js", "assets/cancion-abc.FLAC", "assets/a.m4a"])).toEqual([
+    expect(findBundledAudio(["assets/index-abc.js", "assets/cancion-abc.FLAC", "assets/a.m4a", "b.oga", "c.webm"])).toEqual([
       "assets/cancion-abc.FLAC",
       "assets/a.m4a",
+      "b.oga",
+      "c.webm",
     ]);
   });
 });

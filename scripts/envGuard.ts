@@ -27,7 +27,8 @@ export function findSecretEnv(env: Record<string, string | undefined>): string[]
   return problems;
 }
 
-const audioFile = /\.(flac|mp3|m4a|wav|ogg|opus|aac|alac|aiff)$/i;
+// Mismas extensiones que .gitignore y .githooks/pre-commit; incluye todo lo que acepta core/library.ts.
+const audioFile = /\.(flac|mp3|m4a|wav|ogg|oga|opus|webm|aac|alac|aiff)$/i;
 
 export function findBundledAudio(fileNames: string[]): string[] {
   return fileNames.filter((name) => audioFile.test(name));
