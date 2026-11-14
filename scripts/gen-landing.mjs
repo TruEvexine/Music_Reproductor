@@ -1,7 +1,8 @@
 // Genera las capturas reales de la app que usa la landing (src/assets/landing/*.jpg) con música real CC0 o de dominio público
 // (tests/fixtures/landing, que descarga y etiqueta scripts/descargar-musica-landing.mjs; nunca música con derechos).
 // Uso: node scripts/gen-landing.mjs [url-base] [carpeta]. Requiere `npm run dev` y haber ejecutado antes
-// `node scripts/descargar-musica-landing.mjs`. Repetir cuando cambie el aspecto de la app.
+// `node scripts/descargar-musica-landing.mjs`. Repetir cuando cambie el aspecto de la app y luego `node scripts/avif-landing.mjs`
+// (las versiones AVIF que sirve la landing salen de estos JPG).
 import { chromium } from "@playwright/test";
 import { mkdirSync, readdirSync } from "node:fs";
 import { join } from "node:path";

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { CSSProperties, MouseEvent } from "react";
+import type { CSSProperties, ImgHTMLAttributes, MouseEvent } from "react";
 import libraryDesktop from "../assets/landing/biblioteca-escritorio.jpg";
 import libraryPhone from "../assets/landing/biblioteca-movil.jpg";
 import equalizerPhone from "../assets/landing/ecualizador-movil.jpg";
@@ -10,6 +10,21 @@ import { getSupabase, supabaseConfigured } from "../sync/supabaseClient";
 import { CafeButton } from "./CafeLink";
 import { motionReduced } from "./motion";
 import { navigate } from "./router";
+
+// Versiones AVIF a los anchos reales (scripts/avif-landing.mjs); el JPG de arriba es el respaldo de los navegadores sin AVIF.
+const avif = import.meta.glob<string>("../assets/landing/*.avif", { eager: true, query: "?url", import: "default" });
+const avifSet = (name: string, widths: number[]) => widths.map((width) => `${avif[`../assets/landing/${name}-${width}.avif`]} ${width}w`).join(", ");
+const phones = "(min-width: 900px) 21vw, min(calc((100vw - 3.5rem) / 2), 307px)"; // dos móviles a la par
+const column = "min(calc(100vw - 2.5rem), 630px)"; // ancho de una imagen a una columna (hasta 630 px)
+
+function Shot({ name, widths, sizes, jpg, ...img }: { name: string; widths: number[]; sizes: string; jpg: string } & ImgHTMLAttributes<HTMLImageElement>) {
+  return (
+    <picture>
+      <source sizes={sizes} srcSet={avifSet(name, widths)} type="image/avif" />
+      <img decoding="async" loading="lazy" src={jpg} {...img} />
+    </picture>
+  );
+}
 
 const BRAND_MS = 600; // paso de marca al abrir la app
 
@@ -84,8 +99,11 @@ export function Landing() {
             </a>
           </div>
           <picture data-rise style={rise(3)}>
+            <source media="(min-width: 900px)" sizes="55vw" srcSet={avifSet("biblioteca-escritorio", [780, 1440])} type="image/avif" />
             <source media="(min-width: 900px)" srcSet={libraryDesktop} />
-            <img alt="La vista de álbumes con cinco portadas de álbumes y un nocturno de Chopin sonando en la barra" className="landing-shot" height={1688} src={libraryPhone} width={780} />
+            <source sizes={column} srcSet={avifSet("biblioteca-movil", [390, 780])} type="image/avif" />
+            {/* El LCP es el texto: la captura de la primera pantalla no debe quitarle ancho de banda al JS ni a la fuente. */}
+            <img alt="La vista de álbumes con cinco portadas de álbumes y un nocturno de Chopin sonando en la barra" className="landing-shot" fetchPriority="low" height={1688} src={libraryPhone} width={780} />
           </picture>
         </section>
 
@@ -99,13 +117,13 @@ export function Landing() {
             </p>
           </div>
           <div className="landing-phones">
-            <img alt="El reproductor en pantalla completa en un móvil, con la portada de un nocturno de Chopin" data-reveal decoding="async" height={1688} loading="lazy" src={playerPhone} style={rise(2)} width={780} />
-            <img alt="La página del ecualizador en un móvil, con el ajuste Graves aplicado a las diez bandas" data-reveal decoding="async" height={1688} loading="lazy" src={equalizerPhone} style={rise(3)} width={780} />
+            <Shot alt="El reproductor en pantalla completa en un móvil, con la portada de un nocturno de Chopin" data-reveal height={1688} jpg={playerPhone} name="reproductor-movil" sizes={phones} style={rise(2)} widths={[390, 780]} width={780} />
+            <Shot alt="La página del ecualizador en un móvil, con el ajuste Graves aplicado a las diez bandas" data-reveal height={1688} jpg={equalizerPhone} name="ecualizador-movil" sizes={phones} style={rise(3)} widths={[390, 780]} width={780} />
           </div>
         </section>
 
         <section className="landing-quality">
-          <img alt="El reproductor grande en escritorio, con la portada, el formato del archivo, el progreso y los controles" data-reveal decoding="async" height={900} loading="lazy" src={playerDesktop} width={1440} />
+          <Shot alt="El reproductor grande en escritorio, con la portada, el formato del archivo, el progreso y los controles" data-reveal height={900} jpg={playerDesktop} name="reproductor-escritorio" sizes={`(min-width: 900px) 52vw, ${column}`} widths={[390, 780, 1440]} width={1440} />
           <div className="landing-copy">
             <h2 data-reveal style={rise(1)}>Formato y calidad de cada pista</h2>
             <p data-reveal style={rise(2)}>

@@ -222,3 +222,18 @@ Probado y **no se conserva** (el parche queda fuera del repositorio): `Shell` (l
 | `app.html` como entrada de `/app` (Shell estático y precargado) y CSS único | = | 2 707 | peor; FCP 754 con CSS único |
 
 Causa: Lighthouse simula la carga con el gráfico de dependencias por iniciador, así que cualquier módulo pedido desde otro módulo (el `import()` del Shell, o los de `app.html` desde su mini-entrada) añade un viaje de ida y vuelta (~150 ms) a /app aunque el navegador los pida en paralelo; el LCP observado sin simulación no cambia (112 → 108 ms). El requisito era no empeorar /app, y con una sola `index.html` no hay forma de cumplirlo sin que la landing cargue también el reproductor. La ganancia en la landing (−134 ms) no compensa. Se retoma si se prerrenderiza la landing o si `/app` pasa a tener su propio HTML con el reproductor dentro de la entrada (no un mini-módulo que importe el resto); sin probar.
+
+### 9.2 Imágenes de la landing en AVIF con srcset (punto 3)
+
+`scripts/avif-landing.mjs` (ffmpeg con libaom) deriva de los JPG de `src/assets/landing/` un AVIF a 390 y 780 px (y 1440 en las de escritorio); cada imagen es un `<picture>` con `<source type="image/avif" srcset sizes>` y el JPG como respaldo, con `width`/`height` y los mismos `alt`. La captura de la primera pantalla lleva `fetchpriority="low"`. Los `sizes` salen de medir el ancho real de cada imagen en 390, 700, 900, 1 440 y 1 920 px; el diseño no cambia (mismas cajas, medido). La segunda captura de móvil usaba `img:last-child`; ahora es `picture:last-child`.
+
+Peso por imagen: biblioteca-móvil 142 → 17 kB (390) / 49 kB (780); reproductor-escritorio 63 → 3 / 6 / 13 kB.
+
+**Por qué el móvil descargaba `reproductor-escritorio-*.jpg`:** no era un error de selección. Es la imagen de la sección «Formato y calidad», que se muestra a una columna también en móvil (351 px de ancho), y no tenía versión pequeña: se servía el JPG de 1 440 px (63 kB). Chromium además carga las imágenes `loading="lazy"` que quedan dentro de unos 1 250 px del borde de la pantalla, y la landing entera cabe en esa distancia (Fase 3). Sigue haciendo falta en móvil; ahora pesa 3 kB.
+
+| Landing | Puntos | FCP ms | LCP ms | LCP mín–máx | TBT ms | KB transferidos |
+|---|---|---|---|---|---|---|
+| Línea base | 91 | 754 | 3 440 | 754–3 531 | 11 | 564 |
+| AVIF + srcset + fetchpriority | **100** | 754 | **754** | 753–755 | 8 | **297** (−47 %) |
+
+Matices: (1) el LCP simulado ahora es `span.brand` en las 5 pasadas (en la línea base lo era en 2 de 5 y el resto era el `h1`); el salto a 100 puntos no es solo del `h1` más rápido, sino de que el candidato deja de ser el `h1` retrasado por los bytes de la imagen. (2) Con la CPU ×4 y 150 ms/1,6 Mbps aplicados de verdad (no simulados; Playwright + CDP), los candidatos de LCP son `span.brand` ~1,5 s y la captura del hero ~2,0 s, con y sin `fetchpriority="low"` (2 020–2 050 ms en ambos): el atributo no cambia el LCP real de la imagen, y el `h1` nunca es candidato. (3) El LCP real de la captura sigue en ~2 s; reducirlo más pasaría por una captura de primera pantalla más pequeña o por precargarla, y se descartó porque Lighthouse ya no lo penaliza.

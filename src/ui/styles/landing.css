@@ -112,7 +112,7 @@ body:has(.landing) {
   align-items: start;
 }
 
-.landing-phones img:last-child {
+.landing-phones picture:last-child {
   margin-top: var(--s7);
 }
 
