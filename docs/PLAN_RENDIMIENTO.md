@@ -248,3 +248,15 @@ Cadena: `index.html` → CSS (`@font-face` con `font-display: swap`, latin y lat
 | Con preload | 755 (754–755) | 2 557 (2 555–2 558) |
 
 Sin mejora (la landing ya está en su suelo, que es el FCP; /app queda dentro del ruido de la línea base), así que se revirtió y no se tocó `font-display`.
+
+### 9.4 Restauración con letras realistas (punto 5): medición de la Fase 4
+
+`node scripts/medir-letras.mjs http://localhost:4173 5` contra `vite preview` (build de producción). Siembra 5 002 pistas con letra sincronizada de 0, 2 o 6 KB (JSON), con la CPU ×4 por CDP, en Chromium de Playwright y contexto nuevo por variante. `getAll`: en una pestaña nueva sin la app, la primera lectura y la mediana de las 5 siguientes. Arranque: pestaña nueva en `/app` hasta ver la primera fila de la biblioteca (`performance.now()`), mediana de 5.
+
+| Letra por pista | getAll 1.ª (ms) | getAll mediana (ms) | Leído (MB) | Arranque mediana (ms) | Arranque mín–máx |
+|---|---|---|---|---|---|
+| 0 KB | 129 | 132 | 1,79 | 643 | 637–687 |
+| 2 KB | 181 | 180 | 11,92 | 885 | 873–906 |
+| 6 KB | 243 | 249 | 31,67 | **1 368** | 1 349–1 400 |
+
+Regla: hacer la Fase 4 si el arranque con 6 KB pasa de 1 s con CPU ×4 o si `getAll` supera 300 ms. **Se cumple la primera** (1 368 ms; `getAll` 249 ms no la cumple). La referencia sin letras es coherente con la tuya: 22 ms de `getAll` a CPU ×1 son ~130 ms a ×4. Matiz: 6 KB de letra en las 5 002 pistas (31 MB) es un caso extremo; con 2 KB el arranque es 885 ms.
