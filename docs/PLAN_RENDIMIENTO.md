@@ -237,3 +237,14 @@ Peso por imagen: biblioteca-móvil 142 → 17 kB (390) / 49 kB (780); reproducto
 | AVIF + srcset + fetchpriority | **100** | 754 | **754** | 753–755 | 8 | **297** (−47 %) |
 
 Matices: (1) el LCP simulado ahora es `span.brand` en las 5 pasadas (en la línea base lo era en 2 de 5 y el resto era el `h1`); el salto a 100 puntos no es solo del `h1` más rápido, sino de que el candidato deja de ser el `h1` retrasado por los bytes de la imagen. (2) Con la CPU ×4 y 150 ms/1,6 Mbps aplicados de verdad (no simulados; Playwright + CDP), los candidatos de LCP son `span.brand` ~1,5 s y la captura del hero ~2,0 s, con y sin `fetchpriority="low"` (2 020–2 050 ms en ambos): el atributo no cambia el LCP real de la imagen, y el `h1` nunca es candidato. (3) El LCP real de la captura sigue en ~2 s; reducirlo más pasaría por una captura de primera pantalla más pequeña o por precargarla, y se descartó porque Lighthouse ya no lo penaliza.
+
+### 9.3 Fuente Instrument Sans (punto 4): no se toca
+
+Cadena: `index.html` → CSS (`@font-face` con `font-display: swap`, latin y latin-ext por `unicode-range`) → la fuente solo se pide cuando React pinta texto con ella (≈90 ms observados). Con `swap` el `h1` se pinta de inmediato con la fuente de respaldo, así que la fuente **no bloquea el primer pintado**. Aun así probé `<link rel="preload" as="font" crossorigin>` de la latin (Vite la deduplica con la del CSS: mismo archivo con hash, una sola descarga):
+
+| | Landing LCP | /app LCP |
+|---|---|---|
+| Sin preload (tras 9.2 / línea base) | 754 (753–755) | 2 499 (2 451–2 557) |
+| Con preload | 755 (754–755) | 2 557 (2 555–2 558) |
+
+Sin mejora (la landing ya está en su suelo, que es el FCP; /app queda dentro del ruido de la línea base), así que se revirtió y no se tocó `font-display`.
