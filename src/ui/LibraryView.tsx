@@ -22,6 +22,15 @@ import { VirtualList } from "./VirtualList";
 const ACCEPT = ".mp3,.wav,.flac,.m4a,.aac,.ogg,.oga,.opus,.webm,.lrc,audio/*";
 const ROW = 64;
 
+/** Un enlace con un «%» mal formado (/app/albumes/%E0) no debe dejar la app en blanco: no hay ErrorBoundary. */
+function decodeKey(raw: string): string | undefined {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return undefined;
+  }
+}
+
 type Tab = "canciones" | "albumes" | "artistas" | "carpetas" | "generos" | "recientes";
 const tabs: { id: Tab; label: string; group?: GroupBy }[] = [
   { id: "canciones", label: "Canciones" },
@@ -343,7 +352,7 @@ export function LibraryView({ path }: { path: string }) {
   const [, , slug, rawKey] = path.split("/");
   const tab: Tab = tabs.some((item) => item.id === slug) ? (slug as Tab) : "canciones";
   const groupBy = tabs.find((item) => item.id === tab)?.group;
-  const groupKey = rawKey ? decodeURIComponent(rawKey) : undefined;
+  const groupKey = rawKey ? decodeKey(rawKey) : undefined;
 
   const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
   const key = searchKey(search);
