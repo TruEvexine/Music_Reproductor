@@ -13,6 +13,8 @@ import { ANALYSER_DB } from "../core/rhythm";
 
 const VOLUME_RAMP = 0.015; // s: cambiar el volumen sin escalón audible
 const PAUSE_MARGIN = 0.02; // s tras la rampa antes de pausar el <audio>
+const SEEK_DIP = 0.04; // s de bajada (y de subida) alrededor de una búsqueda: sin chasquido al saltar
+const SEEK_GIVE_UP = 1000; // ms: si `seeked` no llega, el volumen vuelve igual
 
 export interface EngineEvents {
   onPlaying(playing: boolean): void;
@@ -51,6 +53,11 @@ export class PlayerEngine {
   /** Cambia en cada play/pause: una reanudación que espera a `audio.play()` no pisa una pausa pedida mientras tanto. */
   private turn = 0;
   private ramp = { from: 1, to: 1, start: 0, end: 0 };
+  /** Cambia con cada búsqueda suave: la que interrumpe a otra deja sin efecto la anterior. */
+  private seekTurn = 0;
+  private seekTimer?: ReturnType<typeof setTimeout>;
+  /** Destino de la búsqueda mientras baja el volumen (aún no se ha tocado `currentTime`). */
+  private seekTarget: number | null = null;
   /** Para el fondo "Ritmo" y visualizadores. Existe tras la primera reproducción. */
   analyser?: AnalyserNode;
 
@@ -70,7 +77,7 @@ export class PlayerEngine {
     audio.addEventListener("play", whenActive(() => this.events.onPlaying(true)));
     audio.addEventListener("pause", whenActive(() => this.events.onPlaying(false)));
     audio.addEventListener("playing", whenActive(() => this.events.onStarted()));
-    audio.addEventListener("timeupdate", whenActive(() => this.events.onTime(audio.currentTime)));
+    audio.addEventListener("timeupdate", whenActive(() => this.seekTarget === null && this.events.onTime(audio.currentTime)));
     audio.addEventListener("ended", whenActive(() => this.events.onEnded()));
     audio.addEventListener("error", whenActive(() => audio.getAttribute("src") && this.events.onError()));
     audio.addEventListener("loadedmetadata", () => {
@@ -139,7 +146,8 @@ export class PlayerEngine {
 
   private applyVolume() {
     if (this.master) {
-      if (this.pauseTimer === undefined) this.rampMaster(this.volume, VOLUME_RAMP); // en pleno fundido de pausa manda la rampa a 0
+      // En pleno fundido de pausa manda la rampa a 0; en una búsqueda, su subida (que ya usa el volumen nuevo).
+      if (this.pauseTimer === undefined && this.seekTimer === undefined) this.rampMaster(this.volume, VOLUME_RAMP);
     } else for (const deck of this.decks) deck.audio.volume = this.volume;
   }
 
@@ -218,6 +226,7 @@ export class PlayerEngine {
 
   /** Carga una pista en el deck activo. Si ya estaba precargada en el otro, simplemente cambia de deck. */
   load(url: string, startAt = 0, gain = 1) {
+    this.cancelSeek();
     this.cancelFade();
     if (this.idle.audio.getAttribute("src") === url && startAt === 0) {
       const previous = this.current;
@@ -246,6 +255,7 @@ export class PlayerEngine {
     const from = this.current;
     const to = this.idle;
     if (!context || !from.fade || !to.fade || !to.gain) return false;
+    this.cancelSeek();
     this.cancelFade();
     if (to.audio.getAttribute("src") !== url) {
       to.audio.src = url;
@@ -315,16 +325,60 @@ export class PlayerEngine {
   }
 
   stop() {
+    this.cancelSeek();
     this.cancelFade();
     for (const deck of this.decks) this.silence(deck);
   }
 
+  /**
+   * Sonando con Web Audio: baja el volumen SEEK_DIP, salta y lo sube al llegar `seeked` (sin chasquido). En pausa o sin Web Audio, salta directo.
+   * Una búsqueda a mitad de otra baja desde donde iba; solo la última salta y sube el volumen.
+   */
   seek(position: number) {
-    if (Number.isFinite(position)) this.current.audio.currentTime = Math.max(0, position);
+    if (!Number.isFinite(position)) return;
+    const target = Math.max(0, position);
+    const audio = this.current.audio;
+    const context = this.context;
+    if (!context || !this.master || context.state !== "running" || audio.paused || this.pauseTimer !== undefined) {
+      this.cancelSeek();
+      audio.currentTime = target;
+      return;
+    }
+    const turn = ++this.seekTurn;
+    clearTimeout(this.seekTimer);
+    this.seekTarget = target;
+    const end = this.rampMaster(0, SEEK_DIP);
+    const restore = () => {
+      if (turn !== this.seekTurn) return;
+      clearTimeout(this.seekTimer);
+      this.seekTimer = undefined;
+      if (this.pauseTimer === undefined) this.rampMaster(this.volume, SEEK_DIP); // en pleno fundido de pausa manda esa rampa
+    };
+    // Reloj de audio, como en la pausa: se salta cuando la bajada ya se calculó entera.
+    const jump = () => {
+      if (turn !== this.seekTurn) return;
+      if (context.state === "running" && context.currentTime < end) return void (this.seekTimer = setTimeout(jump, 5));
+      this.seekTarget = null;
+      audio.addEventListener("seeked", restore, { once: true });
+      audio.currentTime = target;
+      this.seekTimer = setTimeout(restore, SEEK_GIVE_UP);
+    };
+    this.seekTimer = setTimeout(jump, SEEK_DIP * 1000);
   }
 
+  /** Abandona una búsqueda suave (cambio de pista, parada, búsqueda en pausa) y devuelve el volumen. */
+  private cancelSeek() {
+    if (this.seekTimer === undefined) return;
+    this.seekTurn += 1;
+    clearTimeout(this.seekTimer);
+    this.seekTimer = undefined;
+    this.seekTarget = null;
+    if (this.master && this.pauseTimer === undefined) this.rampMaster(this.volume, SEEK_DIP);
+  }
+
+  /** Durante la bajada de una búsqueda, su destino: varias flechas seguidas suman desde ahí. */
   get position(): number {
-    return this.current.audio.currentTime;
+    return this.seekTarget ?? this.current.audio.currentTime;
   }
 
   /** Pausada o a punto de estarlo (en pleno fundido de pausa). */
@@ -340,6 +394,7 @@ export class PlayerEngine {
       bass: this.bass?.gain.value,
       treble: this.treble?.gain.value,
       pan: this.panner?.pan.value,
+      master: this.master?.gain.value,
       rate: this.current.audio.playbackRate,
       src: this.current.audio.src,
     };

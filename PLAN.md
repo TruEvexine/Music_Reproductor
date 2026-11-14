@@ -834,6 +834,10 @@ Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMT
 
    **Consecuencia:** `npm run build` en local exige esas tres variables (o valores de prueba). Skills aplicadas en los seis puntos: ponytail; design-taste-frontend, ui-ux-pro-max (sin buscador: no hay Python), design-motion-principles, make-interfaces-feel-better e impeccable (no se ejecutó `impeccable context`: solo se leyó su guía).
 
+### 11.1l Barra de progreso «confirmar al soltar» y animación de carga (2026-11-13)
+
+1. **Barra de progreso**: antes buscaba en cada movimiento del arrastre (se oía a trompicones, como a doble velocidad). Ahora `Range` tiene `commit`: arrastrando solo se mueven el tirador y el tiempo de destino; al soltar, tocar o con cada flecha, una sola búsqueda. `PlayerEngine.seek`, sonando con Web Audio, baja el volumen general 40 ms (reloj de audio), salta y lo sube al llegar `seeked` (respaldo de 1 s si no llega); una búsqueda a mitad de otra anula la anterior, y cambiar de pista o parar devuelve el volumen. En pausa o sin Web Audio salta directo. Pruebas: `scripts/prueba-progreso.mjs` (cuenta escrituras de `currentTime` con audio real: 0 arrastrando, 1 al soltar, 1 por toque y por flecha; volumen entero tras interrumpir) y `scripts/prueba-chasquido.mjs` (mayor salto entre muestras al buscar: **0,55 antes, 0,035 después**, igual que el tono sonando; también interrumpida por otras dos).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

@@ -5,6 +5,7 @@ import { buzz } from "./toast";
 // Deslizador único de la app: progreso, volumen, velocidad, fundido, ecualizador y fondo. Debajo hay un <input type="range"> nativo:
 // teclado, foco, aria y lectores de pantalla son los del navegador. El puntero lo lleva esta capa: al pulsar, la barra se engrosa y aparece
 // el tirador; alejar el dedo de la barra en perpendicular baja la velocidad del ajuste (ajuste fino) y muestra el valor.
+// `commit` (progreso): arrastrando solo se mueve el tirador y se muestra el destino; `onChange` llega una vez, al soltar.
 
 /** Velocidad del ajuste según la distancia (px) del puntero a la barra: cerca 1; después ½, ¼ y ⅒. */
 export function fineRate(distance: number): number {
@@ -37,6 +38,7 @@ export function Range({
   origin = min,
   disabled = false,
   vertical = false,
+  commit = false,
   className = "",
 }: {
   /** Nombre accesible; sin él, el del <label> que lo envuelve. */
@@ -53,9 +55,11 @@ export function Range({
   origin?: number;
   disabled?: boolean;
   vertical?: boolean;
+  /** Confirmar al soltar: el puntero llama a `onChange` solo al terminar el gesto (teclado: una vez por tecla). */
+  commit?: boolean;
   className?: string;
 }) {
-  const [drag, setDrag] = useState<{ value: number; rate: number } | null>(null);
+  const [drag, setDrag] = useState<{ value: number; rate: number; waiting?: boolean } | null>(null);
   const gesture = useRef<Gesture | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const shown = drag?.value ?? value;
@@ -70,7 +74,7 @@ export function Range({
     setDrag({ value: snapped, rate: g.rate });
     if (snapped !== g.sent) {
       g.sent = snapped;
-      onChange(snapped);
+      if (!commit) onChange(snapped);
     }
   };
   const end = (event: PointerEvent<HTMLElement>) => {
@@ -78,8 +82,11 @@ export function Range({
     gesture.current = null;
     if (!g) return;
     if (event.type === "pointercancel") {
-      if (!g.pending && g.sent !== g.start) onChange(g.start); // la página se desplazó: el valor vuelve
-    } else if (g.pending) apply(g, g.raw); // toque sin arrastre: salta ahí
+      if (!commit && !g.pending && g.sent !== g.start) onChange(g.start); // la página se desplazó: el valor vuelve
+    } else {
+      if (g.pending) apply(g, g.raw); // toque sin arrastre: salta ahí
+      if (commit && g.sent !== g.start) onChange(g.sent);
+    }
     setDrag(null);
   };
 
@@ -98,7 +105,7 @@ export function Range({
         const position = along(rect, event);
         const g: Gesture = { raw: min + (Math.min(Math.max(position, 0), length(rect)) / length(rect)) * span, last: position, start: value, sent: value, rate: 1, rect, pending: event.pointerType !== "mouse" };
         gesture.current = g;
-        if (g.pending) setDrag({ value, rate: 1 });
+        if (g.pending) setDrag({ value, rate: 1, waiting: true });
         else apply(g, g.raw);
       }}
       onPointerMove={(event) => {
@@ -127,9 +134,10 @@ export function Range({
         {origin > min && <span className="range-origin" />}
       </span>
       <span aria-hidden="true" className="range-thumb" />
-      {drag && drag.rate < 1 && (
+      {drag && (drag.rate < 1 || (commit && !drag.waiting)) && (
         <span aria-hidden="true" className="range-value">
-          {format(drag.value)} · fino {RATE_LABEL[drag.rate]}
+          {format(drag.value)}
+          {drag.rate < 1 && ` · fino ${RATE_LABEL[drag.rate]}`}
         </span>
       )}
       <input

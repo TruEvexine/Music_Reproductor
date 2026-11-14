@@ -110,6 +110,7 @@ function Seek() {
   return (
     <div className="seek">
       <Range
+        commit
         disabled={empty || duration === 0}
         format={formatTime}
         label="Posición de reproducción"
