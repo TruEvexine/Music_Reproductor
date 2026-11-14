@@ -99,9 +99,9 @@ Comprobado en: `scripts/prueba-biblioteca.mjs`, `scripts/gen-biblioteca.mjs`, `s
 ### ¿Qué ajustes de sonido tiene?
 Ecualizador de 10 bandas de ±12 dB con 7 ajustes de partida (Plano, Graves, Agudos, Voz, Rock, Electrónica, Acústica), ReplayGain por
 pista o por álbum, fundido entre canciones de hasta 12 segundos, fundido al pausar, velocidad de 0,5× a 2×, balance y temporizador de
-apagado (a una hora o al terminar la canción).
+apagado (a los 5, 15, 30, 45, 60 o 90 minutos, o al terminar la canción).
 
-Comprobado en: `src/core/audio.ts` (`EQ_BANDS`, `EQ_LIMIT_DB`, `EQ_PRESETS`, `MAX_CROSSFADE`, `SPEED_RANGE`), `src/ui/PlayerMenu.tsx`.
+Comprobado en: `src/core/audio.ts` (`EQ_BANDS`, `EQ_LIMIT_DB`, `EQ_PRESETS`, `MAX_CROSSFADE`, `SPEED_RANGE`), `src/ui/PlayerMenu.tsx` (`sleepChoices`).
 
 ### ¿El sonido es bit-perfect?
 No. El audio pasa por el motor de audio del navegador (Web Audio), que es lo que permite el ecualizador y los fundidos.

@@ -2,6 +2,7 @@ import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "re
 import type { DragEvent, MouseEvent, ReactNode } from "react";
 import { AudioLines, ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Pause, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { coverSeed } from "../core/coverArt";
+import { SWIPE_LABELS } from "../core/gestures";
 import { hasPlayed } from "../core/queue";
 import { formatTime, isHiRes, qualityLabel, searchKey } from "../core/format";
 import { groupTracks, matchesAll as matches, recentTracks, searchTextOf, sortGroups, sortTracks } from "../core/library";
@@ -76,9 +77,9 @@ export function TrackRow({ track, number, onPlay }: { track: Track; number?: num
     <SwipeRow
       className="track-row"
       current={isCurrent}
-      left={{ ...enqueue, label: "A la cola" }}
+      left={{ ...enqueue, label: SWIPE_LABELS.enqueue }}
       onMenu={() => setSheet(true)}
-      right={isCurrent ? undefined : { ...playNext, label: "Siguiente" }}
+      right={isCurrent ? undefined : { ...playNext, label: SWIPE_LABELS.next }}
     >
       <button aria-label={`Reproducir ${track.title}, de ${track.artist}`} className="row-main" data-state={isCurrent ? "current" : played ? "played" : undefined} onClick={onPlay} type="button">
         {number !== undefined ? (

@@ -679,3 +679,105 @@ ol.track-list .row-album {
 .settings .hint {
   padding: 0 var(--s1);
 }
+
+/* Ayuda: preguntas desplegables (<details> nativo, sin animar: se abren de vez en cuando), gestos y «Nosotros». */
+.help-group {
+  display: grid;
+  gap: var(--s1);
+}
+
+.help-group h3,
+.help-list h3 {
+  margin: var(--s3) 0 var(--s1);
+  padding: 0 var(--s1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.help-list {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-list li {
+  padding: var(--s1) var(--s1) var(--s2);
+}
+
+.help-list h3 {
+  margin: 0 0 var(--s1);
+  padding: 0;
+  color: var(--ink);
+  font-size: var(--text-m);
+  font-weight: 650;
+}
+
+.help-list p,
+.help-about p,
+.faq-item p {
+  margin: 0 0 var(--s2);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.help-list .hint {
+  color: var(--ink-3);
+}
+
+.help-about {
+  padding: 0 var(--s1);
+}
+
+.faq-item {
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: var(--tap);
+  padding: var(--s2) var(--s3);
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary svg {
+  flex: none;
+  color: var(--ink-2);
+}
+
+.faq-item[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.faq-item[open] {
+  padding-bottom: var(--s2);
+}
+
+.faq-item > p {
+  padding: 0 var(--s3);
+}
+
+@media (hover: hover) {
+  .faq-item summary:hover {
+    background: var(--surface-2);
+    border-radius: var(--radius-s);
+  }
+}
+
+.settings .help-list .hint {
+  padding: 0;
+}

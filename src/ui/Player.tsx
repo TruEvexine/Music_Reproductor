@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { coverSeed } from "../core/coverArt";
+import { SWIPE_LABELS } from "../core/gestures";
 import { formatTime, isHiRes, qualityLabel } from "../core/format";
 import { lineAt } from "../core/lyrics";
 import type { Lyrics } from "../core/lyrics";
@@ -353,9 +354,9 @@ function QueueRow({ entryKey, track, index, first, last, state, repeated }: { en
     <SwipeRow
       className="queue-row"
       current={isCurrent}
-      left={isCurrent ? undefined : { ...remove, label: "Quitar" }}
+      left={isCurrent ? undefined : { ...remove, label: SWIPE_LABELS.remove }}
       onMenu={() => setSheet(true)}
-      right={isCurrent || isNext ? undefined : { ...playNext, label: "Siguiente" }}
+      right={isCurrent || isNext ? undefined : { ...playNext, label: SWIPE_LABELS.next }}
     >
       <button className="row-main" data-state={state} onClick={() => player.playEntry(entryKey)} type="button">
         <span className="row-coverbox">

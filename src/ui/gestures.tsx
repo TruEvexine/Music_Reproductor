@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import type { PointerEvent, ReactNode, RefObject } from "react";
+import { DISMISS_PX, LONG_PRESS_MS } from "../core/gestures";
 import { buzz } from "./toast";
 
 // Gestos con Pointer Events. Todos tienen alternativa sin gesto: botón de cerrar/Escape para arrastrar hacia abajo,
@@ -21,7 +22,7 @@ export function useDragDismiss(target: RefObject<HTMLElement | null>, onDismiss:
     if (!gesture || !element) return;
     const speed = gesture.dy / Math.max(event.timeStamp - gesture.startTime, 1); // px/ms
     element.style.transition = "transform var(--fast) var(--ease)";
-    if (gesture.dy > 96 || (gesture.dy > 24 && speed > 0.5)) {
+    if (gesture.dy > DISMISS_PX || (gesture.dy > 24 && speed > 0.5)) {
       element.style.transform = "translateY(100%)";
       window.setTimeout(onDismiss, 120);
     } else element.style.transform = "";
@@ -59,7 +60,6 @@ export interface SwipeAction {
 
 const THRESHOLD = 88; // px que arman la acción (vibra al cruzarlo); a esa altura ya se lee el icono y la etiqueta
 const LIMIT = 132;
-const PRESS_MS = 500;
 
 /**
  * Descarta el clic que el navegador genera al soltar tras un gesto, caiga donde caiga. Tras una pulsación larga cae en el fondo
@@ -135,7 +135,7 @@ export function SwipeRow({
           gesture.current.mode = "press";
           buzz(15);
           onMenu();
-        }, PRESS_MS);
+        }, LONG_PRESS_MS);
         gesture.current = g;
       }}
       onPointerMove={(event) => {
