@@ -8,7 +8,7 @@ tests), `src/ui/Backdrop.tsx` (bucle de dibujo) y `src/ui/backdropRenderer.ts` (
 
 ```mermaid
 flowchart LR
-  A["Audio que suena<br/>(tras volumen, EQ y limitador)"] --> B["AnalyserNode<br/>FFT 2048 · suavizado 0,4<br/>−100 a −10 dB → bytes 0–255"]
+  A["Audio que suena<br/>(tras EQ y balance, antes del volumen)"] --> B["AnalyserNode<br/>FFT 2048 · suavizado 0,4<br/>−100 a −10 dB → bytes 0–255"]
   B --> G["Graves<br/>20–150 Hz"]
   B --> M["Medios / voz<br/>250–4000 Hz"]
   B --> T["Agudos<br/>4–16 kHz"]
@@ -51,8 +51,8 @@ El analizador entrega 1024 valores (cada uno, ~22 Hz de ancho) en escala logarí
 
 ## 3. Cómo se normaliza la señal
 
-Cada canción viene masterizada a un volumen y con una compresión distintos, y además pasa por tu volumen y tu ecualizador antes de
-llegar al analizador. Por eso nada se compara con un valor fijo: **cada banda se compara con su propio pasado reciente**.
+Cada canción viene masterizada a un volumen y con una compresión distintos, y además pasa por tu ecualizador antes de
+llegar al analizador (el volumen no: va después). Por eso nada se compara con un valor fijo: **cada banda se compara con su propio pasado reciente**.
 
 - **Energía de la banda:** media de sus bytes, de 0 a 1.
 - **Media y variación móviles:** medias exponenciales con una constante de 4 s (`NORM_MS`). Al empezar se usa la media acumulada,
@@ -198,7 +198,8 @@ node scripts/medir-luces.ts --desde 60 --segundos 30 --sensibilidad high <pista>
 - Las cifras salen de una **simulación** del analizador (misma ventana, FFT, suavizado y escala que la especificación de Web Audio),
   no del navegador: allí el analizador mezcla el estéreo a mono a su manera (aquí lo hace ffmpeg) y los cuadros llegan a intervalos
   irregulares.
-- El analizador va **después** del volumen, el ecualizador y el limitador: con el volumen muy bajo la señal se acerca al suelo de
-  −100 dB y la banda puede entrar en «silencio». Los ataques no dependen del volumen (la escala es en dB); el silencio sí.
+- El analizador va **después** del ecualizador y el balance, pero **antes** del volumen y del limitador (cambio de 2026-11-14): bajar el volumen, silenciar o
+  los fundidos de pausa y de búsqueda no cambian lo que ve; las luces reaccionan igual con el volumen a 1 % o en mute. Antes iba después del volumen y,
+  medido en el navegador con un tema de prueba, el nivel de pico bajaba de 193/255 (volumen 1) a 103 (1 %) y 57 (mute).
 - La métrica mide el brillo. El tamaño y la velocidad se ven, pero no entran en la cifra de actividad (la velocidad se informa aparte).
 - «Se ve bien» no es una cifra: falta mirarlo en un móvil real con varias canciones.

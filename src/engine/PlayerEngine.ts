@@ -5,7 +5,7 @@ import { ANALYSER_DB } from "../core/rhythm";
 // Motor de audio: único dueño de los <audio> y del grafo Web Audio. No conoce React, la cola ni la biblioteca.
 //
 //   deck A ─ ganancia(ReplayGain) ─ fundido ─┐
-//                                            ├─ preamp ─ EQ ×10 ─ graves ─ agudos ─ balance ─ volumen ─ limitador ─ analizador ─ salida
+//                                            ├─ preamp ─ EQ ×10 ─ graves ─ agudos ─ balance ─ analizador ─ volumen ─ limitador ─ salida
 //   deck B ─ ganancia(ReplayGain) ─ fundido ─┘
 //
 // Dos decks: uno suena y el otro precarga la siguiente pista (salto casi sin hueco) o entra en crossfade.
@@ -131,7 +131,8 @@ export class PlayerEngine {
     this.analyser.smoothingTimeConstant = 0.4; // poco suavizado: los golpes del fondo "Ritmo" necesitan flancos nítidos
     this.analyser.minDecibels = ANALYSER_DB.min;
     this.analyser.maxDecibels = ANALYSER_DB.max;
-    const chain: AudioNode[] = [this.preamp, ...this.filters, this.bass, this.treble, this.panner, this.master, limiter, this.analyser, context.destination];
+    // El analizador va antes del volumen: las luces del modo Ritmo no se apagan al bajarlo (ni en los fundidos de pausa y de búsqueda, que usan `master`).
+    const chain: AudioNode[] = [this.preamp, ...this.filters, this.bass, this.treble, this.panner, this.analyser, this.master, limiter, context.destination];
     chain.reduce((from, to) => (from.connect(to), to));
     for (const deck of this.decks) {
       deck.gain = context.createGain();

@@ -101,6 +101,20 @@ await page.keyboard.press("ArrowDown");
 check("↓ baja el volumen", Number(await volume()) < 1, `vol=${await volume()}`);
 await page.keyboard.press("m");
 check("M silencia", Number(await volume()) === 0);
+// El analizador de las luces va antes del volumen: en silencio sigue viendo la señal (antes, con el volumen a 0, su pico bajaba de ~190 a ~57 de 255).
+const analyserPeak = () =>
+  page.evaluate(async () => {
+    const analyser = window.__engine.analyser;
+    const bytes = new Uint8Array(analyser.frequencyBinCount);
+    let peak = 0;
+    for (let i = 0; i < 6; i++) {
+      analyser.getByteFrequencyData(bytes);
+      peak = Math.max(peak, ...bytes);
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    }
+    return peak;
+  });
+check("con el volumen en silencio el analizador de luces sigue recibiendo la señal", (await analyserPeak()) > 120, `pico=${await analyserPeak()}`);
 await page.keyboard.press("m");
 
 // 8. Ajustes: EQ y crossfade de 2 s; persisten al recargar.
