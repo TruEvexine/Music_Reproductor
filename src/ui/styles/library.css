@@ -744,6 +744,35 @@ ol.track-list .row-album {
   }
 }
 
+/* Ayuda en escritorio: atajos y gestos en una columna, preguntas y «Nosotros» en la otra, hasta 88 rem y centrado.
+   Dos columnas fijas (no `columns`): abrir una pregunta no hace saltar secciones de una columna a otra. */
+.help-columns,
+.help-col {
+  display: contents;
+}
+
+@media (min-width: 1000px) {
+  .help {
+    container-type: inline-size;
+    max-width: calc(88rem + 2 * var(--gutter));
+    margin-inline: auto;
+  }
+}
+
+@container (min-width: 47rem) {
+  .help-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s7);
+    align-items: start;
+  }
+
+  .help-col {
+    display: grid;
+    gap: var(--s4);
+  }
+}
+
 /* Ayuda: preguntas desplegables (<details> nativo, sin animar: se abren de vez en cuando), gestos y «Nosotros». */
 .help-group {
   display: grid;
