@@ -19,7 +19,7 @@ const check = (name, ok, detail = "") => {
 };
 
 const pages = [
-  { path: "/privacidad", title: /^Aviso de privacidad de /, has: ["Quién es responsable.", "Tus derechos (ARCO)."] },
+  { path: "/privacidad", title: /^Aviso de privacidad de /, has: ["Quién es responsable.", "Si no estás conforme"] }, // presente con y sin cuentas (VITE_CUENTAS)
   { path: "/terminos", title: /^Términos de uso de /, has: ["10. Contacto.", "7. Apoyo voluntario."] },
   { path: "/almacenamiento", title: /^Cookies y almacenamiento local$/, has: ["no usa cookies ni herramientas de rastreo"] },
 ];
