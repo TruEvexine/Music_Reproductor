@@ -87,11 +87,18 @@ Las fuentes SVG de cada icono están en `logo/iconos/fuente/`.
 **En la app (2026-11-14):** `public/manifest.webmanifest` usa `icon-192`, `icon-512` y `maskable-512`, copiados a `public/icons/`; la fuente
 sigue siendo `fuente/*.svg` y `src/core/brand.test.ts` falla si la copia difiere. Sin `monocromo-512` todavía (no se pidió).
 
-**Medido (Chromium, píxeles del PNG):** el rombo más lejano del centro queda a **56,4 %** del radio en `maskable-512` (zona segura: 80 %),
-con las esquinas opacas en `#0b0a08`; en `icon-512` queda a 66,4 % y las esquinas son transparentes. Los PNG coinciden con su SVG
-(≤ 0,07 % de los píxeles difieren, solo en el borde). **A 48 px** el símbolo se reconoce como cinco hilos oscuros en diagonal, pero en
-`icon-512` reducido (el símbolo ocupa ≈ 65 % del ancho) los huecos entre hilos casi se cierran y se lee más como textura; `favicon-48.png`
-(símbolo más grande) se lee mejor. A 16 px solo queda la silueta del rombo. Revisado a ojo en una sola captura, sin pruebas con usuarios.
+**Símbolo más grande (2026-11-14):** a 48 px el símbolo de `icon-512` (≈ 65 % del ancho) se leía como textura: los huecos entre hilos
+(9,9 u de 33,9 u de paso) casi se cerraban. Se compararon dos variantes a 48, 96 y 192 px junto al actual (símbolo más grande, o hilos de 24 → 17 u
+con hueco de 16,9 u) y se eligió **el símbolo más grande**: escala ×1,2 respecto al anterior en `icon-192`, `icon-512` y `maskable-512`. El favicon
+(`favicon.svg`, `favicon-*.png`, `favicon.ico`), `apple-touch-icon`, `monocromo-512` y los `android-*` no cambian. Los PNG se regeneraron
+renderizando `fuente/*.svg` con Chromium (Playwright); no hay un script del repositorio que lo haga, así que al cambiar una fuente hay que repetirlo y copiar
+los tres PNG a `public/icons/` (`src/core/brand.test.ts` falla si difieren).
+
+**Medido (Chromium, píxeles del PNG, tras el cambio):** el píxel del símbolo más lejano del centro queda a **67,3 %** del radio en `maskable-512`
+(zona segura: 80 %), con las esquinas opacas en `#0b0a08`; en `icon-512` queda a 79,4 % (78,9 % en `icon-192`) y las esquinas son transparentes
+(`any` no tiene zona segura). Antes: 56,4 % (maskable) y 66,4 % (`icon-512`). El favicon de 48 px (símbolo más grande aún) se leía mejor que el
+`icon-512` anterior reducido; a 16 px solo queda la silueta del rombo. **Revisado a ojo** en una captura comparativa con 3 filas × 3 tamaños, sin
+pruebas con usuarios; no se ha probado en un móvil real ni en el selector de máscaras de Android.
 
 ## 3. Animación de carga
 
