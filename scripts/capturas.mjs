@@ -131,8 +131,12 @@ for (const name of matrix) {
   await page.goto(`${base}/app/playlists`);
   await check("07-playlists");
 
-  await page.getByRole("button", { name: /Entrar|Cuenta/ }).first().click();
-  await check("08-cuenta");
+  // Sin cuentas (VITE_CUENTAS distinto de 1) no hay botón de cuenta: esa captura solo existe con cuentas.
+  const account = page.getByRole("button", { name: /Entrar|Cuenta/ }).first();
+  if (await account.count()) {
+    await account.click();
+    await check("08-cuenta");
+  }
 
   await page.goto(`${base}/app/ajustes`);
   await check("10-ajustes");

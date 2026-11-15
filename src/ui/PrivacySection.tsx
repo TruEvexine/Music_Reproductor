@@ -55,7 +55,9 @@ function StoredList({ auth }: { auth: AuthController }) {
     ["Perfil", hasName && hasPhoto ? "Nombre y foto, solo aquí" : hasName ? "Solo el nombre, solo aquí" : hasPhoto ? "Solo la foto, solo aquí" : "Vacío"],
     ...(pending > 0 ? [["Cambios pendientes de subir", String(pending)] as [string, string]] : []),
     ["Espacio total usado", stored ? (stored.space ? `${formatBytes(stored.space.usage)} de ${formatBytes(stored.space.quota)} disponibles` : "El navegador no lo informa") : "Calculando…"],
-    ["Cuenta", auth.session ? `Conectado como ${email ? maskEmail(email) : "tu cuenta"}` : "Sin cuenta: nada sale de este dispositivo"],
+    ...(auth.isConfigured
+      ? [["Cuenta", auth.session ? `Conectado como ${email ? maskEmail(email) : "tu cuenta"}` : "Sin cuenta: nada sale de este dispositivo"] as [string, string]]
+      : []),
   ];
   return (
     <section className="sheet-section">
@@ -69,7 +71,10 @@ function StoredList({ auth }: { auth: AuthController }) {
         ))}
       </dl>
       <p className="hint">
-        Tus archivos de música nunca se suben. Si tienes cuenta, solo se sincronizan tus playlists: su nombre y el título, artista, álbum y duración de cada canción.
+        Tus archivos de música nunca se suben.
+        {auth.isConfigured
+          ? " Si tienes cuenta, solo se sincronizan tus playlists: su nombre y el título, artista, álbum y duración de cada canción."
+          : " No hay cuentas: nada de esto sale de este dispositivo."}
       </p>
     </section>
   );
@@ -139,7 +144,7 @@ export function PrivacySection({ auth }: { auth: AuthController }) {
   return (
     <section aria-labelledby="set-data" className="settings-section">
       <h2 id="set-data">Privacidad y datos</h2>
-      <p className="subtitle">Lo que la app guarda en este dispositivo y en tu cuenta.</p>
+      <p className="subtitle">{auth.isConfigured ? "Lo que la app guarda en este dispositivo y en tu cuenta." : "Lo que la app guarda en este dispositivo."}</p>
       <StoredList auth={auth} />
       <BackupSection />
       {userId && <AccountExport userId={userId} />}

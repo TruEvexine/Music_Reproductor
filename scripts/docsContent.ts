@@ -24,6 +24,18 @@ export function fillMarkers(text: string, values: Record<string, string | undefi
   return text.replace(MARKER, (marker) => values[marker.slice(2, -2)]?.trim() || marker);
 }
 
+/**
+ * Texto que depende de si el build trae cuentas (VITE_CUENTAS=1): `<!-- cuentas -->…<!-- /cuentas -->` solo con cuentas y
+ * `<!-- sin cuentas -->…<!-- /sin cuentas -->` solo sin ellas. Cada marcador va en su propia línea (también dentro de una cita, `> <!-- … -->`).
+ */
+export function forAccounts(markdown: string, enabled: boolean): string {
+  const marker = (name: string) => `^(?:> ?)?<!-- ${name} -->[ \\t]*\\r?\\n`;
+  const drop = enabled ? "sin cuentas" : "cuentas";
+  return markdown
+    .replace(new RegExp(`${marker(drop)}[\\s\\S]*?${marker(`/${drop}`)}`, "gm"), "")
+    .replace(new RegExp(marker("/?(?:sin )?cuentas"), "gm"), "");
+}
+
 /** Preguntas de FAQ.md por grupo (`##`) y pregunta (`###`). La línea «Comprobado en:» es de mantenimiento y no se publica. */
 export function parseFaq(markdown: string): FaqGroup[] {
   const groups: FaqGroup[] = [];

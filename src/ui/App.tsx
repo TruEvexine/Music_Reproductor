@@ -115,10 +115,12 @@ function Shell() {
             <CircleHelp {...icon} />
             <span>Ayuda</span>
           </NavLink>
-          <button className="nav-link" onClick={() => setAccount(true)} type="button">
-            {avatarUrl ? <img alt="" className="nav-avatar" height={24} src={avatarUrl} width={24} /> : <CircleUser {...icon} />}
-            <span>{auth.session ? "Cuenta" : "Entrar"}</span>
-          </button>
+          {auth.isConfigured && (
+            <button className="nav-link" onClick={() => setAccount(true)} type="button">
+              {avatarUrl ? <img alt="" className="nav-avatar" height={24} src={avatarUrl} width={24} /> : <CircleUser {...icon} />}
+              <span>{auth.session ? "Cuenta" : "Entrar"}</span>
+            </button>
+          )}
         </nav>
         <main className="main" inert={panel === "player"}>
           {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : path === "/app/ajustes" ? <SettingsView auth={auth} /> : path === "/app/ayuda" ? <HelpView /> : <LibraryView path={path} />}

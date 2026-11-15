@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { CircleUser } from "lucide-react";
 import { MAX_NAME } from "../core/profile";
 import { profile, useProfile } from "../state/profile";
+import { supabaseConfigured } from "../sync/supabaseClient";
 
 const problems = {
   size: "Esa imagen pesa más de 12 MB. Prueba con otra.",
@@ -76,7 +77,7 @@ export function ProfileSection() {
         </div>
       </div>
       <p className="hint" role="status">
-        {status ?? "Los dos son opcionales y se quedan solo en este dispositivo: no se suben ni se sincronizan con tu cuenta. La foto se recorta a un cuadrado y se guarda reducida, sin la información oculta de la original, como la ubicación."}
+        {status ?? `Los dos son opcionales y se quedan solo en este dispositivo: ${supabaseConfigured ? "no se suben ni se sincronizan con tu cuenta" : "no se suben a ningún sitio"}. La foto se recorta a un cuadrado y se guarda reducida, sin la información oculta de la original, como la ubicación.`}
       </p>
     </section>
   );

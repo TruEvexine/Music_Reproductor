@@ -6,22 +6,39 @@ no», se dice así.
 
 El nombre del producto es **Satin** (`MARCA.md`); en las respuestas se dice «la app» y los textos legales lo toman de `LEGAL_NOMBRE_APP`. Tono decidido el 2026-11-12: cercano, de tú.
 
+**Cuentas (2026-11-14):** el primer lanzamiento va sin cuentas (`VITE_CUENTAS` distinto de `1`). Lo que solo es verdad en uno de los dos
+estados va entre `<!-- cuentas -->…<!-- /cuentas -->` o `<!-- sin cuentas -->…<!-- /sin cuentas -->`, cada marcador en su línea; el build
+publica solo el bloque que corresponde (`forAccounts` en `scripts/docsContent.ts`).
+
 ---
 
 ## Tu música y tus datos
 
 ### ¿Mi música se sube a algún servidor?
+<!-- cuentas -->
 No. La app lee los archivos en tu navegador y nunca los envía. Ni siquiera puede: la web solo tiene permiso para conectarse a su propio
 dominio y al servidor de cuentas.
+<!-- /cuentas -->
+<!-- sin cuentas -->
+No. La app lee los archivos en tu navegador y nunca los envía. Ni siquiera puede: la web solo tiene permiso para conectarse a su propio
+dominio y al servidor de cuentas, que esta versión no usa.
+<!-- /sin cuentas -->
 
 Comprobado en: `vercel.json` (`connect-src`), `AGENTS.md` §5, `src/sync/` (solo playlists).
 
 ### ¿Necesito una cuenta?
+<!-- cuentas -->
 No. Sin cuenta tienes toda la app: biblioteca, playlists, ecualizador, fondos y copia de seguridad. La cuenta solo sirve para
 sincronizar tus playlists entre dispositivos.
+<!-- /cuentas -->
+<!-- sin cuentas -->
+No. Esta versión no tiene cuentas: tienes toda la app (biblioteca, playlists, ecualizador, fondos y copia de seguridad) sin registrarte
+y sin dar ningún dato personal.
+<!-- /sin cuentas -->
 
-Comprobado en: `src/state/playlists.ts` (locales primero), `src/sync/playlistSync.ts`.
+Comprobado en: `src/state/playlists.ts` (locales primero), `src/sync/playlistSync.ts`, `src/sync/supabaseClient.ts` (`VITE_CUENTAS`).
 
+<!-- cuentas -->
 ### Si creo una cuenta, ¿qué se guarda en ella?
 Tu correo, tu nombre visible y tus playlists: el nombre de cada una y, por canción, el título, artista, álbum y duración tal como vienen
 en tus archivos. No se guardan los archivos ni tu biblioteca completa.
@@ -35,6 +52,7 @@ solo en este dispositivo, marcadas «sin subir», y no te lo vuelve a preguntar 
 próxima vez que abras la app.
 
 Comprobado en: `src/ui/dialogs.tsx` (`AdoptDialog`), `src/ui/App.tsx`, `src/state/playlists.ts` (`adoptOwnerless`, `decline`), `scripts/prueba-enlace-magico.mjs`.
+<!-- /cuentas -->
 
 ### ¿Usa cookies o analítica?
 No usa cookies, analítica, publicidad ni rastreo de ningún tipo.
@@ -44,20 +62,29 @@ Comprobado en: `vercel.json` (CSP), búsqueda en `src/` de `document.cookie`, `g
 ### ¿Dónde se guardan mis datos y cómo los borro?
 En el almacenamiento de tu navegador. **Ajustes → Privacidad y datos** te enseña qué guarda la app en este dispositivo, con cifras reales.
 Para borrarlos: **Borrar datos de este dispositivo**. Se borran tu biblioteca, las copias de música, tus playlists y tus ajustes; tus
-archivos originales no se tocan. Si tienes sesión iniciada, el diálogo trae la casilla **Cerrar también la sesión**, marcada por defecto: si la
-desmarcas, la sesión sigue abierta y las playlists de tu cuenta vuelven a bajar. Aparte, **Borrar el historial de Recientes** olvida solo
-cuándo sonó cada canción.
+archivos originales no se tocan.
+<!-- cuentas -->
+Si tienes sesión iniciada, el diálogo trae la casilla **Cerrar también la sesión**, marcada por defecto: si la desmarcas, la sesión sigue
+abierta y las playlists de tu cuenta vuelven a bajar.
+<!-- /cuentas -->
+Aparte, **Borrar el historial de Recientes** olvida solo cuándo sonó cada canción.
 
 Comprobado en: `src/ui/PrivacySection.tsx`, `src/sync/account.ts` (`signOutForWipe`), `src/state/library.ts` (`wipeAll`, `clearPlayed`), `src/platform/web/db.ts` (`clearDatabase`).
 
 ### ¿Puedo poner mi nombre y una foto?
-Sí, en **Ajustes → Perfil**. Los dos son opcionales y el nombre empieza vacío. Se guardan solo en tu dispositivo: no se suben ni se
-sincronizan con tu cuenta (el nombre del perfil es aparte del que escribes al crear la cuenta). La foto se recorta a un cuadrado y se
-guarda reducida a 256 píxeles; al reducirla se pierde la información oculta de la original, como la ubicación. Aceptamos JPG, PNG,
+Sí, en **Ajustes → Perfil**. Los dos son opcionales y el nombre empieza vacío. Se guardan solo en tu dispositivo:
+<!-- cuentas -->
+no se suben ni se sincronizan con tu cuenta (el nombre del perfil es aparte del que escribes al crear la cuenta).
+<!-- /cuentas -->
+<!-- sin cuentas -->
+no se suben a ningún sitio.
+<!-- /sin cuentas -->
+La foto se recorta a un cuadrado y se guarda reducida a 256 píxeles; al reducirla se pierde la información oculta de la original, como la ubicación. Aceptamos JPG, PNG,
 WebP y GIF de hasta 12 MB.
 
 Comprobado en: `src/ui/ProfileSection.tsx`, `src/state/profile.ts` (`reencode`), `src/core/profile.ts` (`checkAvatar`, `AVATAR_PX`), `src/sync/` sin referencias al perfil local.
 
+<!-- cuentas -->
 ### ¿Puedo descargar lo que hay en mi cuenta?
 Sí, con la sesión iniciada: **Ajustes → Privacidad y datos → Datos de tu cuenta**. Descargas un archivo JSON con tu perfil (nombre visible y
 fecha de alta) y todas tus playlists tal como están guardadas; ese archivo también se puede importar como copia de seguridad.
@@ -73,6 +100,7 @@ Comprobado en: no hay llamada de borrado de usuario en `src/sync/`.
 La app todavía no tiene recuperación de contraseña. Escribe a {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta.
 
 Comprobado en: `src/sync/useAuthController.ts` (solo registro, entrada y salida).
+<!-- /cuentas -->
 
 ---
 
@@ -164,7 +192,10 @@ Comprobado en: `AGENTS.md` §3 (errores de reproducción), `src/state/library.ts
 ## La app
 
 ### ¿Funciona sin internet?
-Mientras la página está abierta, sí: puedes reproducir y crear playlists sin conexión, y los cambios se suben cuando vuelve la red.
+Mientras la página está abierta, sí: puedes reproducir y crear playlists sin conexión.
+<!-- cuentas -->
+Si tienes cuenta, los cambios se suben cuando vuelve la red.
+<!-- /cuentas -->
 Lo que todavía no funciona es **abrir o recargar** la página sin conexión.
 
 Comprobado en: `src/core/outbox.ts`, `DECISIONES_PENDIENTES.md` D18.

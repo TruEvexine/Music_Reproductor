@@ -1,5 +1,7 @@
 // Prueba de la vuelta de un enlace de correo (confirmación de registro) en Chromium contra `npm run dev`.
-// Uso: node scripts/prueba-enlace-magico.mjs [url-base]. Requiere VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en .env.
+// Uso: node scripts/prueba-enlace-magico.mjs [url-base] [--sin-cuentas]. Requiere VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en .env.
+// Sin --sin-cuentas, el servidor debe arrancar con cuentas (VITE_CUENTAS=1 npm run dev). Con --sin-cuentas, contra uno sin VITE_CUENTAS:
+// comprueba que no hay interfaz de cuenta, que nunca se pide el SDK ni a Supabase y que ningún token de la URL se procesa.
 // Con PKCE (S-01), Supabase devuelve al usuario con ?code=…, que solo se canjea con el verificador guardado en el navegador que pidió el
 // enlace. La red de Supabase va interceptada (nunca toca el proyecto real). Comprueba: (a) unos tokens en el hash (#access_token=…,
 // flujo implícito) no crean sesión y desaparecen de la URL; (b) ?code con verificador inicia sesión, en la landing y en /app, una sola vez;
@@ -9,7 +11,8 @@
 import { chromium } from "@playwright/test";
 import { loadEnv } from "vite";
 
-const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
+const base = (process.argv.slice(2).find((arg) => !arg.startsWith("--")) ?? "http://localhost:5173").replace(/\/$/, "");
+const withoutAccounts = process.argv.includes("--sin-cuentas");
 const env = loadEnv("development", process.cwd(), "VITE_");
 const storageKey = `sb-${new URL(env.VITE_SUPABASE_URL).hostname.split(".")[0]}-auth-token`;
 
@@ -71,6 +74,41 @@ async function open(path, { session, verifier = false } = {}) {
 const state = (page) =>
   page.evaluate((key) => ({ token: JSON.parse(localStorage.getItem(key) ?? "null")?.access_token ?? null, url: location.pathname + location.search + location.hash }), storageKey);
 const accountButton = (page) => page.getByRole("button", { name: "Cuenta", exact: true });
+
+// Cuentas cerradas: ni interfaz, ni SDK, ni Supabase, ni tokens procesados (el enlace se queda como llegó, sin efecto).
+if (withoutAccounts) {
+  for (const path of ["/", "/app", "/app/playlists", "/app/ayuda", "/app/ajustes"]) {
+    for (const suffix of ["", hash, "?code=codigo-valido"]) {
+      const sdkRequests = [];
+      const { context, page, errors } = await open(`${path}${suffix}`, { verifier: true });
+      page.on("request", (request) => /@supabase|supabase\.co/.test(request.url()) && sdkRequests.push(request.url())); // el SDK (en dev, /node_modules/.vite/deps/@supabase_…) o el servidor
+      await page.reload();
+      await page.waitForTimeout(800);
+      const label = `sin cuentas ${path}${suffix ? (suffix === hash ? " #access_token" : " ?code") : ""}`;
+      const after = await state(page);
+      check(`${label}: sin sesión`, after.token === null);
+      check(`${label}: no se pide el SDK ni a Supabase`, sdkRequests.length === 0 && supabaseCalls.length === 0, [...sdkRequests, ...supabaseCalls].join(", ").slice(0, 120));
+      check(`${label}: el token de la URL no se toca`, suffix === "" || after.url.endsWith(suffix), after.url.slice(0, 60));
+      check(`${label}: sin botón de cuenta ni «Iniciar sesión»`, (await page.getByRole("button", { name: /^(Entrar|Cuenta|Iniciar sesión)$/ }).count()) === 0);
+      check(`${label}: sin errores`, errors.length === 0, errors.join(" | "));
+      await context.close();
+    }
+  }
+  const { context, page } = await open("/app/ayuda");
+  await page.getByText("¿Necesito una cuenta?").click();
+  check("sin cuentas: la Ayuda dice que no hay cuentas", (await page.getByText(/no hay cuentas: no recogemos datos personales/).count()) === 1);
+  check("sin cuentas: la FAQ no pregunta por la contraseña", (await page.getByText("Olvidé mi contraseña.").count()) === 0);
+  check("sin cuentas: la FAQ responde sin cuenta", (await page.getByText(/sin dar ningún dato personal/).count()) === 1);
+  await page.goto(`${base}/app/ajustes`);
+  await page.waitForTimeout(800);
+  check("sin cuentas: «Qué se guarda» no tiene fila de cuenta", (await page.locator("dl.stored dt", { hasText: /^Cuenta$/ }).count()) === 0);
+  await page.goto(`${base}/privacidad`);
+  await page.waitForTimeout(800);
+  check("sin cuentas: el aviso dice que no hay cuentas", (await page.getByText(/no tiene cuentas/).count()) > 0 && (await page.getByText(/Si creas una cuenta/).count()) === 0);
+  await context.close();
+  await browser.close();
+  process.exit(failed ? 1 : 0);
+}
 
 // (a) Tokens en el hash: ya no inician sesión, ni en la landing ni en la app.
 for (const path of ["/", "/app"]) {

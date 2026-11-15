@@ -46,7 +46,7 @@ UI (src/ui)  →  estado (src/state)  →  core (src/core) + motor (src/engine) 
 Una base de código, tres destinos (web, Android, iPhone con Capacitor). Ver `PLAN.md` §3.7 y `docs/ARQUITECTURA_APP.md`.
 
 - Fronteras: `LocalLibrary`, `AudioSession`, `SecureStore`, `Storage`, `Connectivity`. Hoy solo existe la versión web; la nativa se escribe cuando haya Android Studio.
-- Pruebas de navegador: `scripts/prueba-biblioteca.mjs` (biblioteca, Chromium/Firefox/WebKit, 5 000 pistas de `node scripts/gen-biblioteca.mjs`), `prueba-audio.mjs`, `prueba-menu.mjs`, `prueba-fondo.mjs`, `prueba-enlace-magico.mjs` (vuelta del enlace de correo con Supabase interceptado). Todas aceptan la URL base como primer argumento.
+- Pruebas de navegador: `scripts/prueba-biblioteca.mjs` (biblioteca, Chromium/Firefox/WebKit, 5 000 pistas de `node scripts/gen-biblioteca.mjs`), `prueba-audio.mjs`, `prueba-menu.mjs`, `prueba-fondo.mjs`, `prueba-enlace-magico.mjs` (vuelta del enlace de correo con PKCE y adopción de playlists, con Supabase interceptado; `--sin-cuentas` comprueba el build sin cuentas). Todas aceptan la URL base como primer argumento. Las que abren la cuenta (`prueba-enlace-magico`, `prueba-privacidad`, `prueba-movimiento`, `verificar-csp`) necesitan un servidor con `VITE_CUENTAS=1`.
 - Variantes por plataforma con `data-platform="web|android|ios"` en `<html>` y CSS; nunca forks de componentes enteros.
 - `VITE_TARGET=web|android|ios`. En nativo: `base: './'`, router con hash, CSP por `<meta>`, sin dominios absolutos.
 - **Todo el estado del usuario se escribe primero en IndexedDB** y funciona sin red. Supabase es sincronización opcional. La UI nunca espera a la red.
@@ -55,6 +55,7 @@ Una base de código, tres destinos (web, Android, iPhone con Capacitor). Ver `PL
 
 ## 5. Seguridad
 
+- **Cuentas cerradas por defecto:** solo `VITE_CUENTAS=1` las activa. Sin ellas no hay interfaz de cuenta, no se procesa ningún token de la URL y el SDK de Supabase no entra en el build (`vite.config.ts` falla si entra). La FAQ y los borradores legales marcan lo que depende del estado con `<!-- cuentas -->` / `<!-- sin cuentas -->`.
 - En el cliente solo existen `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`. Nada de `service_role`, secret keys ni URIs de PostgreSQL (el build falla si las ve). Lo secreto vive en Edge Functions.
 - **Nunca se versiona ni se despliega audio.** `src/assets/music/` es local e ignorada: no la borres ni la muevas. Para pruebas, audio sintético: `npm run test:audio`.
 - Metadatos y nombres se pintan como texto: sin `innerHTML`, `dangerouslySetInnerHTML` ni `eval`. Portadas: ≤ 12 MB y MIME en lista blanca. URLs `blob:` revocadas al dejar de usarse.

@@ -8,6 +8,11 @@
 
 Los textos para publicar están en las secciones 3, 4 y 5. Las secciones 1 y 2 son la base que el abogado necesita para revisarlos.
 
+> **Cuentas (2026-11-14):** el primer lanzamiento va **sin cuentas** (`VITE_CUENTAS` distinto de `1`): no hay registro, el SDK de Supabase
+> no entra en el build y la app no recoge datos personales. Lo que solo vale en uno de los dos estados va entre `<!-- cuentas -->…<!-- /cuentas -->`
+> o `<!-- sin cuentas -->…<!-- /sin cuentas -->`, y el build publica solo el bloque que corresponde (`forAccounts` en `scripts/docsContent.ts`).
+> Las filas de Supabase del inventario (§1.1 y §1.2) solo existen con cuentas.
+
 ---
 
 ## 1. Inventario: qué datos existen y dónde viven
@@ -103,6 +108,7 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > **Lo que no recabamos.** Tu música no sale de tu dispositivo: la app lee los archivos en tu navegador y no los sube a ningún
 > servidor. Tampoco usamos cookies, analítica, publicidad ni herramientas de rastreo.
 >
+> <!-- cuentas -->
 > **Si usas la app sin cuenta,** no tratamos ningún dato personal tuyo. Tu biblioteca, playlists, cola y ajustes, y el nombre y la foto de perfil si los pones, se guardan solo en
 > el almacenamiento de tu navegador y puedes borrarlos desde Ajustes → Privacidad y datos.
 >
@@ -136,11 +142,25 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > Respondemos en un máximo de 20 días hábiles y, si procede, lo aplicamos en los 15 días hábiles siguientes. Es gratuito.
 > Desde la app también puedes: cerrar sesión, borrar tus playlists y borrar todos los datos de tu dispositivo.
 > **[Decides tú]** Cuando exista "Eliminar cuenta" en la app, mencionarlo aquí.
+> <!-- /cuentas -->
+> <!-- sin cuentas -->
+> **Esta versión de la app no tiene cuentas,** así que no recabamos ningún dato personal tuyo. Tu biblioteca, playlists, cola y ajustes,
+> y el nombre y la foto de perfil si los pones, se guardan solo en el almacenamiento de tu navegador y puedes borrarlos desde
+> Ajustes → Privacidad y datos.
+>
+> **Con quién.** La web está alojada en Vercel, Inc., que recibe la dirección IP de cada visita para entregar la página. Nosotros no
+> recibimos esos datos ni los usamos. No transferimos datos a terceros.
+>
+> **Dudas.** Para cualquier asunto de privacidad, escribe a {{CORREO_PRIVACIDAD}}. Desde la app puedes borrar tus playlists y todos
+> los datos de tu dispositivo.
+> <!-- /sin cuentas -->
 >
 > **Si no estás conforme** con nuestra respuesta, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno.
 >
-> **Cambios a este aviso.** Publicaremos cualquier cambio en {{URL_APP}}/privacidad con su fecha. Si el cambio afecta a lo que hacemos con
-> tus datos, te avisaremos por correo antes de aplicarlo.
+> **Cambios a este aviso.** Publicaremos cualquier cambio en {{URL_APP}}/privacidad con su fecha.
+> <!-- cuentas -->
+> Si el cambio afecta a lo que hacemos con tus datos, te avisaremos por correo antes de aplicarlo.
+> <!-- /cuentas -->
 
 ### 3.2 Aviso simplificado (bajo el botón de registro)
 
@@ -156,16 +176,24 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > Última actualización: {{FECHA_ACTUALIZACION}}
 >
 > **1. Qué es.** {{NOMBRE_APP}} es un reproductor de música que funciona en tu navegador con archivos que ya tienes. La app no
-> vende, presta ni distribuye música. La cuenta es opcional y solo sirve para sincronizar playlists.
+> vende, presta ni distribuye música.
+> <!-- cuentas -->
+> La cuenta es opcional y solo sirve para sincronizar playlists.
+> <!-- /cuentas -->
 >
 > **2. Tu música es tu responsabilidad.** Solo debes reproducir archivos que tengas derecho a usar. La app no sube tus archivos ni
 > verifica su origen.
 >
+> <!-- sin cuentas -->
+> **3. Cuentas.** Esta versión no tiene cuentas. Si algún día se añaden, actualizaremos estos términos antes.
+> <!-- /sin cuentas -->
+> <!-- cuentas -->
 > **3. Tu cuenta.** Debes dar un correo válido y cuidar tu contraseña. Puedes dejar de usar la cuenta y pedir su eliminación en
 > cualquier momento. Podemos suspender una cuenta que se use para atacar el servicio o a otras personas (por ejemplo, intentos
 > automatizados de acceso o abuso de la sincronización).
 > **[Decides tú]** edad mínima. Sugerencia: 13 años con autorización de padre, madre o tutor hasta los 18. **[Abogado]** validez de
 > esa fórmula en México.
+> <!-- /cuentas -->
 >
 > **4. Licencia de uso.** Te damos permiso personal, gratuito y no exclusivo para usar la app. No puedes usarla para ofrecer un
 > servicio a terceros ni intentar saltarte sus límites técnicos.
@@ -215,9 +243,15 @@ Basta con esta página, enlazada desde el pie de la landing y desde Ajustes:
 > | Copias de tus archivos, solo en navegadores que no permiten recordar carpetas (Firefox, Safari) | Que tu música siga disponible al volver | Ídem |
 > | Playlists, cola, posición de reproducción y ajustes de sonido y fondo | Que la app esté como la dejaste | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > | Tu nombre y tu foto de perfil, si los pones (la foto se guarda reducida y sin sus metadatos) | Mostrarlos en la app | Ajustes → Perfil, o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
+> <!-- cuentas -->
 > | Tu sesión, si iniciaste sesión | No pedirte la contraseña cada vez | Cerrar sesión |
 >
 > Nada de esto se envía a nosotros, salvo tus playlists si tienes cuenta (ver el aviso de privacidad).
+> <!-- /cuentas -->
+> <!-- sin cuentas -->
+>
+> Nada de esto se envía a nosotros.
+> <!-- /sin cuentas -->
 
 **Si algún día se añade analítica:** elegir una que no use cookies ni identificadores persistentes (ver `AJUSTES_PRIVACIDAD.md` §4) y,
 aun así, ofrecerla como opción activada por la persona. Entonces esta página y el aviso se actualizan antes de publicarla.

@@ -4,8 +4,11 @@ import { loadEnv, normalizePath } from "vite";
 import type { Plugin } from "vite";
 import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
-import { fillMarkers, parseFaq, parseLegal, unfilledMarkers } from "./scripts/docsContent";
+import { fillMarkers, forAccounts, parseFaq, parseLegal, unfilledMarkers } from "./scripts/docsContent";
 import { findBundledAudio, findSecretEnv } from "./scripts/envGuard";
+
+/** VITE_CUENTAS=1 (entorno o .env): solo ese valor activa las cuentas. Por defecto están cerradas. */
+const accountsOn = (mode: string) => ({ ...process.env, ...loadEnv(mode, process.cwd(), "VITE_") }).VITE_CUENTAS === "1";
 
 function buildGuard(mode: string): Plugin {
   return {
@@ -37,6 +40,11 @@ function buildGuard(mode: string): Plugin {
       if (audio.length > 0) {
         this.error(`El build incluye audio (nunca se despliega música):\n- ${audio.join("\n- ")}`);
       }
+      // Sin cuentas, el SDK de Supabase no puede llegar al build (ni a la landing ni a /app), ni siquiera como chunk diferido.
+      const sdk = Object.values(bundle).filter((file) => file.type === "chunk" && Object.keys(file.modules).some((id) => id.includes("/@supabase/")));
+      if (!accountsOn(mode) && sdk.length > 0) {
+        this.error(`Build sin cuentas (VITE_CUENTAS distinto de "1") con el SDK de Supabase dentro:\n- ${sdk.map((file) => file.fileName).join("\n- ")}`);
+      }
     },
   };
 }
@@ -56,8 +64,9 @@ function docsContent(mode: string): Plugin {
       const env = { ...process.env, ...loadEnv(mode, process.cwd(), "LEGAL_") };
       const values = Object.fromEntries(Object.entries(env).filter(([name]) => name.startsWith("LEGAL_")).map(([name, value]) => [name.slice(6), value]));
       const fill = (text: string) => fillMarkers(text, values);
-      const faq = parseFaq(readFileSync(files[0], "utf8")).map(({ group, items }) => ({ group, items: items.map(({ question, answer }) => ({ question, answer: answer.map(fill) })) }));
-      const legal = Object.fromEntries(Object.entries(parseLegal(readFileSync(files[1], "utf8"))).map(([name, text]) => [name, fill(text)]));
+      const read = (file: string) => forAccounts(readFileSync(file, "utf8"), accountsOn(mode));
+      const faq = parseFaq(read(files[0])).map(({ group, items }) => ({ group, items: items.map(({ question, answer }) => ({ question, answer: answer.map(fill) })) }));
+      const legal = Object.fromEntries(Object.entries(parseLegal(read(files[1]))).map(([name, text]) => [name, fill(text)]));
       return `export const faq = ${JSON.stringify(faq)};\nexport const legal = ${JSON.stringify(legal)};`;
     },
     configureServer(server) {

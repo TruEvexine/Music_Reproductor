@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SHORTCUTS } from "../src/core/shortcuts";
-import { fillMarkers, findMarkers, parseFaq, parseLegal, stripNotes, unfilledMarkers } from "./docsContent";
+import { fillMarkers, findMarkers, forAccounts, parseFaq, parseLegal, stripNotes, unfilledMarkers } from "./docsContent";
 
 const read = (name: string) => readFileSync(new URL(`../docs/producto/${name}`, import.meta.url), "utf8");
 
@@ -98,3 +98,55 @@ describe("FAQ de atajos", () => {
 function questionsOf(name: string) {
   return parseFaq(read(name)).flatMap((group) => group.items);
 }
+
+describe("forAccounts", () => {
+  const doc = [
+    "Siempre.",
+    "<!-- cuentas -->",
+    "Con cuenta.",
+    "<!-- /cuentas -->",
+    "<!-- sin cuentas -->",
+    "Sin cuenta.",
+    "<!-- /sin cuentas -->",
+    "> Cita.",
+    "> <!-- cuentas -->",
+    "> Cita con cuenta.",
+    "> <!-- /cuentas -->",
+    "> Fin.",
+    "",
+  ].join("\r\n");
+  it("sin cuentas quita los bloques de cuentas y los marcadores", () => {
+    expect(forAccounts(doc, false)).toBe(["Siempre.", "Sin cuenta.", "> Cita.", "> Fin.", ""].join("\r\n"));
+  });
+  it("con cuentas quita los bloques sin cuentas y los marcadores", () => {
+    expect(forAccounts(doc, true)).toBe(["Siempre.", "Con cuenta.", "> Cita.", "> Cita con cuenta.", "> Fin.", ""].join("\r\n"));
+  });
+});
+
+describe("FAQ y borradores en los dos estados de cuentas", () => {
+  const publish = (enabled: boolean) => {
+    const faq = parseFaq(forAccounts(read("FAQ.md"), enabled));
+    const legal = parseLegal(forAccounts(read("LEGAL_BORRADORES.md"), enabled));
+    return { faq: JSON.stringify(faq), questions: faq.flatMap((group) => group.items.map((item) => item.question)), legal: Object.values(legal).join("\n") };
+  };
+  it("no publica ningún marcador", () => {
+    for (const enabled of [true, false]) {
+      const { faq, legal } = publish(enabled);
+      expect(faq + legal).not.toMatch(/<!--|-->/);
+    }
+  });
+  it("sin cuentas no habla de registro, sesión ni datos de la cuenta", () => {
+    const { questions, legal, faq } = publish(false);
+    expect(questions).not.toContain("Olvidé mi contraseña.");
+    expect(questions).not.toContain("Si creo una cuenta, ¿qué se guarda en ella?");
+    expect(legal).not.toMatch(/Si creas una cuenta|Supabase|Tu sesión/);
+    expect(legal).toMatch(/no tiene cuentas/);
+    expect(faq).toMatch(/sin dar ningún dato personal/);
+  });
+  it("con cuentas mantiene lo de la cuenta", () => {
+    const { questions, legal } = publish(true);
+    expect(questions).toContain("Olvidé mi contraseña.");
+    expect(legal).toMatch(/Si creas una cuenta/);
+    expect(legal).not.toMatch(/no tiene cuentas/);
+  });
+});

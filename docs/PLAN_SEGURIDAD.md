@@ -117,12 +117,15 @@ Ver §6.
 
 ## 5. Decisiones que necesito
 
-- **D-1 · S-01 (prioridad).** Pasar a PKCE y adoptar las playlists solo con consentimiento. Efecto visible: el enlace de confirmación del correo solo inicia sesión si se abre en el mismo navegador donde se hizo el registro. Si se abre en otro, el correo queda confirmado, pero hay que entrar con la contraseña. Mi recomendación es hacerlo **ya**, con `emailRedirectTo` y una prueba de regresión.
+- **D-1 · S-01 (prioridad). Decidido 2026-11-14: sí** (PKCE y adopción solo con consentimiento; hecho). Pasar a PKCE y adoptar las playlists solo con consentimiento. Efecto visible: el enlace de confirmación del correo solo inicia sesión si se abre en el mismo navegador donde se hizo el registro. Si se abre en otro, el correo queda confirmado, pero hay que entrar con la contraseña. Mi recomendación es hacerlo **ya**, con `emailRedirectTo` y una prueba de regresión.
 - **D-2 · Proyecto compartido o propio** (§6). Mi recomendación es un proyecto propio antes de abrir los registros.
+  **Decidido 2026-11-14:** el plan gratuito no deja crear otro proyecto, así que el primer lanzamiento va **con las cuentas cerradas**
+  (`VITE_CUENTAS` distinto de `1`): sin interfaz de cuenta, sin SDK en el build y sin procesar tokens de la URL. Abrirlas es poner
+  `VITE_CUENTAS=1` en Vercel, después de D-3, D-4 y D-6.
 - **D-3 · Borrado de cuenta.** Mientras se siga compartiendo, no publicar `mp-delete-account` con `auth.admin.deleteUser`. Y antes de borrar nada a mano, comprobar que la petición viene de verdad del dueño de la cuenta (no basta con el remitente del correo).
 - **D-4 · Migraciones al remoto.** Aplicar, tras probarlas en local: la de D25, una nueva para S-03 (CHECKs y borrar las políticas antiguas), el `revoke` de S-08 (coordinado con la app de matemáticas) y opcionalmente `alter default privileges … revoke … from anon, authenticated`. Después, `supabase migration repair`.
 - **D-5 · Arreglos que cambian lo que se ve:** S-09, S-11, S-13 y S-17 (aviso en el registro, textos legales).
-- **D-6 · Panel de Supabase (lo haces tú):** protección de contraseñas filtradas; mínimo ≥ 10; confirmación de correo activada; Site URL y Redirect URLs (sin localhost en producción, ¿hay comodines?); caducidad de enlaces; límites de Auth y CAPTCHA; SMTP propio. En Vercel: comprobar que las cabeceras se sirven en producción y borrar los despliegues viejos (D4 de `SECURITY_AUDIT.md`).
+- **D-6 · Panel de Supabase (lo haces tú):** antes de abrir cuentas, añadir `<dominio>/app` a las Redirect URLs (el registro y «Pedir un enlace nuevo» envían `emailRedirectTo` a esa ruta; si no está, Supabase usa la Site URL, que puede ser de la otra app); protección de contraseñas filtradas; mínimo ≥ 10; confirmación de correo activada; Site URL y Redirect URLs (sin localhost en producción, ¿hay comodines?); caducidad de enlaces; límites de Auth y CAPTCHA; SMTP propio. En Vercel: comprobar que las cabeceras se sirven en producción y borrar los despliegues viejos (D4 de `SECURITY_AUDIT.md`).
 
 ## 6. Proyecto compartido: opciones
 

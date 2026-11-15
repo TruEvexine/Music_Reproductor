@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { faq } from "virtual:docs";
 import { APP_NAME } from "../core/brand";
 import { GESTURES } from "../core/gestures";
+import { supabaseConfigured } from "../sync/supabaseClient";
 import { Inline } from "./Markdown";
 import { icon } from "./parts";
 import { openShortcutHelp, ShortcutsList } from "./ShortcutsHelp";
@@ -63,7 +64,7 @@ export function HelpView() {
         <h2 id="help-about">Nosotros</h2>
         <div className="help-about">
           <p>Detrás de {APP_NAME} hay una persona en México.</p>
-          <p>La idea es sencilla: tu música es tuya. Se queda en tu dispositivo, no hay anuncios, cookies ni analítica, y la cuenta es opcional: solo sirve para sincronizar tus playlists.</p>
+          <p>La idea es sencilla: tu música es tuya. Se queda en tu dispositivo, no hay anuncios, cookies ni analítica{supabaseConfigured ? ", y la cuenta es opcional: solo sirve para sincronizar tus playlists." : ", y no hay cuentas: no recogemos datos personales."}</p>
           <p>El código es público, bajo la licencia PolyForm Noncommercial 1.0.0, para que cualquiera pueda ver cómo funciona.</p>
         </div>
       </section>

@@ -19,14 +19,6 @@ export function AuthDialog({ auth, onClose }: { auth: AuthController; onClose: (
     void (registering ? auth.signUp(email.trim(), password, name.trim()) : auth.signIn(email.trim(), password));
   }
 
-  if (!auth.isConfigured) {
-    return (
-      <Dialog onClose={onClose} title="Cuenta">
-        <p>Las cuentas no están disponibles en esta instalación. Tu música local funciona igual sin ellas.</p>
-      </Dialog>
-    );
-  }
-
   if (auth.linkProblem && !auth.session) {
     const otherBrowser = auth.linkProblem === "other-browser";
     return (

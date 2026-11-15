@@ -4,7 +4,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim() ?? "";
 const publishableKey =
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() ?? "";
 
-export const supabaseConfigured = Boolean(supabaseUrl && publishableKey);
+/**
+ * Cuentas cerradas por defecto: solo un build con VITE_CUENTAS=1 las activa. Sin ellas no hay interfaz de cuenta, no se procesa ningún
+ * token de la URL y el SDK ni siquiera entra en el build (la condición es constante al compilar; vite.config.ts lo comprueba).
+ */
+const accountsEnabled = import.meta.env.VITE_CUENTAS === "1";
+export const supabaseConfigured = accountsEnabled && Boolean(supabaseUrl && publishableKey);
 
 let client: Promise<SupabaseClient> | undefined;
 

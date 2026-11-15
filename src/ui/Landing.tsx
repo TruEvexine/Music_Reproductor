@@ -151,7 +151,10 @@ export function Landing() {
           <a className="button primary" data-reveal href="/app" onClick={open} style={rise(1)}>
             Abrir el reproductor
           </a>
-          <p data-reveal style={rise(2)}>La cuenta es opcional y solo sincroniza tus playlists entre dispositivos. Los archivos se quedan en el dispositivo donde están.</p>
+          <p data-reveal style={rise(2)}>
+            {supabaseConfigured ? "La cuenta es opcional y solo sincroniza tus playlists entre dispositivos." : "No hay cuentas ni registro: no recogemos datos personales."} Los archivos se
+            quedan en el dispositivo donde están.
+          </p>
         </section>
       </main>
       <footer className="landing-credits">
