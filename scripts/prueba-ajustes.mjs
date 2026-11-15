@@ -84,7 +84,7 @@ await page.getByRole("button", { name: "Borrar datos de este dispositivo" }).cli
 await wait(page, 300);
 await page.locator("dialog[open]").getByRole("button", { name: "Cancelar" }).click();
 await wait(page, 300);
-await page.getByRole("link", { name: "Biblioteca", exact: true }).click();
+await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
 await wait(page, 500);
 check("cancelar el borrado no quita la biblioteca", (await page.locator(".track-row").count()) === 2);
 await page.getByRole("link", { name: "Ajustes", exact: true }).click();

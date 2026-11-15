@@ -80,7 +80,7 @@ const stored = async (page) => Object.fromEntries(await page.locator(".stored > 
   await page.getByRole("heading", { name: "Privacidad y datos" }).scrollIntoViewIfNeeded();
 
   // Recientes: la pista que suena sube al primer puesto; al borrar el historial, vuelve el orden de entrada.
-  await page.getByRole("link", { name: "Biblioteca", exact: true }).click();
+  await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
   await wait(page, 500);
   await page.locator(".track-row .row-main").nth(1).click();
   await wait(page, 700);
@@ -99,7 +99,7 @@ const stored = async (page) => Object.fromEntries(await page.locator(".stored > 
   await page.locator("dialog[open]").getByRole("button", { name: "Borrar historial" }).click();
   await wait(page, 600);
   check("borrar Recientes avisa", (await page.locator(".toast").innerText().catch(() => "")).includes("Historial de Recientes borrado"));
-  await page.getByRole("link", { name: "Biblioteca", exact: true }).click();
+  await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
   await wait(page, 500);
   await page.getByRole("link", { name: "Recientes", exact: true }).click();
   await wait(page, 400);

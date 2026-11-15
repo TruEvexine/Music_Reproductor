@@ -102,7 +102,7 @@ async function swipe(page, from, to) {
   await page.getByRole("button", { name: "Ver tutoriales otra vez" }).click();
   await page.waitForTimeout(300);
   check("móvil: «Ver tutoriales otra vez» confirma sin abrir nada encima", (await tips(page).count()) === 0 && (await page.getByText("volverá a salir").count()) === 1);
-  await page.getByRole("link", { name: "Biblioteca", exact: true }).click();
+  await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
   await page.waitForTimeout(600);
   check("móvil: de vuelta en la biblioteca el aviso de deslizar vuelve a salir", (await tips(page).count()) === 1 && /Desliza una canción/.test(await tipText(page)));
   await page.getByRole("button", { name: "Entendido" }).click();

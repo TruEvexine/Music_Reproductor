@@ -4,6 +4,7 @@ import { iconSmall } from "./parts";
 
 // Se decide al compilar: sin VITE_CAFE_URL (o con una que no sea https) no hay botón en ninguna parte.
 const url = cafeUrl(import.meta.env.VITE_CAFE_URL);
+export const hasCafe = Boolean(url);
 
 /** «Comprar un café»: un enlace que abre la página de pago en otra pestaña. Sin SDK ni diálogos, y no desbloquea nada. */
 export function CafeButton({ className = "button" }: { className?: string }) {

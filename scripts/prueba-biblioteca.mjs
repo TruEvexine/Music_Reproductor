@@ -202,7 +202,7 @@ const stored = (page) =>
   await page.reload();
   await page.waitForTimeout(800);
   check("playlist sin cuenta: persiste tras recargar con su canción", (await page.locator(".playlist-detail .track-row", { hasText: "Marea de Fase" }).count()) === 1);
-  await page.getByRole("link", { name: "Biblioteca", exact: true }).click();
+  await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
   await page.getByRole("button", { name: "Carpetas y copia de seguridad" }).click();
   const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Exportar" }).click()]);
   const dir = mkdtempSync(join(tmpdir(), "copia-"));
