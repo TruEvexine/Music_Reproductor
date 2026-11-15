@@ -194,7 +194,41 @@ Necesitas el móvil con cable USB, la **depuración USB** activada (Ajustes → 
 | `capturas.mjs`, menú Fondo | 4 de 10 | Del script: reabría ≡ durante los 140 ms de salida. El clic caía entre `dialog.close()` y el evento `close` (el `<dialog>` ya cerrado, React aún con `open=true`), así que `setOpen(true)` no hacía nada | Arreglado en el script (espera a que el `<dialog>` se desmonte): 10 de 10 en verde |
 | `prueba-movil.mjs`, pulsación larga | 6 de 10 | De la app, o de la emulación táctil de Chromium: la hoja se abre a los 500 ms, pero al soltar llega un `click` cuyo destino es el propio `<dialog>` y `parts.tsx:63` lo cierra como si fuera un toque en el fondo. `SwipeRow` solo descarta el clic dentro de la fila. No depende de cuánto se mantenga el dedo (falla con 600, 700 y 1 000 ms) | Sin arreglar (la causa no está en el script). Falta comprobarlo en un móvil real |
 | `prueba-biblioteca.mjs`, recarga tras importar | 1 de 10 > 1 s (3 322 ms; resto 391–494 ms) | §2: almacenamiento ocupado tras la importación | Ya solo informativa (Fase 1). La pestaña nueva: 10 de 10 < 1 s |
-| `prueba-biblioteca.mjs`, scroll p95 (hallado de paso) | 1 de 10 (53 ms, umbral 50) | Sin investigar | Nada |
+| `prueba-biblioteca.mjs`, scroll p95 (hallado de paso) | 1 de 10 (53 ms, umbral 50) | Medido en §8.1 | Nada (umbral intacto; propuesta pendiente de tu respuesta) |
+
+### 8.1 Scroll p95 de `prueba-biblioteca.mjs`: distribución (2026-11-14, 10 pasadas completas seguidas, `vite` en desarrollo, este PC, Chromium)
+
+Umbral sin tocar: `p95 < 50 ms` sobre 120 cuadros de scroll rápido (900 px por cuadro) con 5 000 pistas. Resultado: **6 de 10 pasadas fallan**, y
+en todas ese era el único fallo de la prueba (las demás comprobaciones: 10 de 10).
+
+| Pasada | p50 (ms) | p95 (ms) | máx (ms) | p95 / p50 | Veredicto |
+|---|---|---|---|---|---|
+| 1 | 20,4 | 52,8 | 75,7 | 2,59 | FAIL |
+| 2 | 19,1 | 50,0 | 70,4 | 2,62 | FAIL (50,0 no es < 50) |
+| 3 | 18,7 | 51,3 | 53,5 | 2,74 | FAIL |
+| 4 | 18,9 | 49,3 | 52,8 | 2,61 | OK |
+| 5 | 18,7 | 48,7 | 64,8 | 2,60 | OK |
+| 6 | 19,5 | 51,7 | 56,7 | 2,65 | FAIL |
+| 7 | 19,6 | 52,7 | 68,0 | 2,69 | FAIL |
+| 8 | 18,8 | 49,8 | 53,8 | 2,65 | OK |
+| 9 | 19,0 | 49,6 | 57,6 | 2,61 | OK |
+| 10 | 18,5 | 50,4 | 57,6 | 2,72 | FAIL |
+
+**Distribución del p95:** mín 48,7 · mediana 50,2 · media 50,6 · máx 52,8 ms (rango de 4,1 ms alrededor del umbral). p50: 18,5–20,4 ms. p95/p50: 2,59–2,74.
+
+**Lectura:** no hay una regresión: el p95 oscila *sobre* el umbral (mediana 0,2 ms por encima), no lejos de él. Con 120 muestras el p95 es el sexto peor
+cuadro (`gaps[114]`), así que depende de 5 o 6 cuadros sueltos; además 50 ms ≈ 3 cuadros de 60 Hz, de modo que el valor salta entre «2 y pico» y «3 cuadros».
+El p50 de ~19 ms (no 16,7) indica que, en desarrollo y sin minificar, cada cuadro ya cuesta algo más que un vsync. Medido solo en este PC y en
+`vite` de desarrollo: no sé cuánto cambia con el build de producción ni en un móvil de gama media (§6.1).
+
+**Propuesta (sin aplicar; decides tú):**
+
+1. **Relativo (recomendada):** `p95 < 3 × p50` (mismo `p95`, medido contra el p50 de la misma pasada). Las 10 pasadas habrían pasado (máx 2,74, margen ≈ 9 %);
+   sigue detectando que la lista se vuelva a atascar (el p95 se dispararía respecto al p50) y se adapta a un PC más lento. Contra: no detecta que *todo* sea
+   más lento a la vez (p50 y p95 suben juntos); para eso hace falta además un tope absoluto holgado (p. ej. `p50 < 33 ms` y `máx < 150 ms`).
+2. **Con un reintento:** repetir la medición una vez si falla y exigir que pase una de las dos. Con la tasa observada (6/10) un solo reintento deja un falso fallo
+   de ≈ 36 % por pasada: no basta; con tres intentos, ≈ 22 % → sigue siendo ruidoso, y triplica el tiempo en los casos malos. No la recomiendo.
+3. **No cambiar nada** y aceptar que la prueba es ruidosa en este PC: descartado, porque ya bloquea la suite de forma habitual.
 
 ## 9. Lighthouse en producción local (línea base y seguimiento)
 
