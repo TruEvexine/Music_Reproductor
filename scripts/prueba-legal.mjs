@@ -1,16 +1,37 @@
-// Prueba de las páginas legales en Chromium. Uso: node scripts/prueba-legal.mjs <url-base> [esperado] [carpeta-capturas]
-//   esperado = "marcadores": servidor de desarrollo sin LEGAL_*: los {{MARCADORES}} se ven tal cual (el build de producción los rechaza).
-//   esperado = "completo": build servido con `vite preview` y LEGAL_RESPONSABLE="Persona de Prueba", LEGAL_DOMICILIO="Calle Falsa 123, Ciudad de Prueba",
-//              LEGAL_CORREO_PRIVACIDAD="prueba@example.com", LEGAL_NOMBRE_APP="App de Prueba", LEGAL_FECHA_ACTUALIZACION="1 de enero de 2030", LEGAL_URL_APP="https://prueba.example": se ven los valores y no queda ningún marcador.
+// Prueba de las páginas legales en Chromium. Uso: node scripts/prueba-legal.mjs [carpeta-capturas]
+// Aislada del entorno: levanta ella misma dos servidores de desarrollo con las LEGAL_* fijadas en el entorno del proceso (que en Vite pisa a
+// .env.local), así que da igual lo que haya en .env.local o en las LEGAL_* de quien la lanza.
+//   "marcadores": LEGAL_* vacías: los {{MARCADORES}} se ven tal cual (el build de producción los rechaza).
+//   "completo": valores ficticios (abajo): se ven los valores y no queda ningún marcador.
 // En ambos casos: las tres páginas rinden sin las notas internas, no están enlazadas desde la navegación pública, piden no indexarse y caben en móvil.
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { createServer } from "vite";
 
-const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
-const expected = process.argv[3] ?? "marcadores";
-const shots = process.argv[4];
+const shots = process.argv[2];
 if (shots) mkdirSync(shots, { recursive: true });
+
+const fake = {
+  LEGAL_RESPONSABLE: "Persona de Prueba",
+  LEGAL_DOMICILIO: "Calle Falsa 123, Ciudad de Prueba",
+  LEGAL_CORREO_PRIVACIDAD: "prueba@example.com",
+  LEGAL_NOMBRE_APP: "App de Prueba",
+  LEGAL_FECHA_ACTUALIZACION: "1 de enero de 2030",
+  LEGAL_URL_APP: "https://prueba.example",
+};
+
+/** Servidor con exactamente estas LEGAL_*; las no dadas quedan vacías, que para fillMarkers equivale a no definidas. */
+async function withServer(values, run) {
+  for (const key of Object.keys(fake)) process.env[key] = values[key] ?? "";
+  const server = await createServer({ server: { host: "127.0.0.1", port: 0 }, logLevel: "silent" });
+  await server.listen();
+  try {
+    await run(server.resolvedUrls.local[0].replace(/\/$/, ""));
+  } finally {
+    await server.close();
+  }
+}
 
 let failed = 0;
 const check = (name, ok, detail = "") => {
@@ -26,6 +47,7 @@ const pages = [
 
 const browser = await chromium.launch();
 const errors = [];
+async function run(base, expected) {
 for (const [label, viewport] of [["escritorio", { width: 1440, height: 900 }], ["móvil", { width: 390, height: 844 }]]) {
   const page = await browser.newPage({ viewport });
   page.on("pageerror", (error) => errors.push(error.message));
@@ -65,6 +87,11 @@ for (const path of ["/", "/app", "/app/playlists", "/app/ajustes", "/app/ayuda"]
   linked.push(...hrefs.filter((href) => /^\/(privacidad|terminos|almacenamiento)\/?$/.test(href)).map((href) => `${path} → ${href}`));
 }
 check("ninguna página pública enlaza a las legales", linked.length === 0, linked.join(" | "));
+await page.close();
+}
+
+await withServer({}, (base) => run(base, "marcadores"));
+await withServer(fake, (base) => run(base, "completo"));
 
 check("sin errores de página", errors.length === 0, errors.join(" | "));
 await browser.close();
