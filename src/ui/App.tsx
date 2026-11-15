@@ -5,14 +5,16 @@ import { isNative } from "../platform";
 import { useBackground } from "../state/background";
 import { usePaletteOf } from "../state/covers";
 import { APP_NAME } from "../core/brand";
+import { offerableOrphans } from "../core/outbox";
 import { trackCoverSeed } from "../core/coverArt";
 import { usePlayer } from "../state/player";
+import { playlists, usePlaylists } from "../state/playlists";
 import { useProfile } from "../state/profile";
 import { setSyncUser } from "../sync/playlistSync";
 import { useAuthController } from "../sync/useAuthController";
 import { Backdrop, Tint } from "./Backdrop";
 import { HelpView } from "./HelpView";
-import { AuthDialog } from "./dialogs";
+import { AdoptDialog, AuthDialog } from "./dialogs";
 import { Landing } from "./Landing";
 import { LEGAL_PATHS, LegalPage } from "./LegalPage";
 import { LibraryView } from "./LibraryView";
@@ -58,6 +60,17 @@ function Shell() {
   useEncounter("shortcuts", playing && shortcutsOn); // el aviso de atajos sale cuando suena la primera canción (solo con puntero)
   const userId = auth.session?.user.id ?? null;
   useEffect(() => setSyncUser(userId), [userId]);
+  // Playlists creadas sin cuenta: se pregunta antes de subirlas. «Decidir luego» dura hasta recargar; «No subir» se guarda.
+  const allPlaylists = usePlaylists((state) => state.all);
+  const declined = usePlaylists((state) => state.declined);
+  const [adoptLater, setAdoptLater] = useState(false);
+  const orphans = userId && !adoptLater ? offerableOrphans(allPlaylists, declined) : [];
+  const chooseAdopt = (choice: "upload" | "keep" | "later") => {
+    const ids = orphans.map((playlist) => playlist.id);
+    if (choice === "upload" && userId) void playlists.adoptOwnerless(userId, ids);
+    else if (choice === "keep") void playlists.decline(ids);
+    else setAdoptLater(true);
+  };
   useEffect(() => {
     if (auth.linkProblem) setAccount(true); // el enlace del correo no sirvió: se explica en el diálogo de cuenta
   }, [auth.linkProblem]);
@@ -123,6 +136,7 @@ function Shell() {
             }}
           />
         )}
+        {!account && orphans.length > 0 && <AdoptDialog count={orphans.length} onChoose={chooseAdopt} />}
         <ShortcutsHelp />
       </div>
     </PaletteContext.Provider>

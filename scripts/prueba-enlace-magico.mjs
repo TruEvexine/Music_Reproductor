@@ -3,7 +3,8 @@
 // Con PKCE (S-01), Supabase devuelve al usuario con ?code=…, que solo se canjea con el verificador guardado en el navegador que pidió el
 // enlace. La red de Supabase va interceptada (nunca toca el proyecto real). Comprueba: (a) unos tokens en el hash (#access_token=…,
 // flujo implícito) no crean sesión y desaparecen de la URL; (b) ?code con verificador inicia sesión, en la landing y en /app, una sola vez;
-// (c) una sesión abierta no se sustituye por la de un enlace; y el aviso cuando el enlace se abre en otro navegador o ha caducado.
+// (c) una sesión abierta no se sustituye por la de un enlace; el aviso cuando el enlace se abre en otro navegador o ha caducado; y que las
+// playlists creadas sin cuenta solo se suben si la persona lo acepta (Subir / No subir / Decidir luego, recordado en local).
 // Sale con 1 si algo falla.
 import { chromium } from "@playwright/test";
 import { loadEnv } from "vite";
@@ -31,6 +32,7 @@ const hash = `#access_token=${linked.token}&expires_at=${exp}&expires_in=3600&re
 
 const browser = await chromium.launch();
 const tokenCalls = [];
+const playlistUploads = []; // cuerpos de POST /rest/v1/playlists
 const supabaseCalls = [];
 
 /** Abre `path` con lo que haya en localStorage antes de cargar: sesión previa y/o verificador PKCE (lo que deja signUp en este navegador). */
@@ -55,6 +57,7 @@ async function open(path, { session, verifier = false } = {}) {
       return route.fulfill({ json: linked.session });
     }
     if (pathname === "/auth/v1/user") return route.fulfill({ json: linked.user });
+    if (pathname === "/rest/v1/playlists" && route.request().method() === "POST") playlistUploads.push(route.request().postDataJSON());
     if (pathname.startsWith("/rest/v1/")) return route.fulfill({ json: [] });
     return route.abort();
   });
@@ -127,6 +130,56 @@ for (const [name, path, text] of [
   check(`${name}: no hay sesión y la URL queda limpia`, after.token === null && after.url === "/app", `${after.token} ${after.url}`);
   check(`${name}: sin canje en el servidor`, tokenCalls.length === 0, String(tokenCalls.length));
   check(`${name}: sin errores`, errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+
+// Adopción: una playlist creada sin cuenta y después se inicia sesión con el enlace.
+async function signInWithLocalPlaylist() {
+  const opened = await open("/app/playlists", { verifier: true });
+  await opened.page.getByRole("button", { name: "Nueva playlist" }).click();
+  await opened.page.getByLabel("Nombre de la playlist").fill("Hecha sin cuenta");
+  await opened.page.keyboard.press("Enter");
+  await opened.page.waitForTimeout(500);
+  await opened.page.goto(`${base}/app/playlists?code=codigo-valido`);
+  await opened.page.waitForTimeout(1500);
+  return opened;
+}
+const adoptDialog = (page) => page.locator('dialog.dialog[open][aria-label="¿Subir tu playlist a la cuenta?"]');
+const settle = async (page) => {
+  await page.reload();
+  await page.waitForTimeout(1500);
+};
+{
+  playlistUploads.length = 0;
+  const { context, page, errors } = await signInWithLocalPlaylist();
+  check("adopción: con sesión, pregunta antes de subir", (await adoptDialog(page).count()) === 1);
+  check("adopción: dice qué se sube", (await adoptDialog(page).getByText(/título, artista, álbum y duración/).count()) === 1);
+  check("adopción: no se sube nada mientras no se decide", playlistUploads.length === 0, JSON.stringify(playlistUploads));
+  await adoptDialog(page).getByRole("button", { name: "No subir" }).click();
+  await page.waitForTimeout(1200);
+  check("adopción · No subir: no se envía nada", playlistUploads.length === 0, JSON.stringify(playlistUploads));
+  await settle(page);
+  check("adopción · No subir: se recuerda al recargar (no vuelve a preguntar)", (await adoptDialog(page).count()) === 0);
+  check("adopción · No subir: la playlist sigue en el dispositivo", (await page.getByText("Hecha sin cuenta").count()) > 0);
+  check("adopción · No subir: la lista la marca «sin subir»", (await page.locator(".playlist-item", { hasText: "Hecha sin cuenta" }).getByText(/sin subir/).count()) === 1);
+  check("adopción · No subir: sigue sin enviarse nada", playlistUploads.length === 0, JSON.stringify(playlistUploads));
+  check("adopción · No subir: sin errores", errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+{
+  playlistUploads.length = 0;
+  const { context, page, errors } = await signInWithLocalPlaylist();
+  await adoptDialog(page).getByRole("button", { name: "Decidir luego" }).click();
+  await page.waitForTimeout(1200);
+  check("adopción · Decidir luego: no se envía nada", playlistUploads.length === 0, JSON.stringify(playlistUploads));
+  await settle(page);
+  check("adopción · Decidir luego: al volver a abrir la app, vuelve a preguntar", (await adoptDialog(page).count()) === 1);
+  await adoptDialog(page).getByRole("button", { name: "Subir", exact: true }).click();
+  await page.waitForTimeout(2000);
+  check("adopción · Subir: la playlist se sube a la cuenta", playlistUploads.some((body) => body.name === "Hecha sin cuenta" && body.user_id === linked.user.id), JSON.stringify(playlistUploads));
+  await settle(page);
+  check("adopción · Subir: ya no pregunta", (await adoptDialog(page).count()) === 0);
+  check("adopción · Subir: sin errores", errors.length === 0, errors.join(" | "));
   await context.close();
 }
 

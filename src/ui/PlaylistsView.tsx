@@ -78,6 +78,7 @@ export function PlaylistsView({ auth, onAccount }: { auth: AuthController; onAcc
                   <span className="title">{playlist.name}</span>
                   <span className="subtitle">
                     {playlist.trackIdentifiers.length} {playlist.trackIdentifiers.length === 1 ? "canción" : "canciones"}
+                    {userId && playlist.ownerId === null && " · sin subir"}
                   </span>
                 </button>
               </li>

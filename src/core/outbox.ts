@@ -7,7 +7,7 @@ export interface LocalPlaylist {
   /** Identidades de pista en orden (track:v1, o track:v2 si se añadió así). */
   trackIdentifiers: string[];
   createdAt: string;
-  /** Cuenta dueña. null = creada sin cuenta: se adopta al iniciar sesión. */
+  /** Cuenta dueña. null = creada sin cuenta: solo pasa a una cuenta si la persona acepta subirla (`offerableOrphans`). */
   ownerId: string | null;
 }
 
@@ -78,4 +78,9 @@ export function mergeRemote(local: LocalPlaylist[], remote: RemotePlaylist[], us
 export function isPermanentFailure(status: number | undefined, code: string | undefined): boolean {
   if (code === "42501" || code === "23514" || code === "22001" || code === "23503") return true;
   return status !== undefined && status >= 400 && status < 500 && status !== 401 && status !== 408 && status !== 429;
+}
+
+/** Playlists creadas sin cuenta que aún hay que ofrecer subir: las que la persona ya rechazó en este dispositivo no se vuelven a preguntar. */
+export function offerableOrphans(all: LocalPlaylist[], declined: string[]): LocalPlaylist[] {
+  return all.filter((playlist) => playlist.ownerId === null && !declined.includes(playlist.id));
 }

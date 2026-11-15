@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildBackup, parseBackup } from "./backup";
 import { lineAt, lyricsFromTags, parseLrc } from "./lyrics";
-import { isPermanentFailure, mergeRemote, planFlush } from "./outbox";
+import { isPermanentFailure, mergeRemote, offerableOrphans, planFlush } from "./outbox";
 import type { LocalPlaylist, OutboxEntry, PlaylistOp } from "./outbox";
 
 const entry = (seq: number, op: PlaylistOp): OutboxEntry => ({ seq, op, at: seq });
@@ -125,5 +125,14 @@ describe("letras", () => {
     expect(lineAt(lines, 0.5)).toBe(-1);
     expect(lineAt(lines, 1)).toBe(0);
     expect(lineAt(lines, 10)).toBe(1);
+  });
+});
+
+describe("adopción de playlists creadas sin cuenta", () => {
+  const playlist = (id: string, ownerId: string | null): LocalPlaylist => ({ id, name: id, trackIdentifiers: [], createdAt: "2026-01-01", ownerId });
+  it("solo ofrece las que no tienen dueño y no se rechazaron", () => {
+    const all = [playlist("cuenta", "u"), playlist("rechazada", null), playlist("nueva", null)];
+    expect(offerableOrphans(all, ["rechazada"]).map((item) => item.id)).toEqual(["nueva"]);
+    expect(offerableOrphans(all, ["rechazada", "nueva"])).toEqual([]);
   });
 });

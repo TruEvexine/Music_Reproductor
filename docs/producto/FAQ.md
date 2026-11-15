@@ -29,9 +29,12 @@ en tus archivos. No se guardan los archivos ni tu biblioteca completa.
 Comprobado en: `src/core/track.ts` (identidad `track:v1`), `supabase/migrations/`.
 
 ### Hice playlists sin cuenta y luego inicié sesión. ¿Qué pasa con ellas?
-Pasan a tu cuenta y se suben. Desde ese momento se sincronizan como las demás.
+La app te pregunta antes de subir nada: **Subir**, **No subir** o **Decidir luego**. Si las subes, tu cuenta guarda su nombre y, por
+canción, el título, artista, álbum y duración, y desde ese momento se sincronizan como las demás. Si eliges **No subir**, se quedan
+solo en este dispositivo, marcadas «sin subir», y no te lo vuelve a preguntar por ellas. Con **Decidir luego**, te lo pregunta la
+próxima vez que abras la app.
 
-Comprobado en: `src/state/playlists.ts` (`adoptOwnerless`).
+Comprobado en: `src/ui/dialogs.tsx` (`AdoptDialog`), `src/ui/App.tsx`, `src/state/playlists.ts` (`adoptOwnerless`, `decline`), `scripts/prueba-enlace-magico.mjs`.
 
 ### ¿Usa cookies o analítica?
 No usa cookies, analítica, publicidad ni rastreo de ningún tipo.

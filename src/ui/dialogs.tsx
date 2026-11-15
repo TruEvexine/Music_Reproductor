@@ -299,3 +299,28 @@ export function AddTracksDialog({
     </Dialog>
   );
 }
+
+/** Tras iniciar sesión, si hay playlists creadas sin cuenta: nunca se suben sin preguntar. Cerrar el diálogo equivale a «Decidir luego». */
+export function AdoptDialog({ count, onChoose }: { count: number; onChoose: (choice: "upload" | "keep" | "later") => void }) {
+  const one = count === 1;
+  return (
+    <Dialog onClose={() => onChoose("later")} title={one ? "¿Subir tu playlist a la cuenta?" : "¿Subir tus playlists a la cuenta?"}>
+      <p>{one ? "Tienes 1 playlist creada sin cuenta en este dispositivo." : `Tienes ${count} playlists creadas sin cuenta en este dispositivo.`}</p>
+      <p className="subtitle">
+        Si {one ? "la subes" : "las subes"}, tu cuenta guardará el nombre de cada playlist y, por cada canción, su título, artista, álbum y duración tal como
+        vienen en tus archivos. Los archivos de música no se suben. Si no, {one ? "se queda" : "se quedan"} solo en este dispositivo.
+      </p>
+      <div className="dialog-actions">
+        <button className="button" onClick={() => onChoose("later")} type="button">
+          Decidir luego
+        </button>
+        <button className="button" onClick={() => onChoose("keep")} type="button">
+          No subir
+        </button>
+        <button className="button primary" onClick={() => onChoose("upload")} type="button">
+          Subir
+        </button>
+      </div>
+    </Dialog>
+  );
+}

@@ -14,9 +14,11 @@ interface PlaylistsState {
   syncing: boolean;
   /** La última sincronización falló por la red: se reintentará sola. */
   offline: boolean;
+  /** Ids de playlists creadas sin cuenta que la persona decidió no subir (clave kv `playlists.declined`). */
+  declined: string[];
 }
 
-export const usePlaylists = create<PlaylistsState>(() => ({ all: [], ready: false, pending: 0, syncing: false, offline: false }));
+export const usePlaylists = create<PlaylistsState>(() => ({ all: [], ready: false, pending: 0, syncing: false, offline: false, declined: [] }));
 
 let userId: string | null = null;
 let markReady: () => void;
@@ -57,8 +59,8 @@ async function setTracks(id: string, identifiers: string[]) {
 
 export const playlists = {
   async init() {
-    const [all, outbox] = await Promise.all([storage.list<LocalPlaylist>("playlists"), storage.list<OutboxEntry>("outbox")]);
-    usePlaylists.setState({ all, pending: outbox.length, ready: true });
+    const [all, outbox, declined] = await Promise.all([storage.list<LocalPlaylist>("playlists"), storage.list<OutboxEntry>("outbox"), storage.get<string[]>("playlists.declined")]);
+    usePlaylists.setState({ all, pending: outbox.length, declined: Array.isArray(declined) ? declined : [], ready: true });
     markReady();
   },
   /** La sincronización espera a lo guardado: mezclar con una lista aún vacía borraría playlists locales. */
@@ -123,8 +125,9 @@ export const playlists = {
     const removed = usePlaylists.getState().all.filter((item) => !next.some((playlist) => playlist.id === item.id)).map((item) => item.id);
     await save(next, next, removed);
   },
-  async adoptOwnerless(owner: string) {
-    const orphans = usePlaylists.getState().all.filter((playlist) => playlist.ownerId === null);
+  /** Solo con el consentimiento de la persona (diálogo tras iniciar sesión): pasan a la cuenta y se suben. */
+  async adoptOwnerless(owner: string, ids: string[]) {
+    const orphans = usePlaylists.getState().all.filter((playlist) => playlist.ownerId === null && ids.includes(playlist.id));
     if (orphans.length === 0) return;
     const adopted = orphans.map((playlist) => ({ ...playlist, ownerId: owner }));
     await save(usePlaylists.getState().all.map((item) => adopted.find((playlist) => playlist.id === item.id) ?? item), adopted);
@@ -134,5 +137,11 @@ export const playlists = {
         ...(playlist.trackIdentifiers.length > 0 ? [{ type: "tracks" as const, playlistId: playlist.id, userId: owner, identifiers: playlist.trackIdentifiers }] : []),
       ]),
     );
+  },
+  /** «No subir»: se quedan solo en este dispositivo y no se vuelve a preguntar por ellas. */
+  async decline(ids: string[]) {
+    const declined = [...new Set([...usePlaylists.getState().declined, ...ids])];
+    usePlaylists.setState({ declined });
+    await storage.set("playlists.declined", declined);
   },
 };

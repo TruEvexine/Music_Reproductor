@@ -38,7 +38,6 @@ async function syncOnce(user: string) {
   await playlists.whenReady();
   usePlaylists.setState({ syncing: true });
   try {
-    await playlists.adoptOwnerless(user);
     const sent = await flushOutbox(user);
     if (sent) {
       const remote = await fetchUserPlaylists(user);
