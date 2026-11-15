@@ -51,7 +51,7 @@ Gravedad según la escala de la skill. Las marcadas como *estimada* no se han va
 |---|---|---|---|---|---|---|
 | S-01 | **Media** (estimada) | Un enlace con tokens en el fragmento inicia sesión con la cuenta del atacante, y `adoptOwnerless` le sube las playlists creadas sin cuenta. Si la víctima ya tenía sesión, se la cambia en silencio | `src/sync/supabaseClient.ts:16-21,33`; `node_modules/@supabase/auth-js/dist/module/GoTrueClient.js:21,3268,3320,421`; `src/ui/App.tsx:59`; `src/sync/playlistSync.ts:41`; `src/state/playlists.ts:127-131`; `src/sync/playlistService.ts:29`. Rompe la promesa de `src/ui/PrivacySection.tsx:58` | `flowType: "pkce"` en `createClient`. Adoptar las playlists solo tras un inicio de sesión hecho en esta pestaña, o preguntando antes. Adaptar `scripts/prueba-enlace-magico.mjs` como prueba de regresión | S | **Corregido** (D-1 = sí): PKCE, `?code` canjeado una vez y nunca sobre una sesión abierta, tokens del hash descartados, aviso si el enlace se abre en otro navegador; `emailRedirectTo` en el registro |
 | S-02 | Baja | Protección de contraseñas filtradas desactivada (advisor de Supabase). El mínimo de 10 caracteres solo se exige en el cliente (`src/ui/dialogs.tsx:74`). No se ve el mínimo del servidor | Advisor `auth_leaked_password_protection` | Activarla en Auth → Passwords y fijar un mínimo ≥ 10 en el servidor. Afecta a las dos apps del pool | XS | Panel (D-6) |
-| S-03 | Baja | Deriva del esquema remoto: (a) `playlists.name` sin CHECK de 1–120 caracteres y `playlist_tracks.position` sin `>= 0`, porque `create table if not exists` reutilizó tablas que ya existían; (b) políticas antiguas duplicadas («Users can …»), solo del dueño pero con `auth.uid()` sin `select`; (c) `20261014120000_hardening_limits` aplicada pero sin registrar, y la de revocación registrada con otra versión | Catálogo en vivo frente a `supabase/migrations/20260928180000_initial_music_player.sql:11,19` | Migración nueva: recortar datos, añadir los dos CHECK y borrar las políticas antiguas. Después, `supabase migration repair` para cuadrar el historial | S | Propuesta (D-4) |
+| S-03 | Baja | Deriva del esquema remoto: (a) `playlists.name` sin CHECK de 1–120 caracteres y `playlist_tracks.position` sin `>= 0`, porque `create table if not exists` reutilizó tablas que ya existían; (b) políticas antiguas duplicadas («Users can …»), solo del dueño pero con `auth.uid()` sin `select`; (c) `20261014120000_hardening_limits` aplicada pero sin registrar, y la de revocación registrada con otra versión | Catálogo en vivo frente a `supabase/migrations/20260928180000_initial_music_player.sql:11,19` | Migración nueva: recortar datos, añadir los dos CHECK y borrar las políticas antiguas. Después, `supabase migration repair` para cuadrar el historial | S | Propuesta (D-4). Plan desde un proyecto limpio en §8 |
 | S-04 | Baja (estimada) | No hay tope de filas ni de tamaño por usuario: cualquier cuenta del pool puede crecer sin límite en un proyecto gratuito compartido. Insertar directamente en `playlist_tracks` se salta el tope de 5 000 del RPC, y `playlists.name` no tiene límite en remoto | `supabase/migrations/20260928180000_initial_music_player.sql:34-37`; `20261014120000_hardening_limits.sql:65` | Revocar el INSERT directo en `playlist_tracks` y dejar solo el RPC. Tope de playlists por usuario con un trigger. CAPTCHA y límites de Auth. Depende de D-2 | M | Diferido por el crítico; propuesta |
 | S-05 | Informativa | D25: si el nombre opcional queda vacío, el disparador guarda la parte del correo antes de la «@», pero el borrador del aviso dice «el nombre visible que elijas». **Solo lo ve su dueño**: el SELECT de RLS es del dueño, no hay vistas, buckets ni RPC que lo expongan, la UI nunca lo pinta y solo lo lee la exportación del propio usuario | `supabase/migrations/20261014120000_hardening_limits.sql:41-47`; `docs/producto/LEGAL_BORRADORES.md:111` | Migración `supabase/migrations/20261114120000_profile_display_name_sin_correo.sql` (**sin aplicar**): `NULL` si no se da nombre, y vaciar los nombres ya derivados del correo | XS | Archivo en `7f7f559`, D-4 |
 | S-06 | Informativa | Pool de Auth compartido: cada registro en cualquiera de las dos apps crea un perfil del reproductor (con el nombre sacado del correo) y otro de matemáticas | `supabase/migrations/20260928180000_initial_music_player.sql:152-155` y el trigger `math_create_profile_after_signup` en vivo | Proyecto propio (D-2). Si se sigue compartiendo: crear el perfil solo en registros del reproductor o al primer inicio de sesión. La app ya tolera que no exista (`src/sync/account.ts:24`) | S | Decisión D-2 |
@@ -150,3 +150,66 @@ Hoy: un pool de Auth para dos apps, triggers de perfil que se disparan para todo
   - `prueba-legal`: en local hay valores `LEGAL_*` reales, que no coinciden con los que espera el script. Con los valores ficticios del propio script (modo `completo`) pasa.
   
   `capturas.mjs`: «matriz correcta, 9 viewports sin scroll horizontal ni áreas táctiles pequeñas». Se ejecutó sin `--actualizar`, así que `docs/capturas` no cambió.
+
+## 8. S-03: reconciliar las migraciones partiendo de un proyecto limpio
+
+> 2026-11-14. **Solo plan: no se aplicó nada.** Hoy no se puede crear otro proyecto (plan gratuito, D-2), así que esto queda listo para
+> cuando lo haya. Con un proyecto nuevo la deriva de S-03 desaparece por construcción: el remoto es exactamente lo que dicen los archivos,
+> en vez de remendar el remoto compartido con `migration repair`. Los pasos de crear el proyecto y configurar Auth están en
+> `SUPABASE.md` §16, que se quedó en 3 migraciones y en Redirect URLs con `/**`: al ejecutarlo, seguir este orden y no el suyo.
+
+### 8.1 Orden
+
+Las cinco migraciones del repo, tal cual y en este orden (`npx supabase db push` las aplica así y registra cada versión):
+
+| # | Archivo | Qué deja en un proyecto vacío |
+|---|---|---|
+| 1 | `20260928180000_initial_music_player.sql` | `profiles`, `playlists`, `playlist_tracks` **con** los CHECK de nombre (1–120) y `position >= 0` que faltan en el remoto actual (S-03 a); índices; RLS; `revoke` a `anon`; políticas solo del dueño con `(select auth.uid())`; trigger `on_auth_user_created` (versión 1 de la función) |
+| 2 | `20260928181500_playlist_track_operations.sql` | RPC `replace_playlist_tracks` (versión 1, sin tope) |
+| 3 | `20261014120000_hardening_limits.sql` | CHECK de `display_name` ≤ 60, `avatar_url` https ≤ 500 e identificador ≤ 512; función del trigger versión 2 (recorta a 60); RPC versión 2 (tope de 5 000). Sus `update` de recorte no hacen nada con la base vacía |
+| 4 | `20261110120000_revoke_profile_trigger_execute.sql` | `revoke execute` de la función del trigger (advisor 0028/0029) |
+| 5 | `20261114120000_profile_display_name_sin_correo.sql` | Función del trigger versión 3 (D25: `NULL` si no hay nombre, nunca el correo) y el `revoke` repetido. Su `update` no hace nada con la base vacía |
+
+Después: `npx supabase migration list` debe mostrar las cinco versiones en Local y Remote, con las mismas fechas. Sin `migration repair`:
+ese comando es solo para el remoto compartido, donde la 3 se aplicó sin registrarse y la 4 quedó con otra versión (S-03 c).
+
+### 8.2 Qué sobra (y se deja igual)
+
+- **Las versiones viejas de la función del trigger y del RPC** (1 y 2 se sobrescriben con `create or replace`). No se reescriben ni se
+  aplastan en una línea base: el remoto compartido ya registró algunas de esas versiones, y cambiar archivos aplicados rompería
+  `migration list` allí mientras siga vivo. Con cinco archivos, el coste de conservarlos es nulo.
+- **Los `if not exists`, `drop … if exists` y los `update` de datos** (3 y 5): no hacen nada en un proyecto vacío, pero mantienen las
+  migraciones idempotentes, como pide `AGENTS.md` §5.
+- **Lo del remoto compartido que no es del reproductor:** las tablas y funciones `math_*`, el trigger `math_create_profile_after_signup`,
+  `rls_auto_enable()` y el event trigger `ensure_rls`. No se copian (S-06, S-08).
+- **Las políticas antiguas «Users can …» y los CHECK que faltan** (S-03 a y b): solo existen o faltan en el remoto compartido. En el
+  proyecto nuevo no hay nada que borrar ni que añadir.
+- **`profiles.avatar_url`:** la app no la usa (`LEGAL_BORRADORES.md` §1.2), pero está en la migración 1 con su CHECK. Se queda; quitarla
+  sería una migración destructiva sin beneficio.
+
+### 8.3 Qué falta
+
+Migraciones nuevas, cada una con su prueba en un Postgres local descartable antes del `push` (aquí no hay Docker ni psql):
+
+1. **Privilegios por defecto** (D-4, opcional en el compartido, necesario en el nuevo): `alter default privileges in schema public revoke
+   all on tables from anon, authenticated` (y lo mismo para funciones y secuencias). En un proyecto nuevo, lo que se cree desde el panel
+   hereda permisos para `anon` y `authenticated`, y no hay que contar con un `ensure_rls` que active RLS. Comprobar antes qué trae un
+   proyecto recién creado.
+2. **S-04, tope de filas por usuario:** un trigger en `playlists` que limite cuántas tiene cada usuario y quitar el INSERT directo en
+   `playlist_tracks`. Ojo: el RPC es SECURITY INVOKER, así que revocar ese INSERT lo rompe; habría que pasarlo a SECURITY DEFINER con
+   `search_path = ''`, la comprobación de dueño que ya tiene y `revoke execute` a `anon`.
+3. **Nada más de esquema para S-03.** Lo de Auth no va en migraciones (no hay `supabase/config.toml`) y se repite a mano en el panel:
+   D-6 completo, con `<dominio>/app` en las Redirect URLs (PKCE y `emailRedirectTo`), sin `localhost` en producción, confirmación de
+   correo, mínimo ≥ 10, contraseñas filtradas y SMTP propio.
+
+### 8.4 Fuera del esquema, al cambiar de proyecto
+
+- **Variables y CSP:** `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` en Vercel y en `.env`; la ref nueva en `connect-src` de
+  `vercel.json` (https y wss; si no coincide, la sincronización falla cerrada, S-12); `npm run build` y `node scripts/verificar-csp.mjs`.
+- **Cuentas:** abrirlas (`VITE_CUENTAS=1`) solo con el proyecto nuevo comprobado, después de D-3 y D-6.
+- **Usuarios del proyecto compartido:** no se migran. El pool de Auth mezcla a los de las dos apps y no hay forma limpia de separar los
+  del reproductor. Sus playlists siguen en cada dispositivo, pero guardadas con el id de la cuenta vieja: con la cuenta nueva **no se ven**
+  (`visiblePlaylists` filtra por dueño). Como el lanzamiento va sin cuentas, hoy no afecta a nadie. Si al abrir hay cuentas viejas en uso,
+  el camino es la copia de seguridad: exportar antes e importar después, que las crea como playlists nuevas.
+- **El proyecto compartido:** no tocarlo hasta que el nuevo esté comprobado. Después, la limpieza de `SUPABASE.md` §16.7, coordinada con la
+  app de matemáticas.
