@@ -37,6 +37,14 @@ export function signUpMessage(error: unknown): { error?: string; notice?: string
   return { error: "No se pudo crear la cuenta. Revisa los datos e inténtalo de nuevo." };
 }
 
+export const LINK_SENT = "Si ese correo tiene una cuenta pendiente de confirmar, te enviamos un enlace nuevo. Ábrelo en este navegador.";
+
+/** Pedir otro enlace: salvo red o límite, cualquier respuesta se ve igual (no revela si el correo existe o ya está confirmado). */
+export function resendMessage(error: unknown): { error?: string; notice?: string } {
+  const shared = common((error ?? {}) as AuthFailure);
+  return shared ? { error: shared } : { notice: LINK_SENT };
+}
+
 /** Tras `max` fallos seguidos bloquea `lockMs`. Solo frena al usuario honesto; el límite real es del servidor. */
 export function createAttemptLimiter(max = 5, lockMs = 30_000) {
   let failures = 0;

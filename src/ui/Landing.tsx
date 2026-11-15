@@ -7,7 +7,7 @@ import playerDesktop from "../assets/landing/reproductor-escritorio.jpg";
 import playerPhone from "../assets/landing/reproductor-movil.jpg";
 import { APP_NAME } from "../core/brand";
 import { cssMs } from "../core/format";
-import { getSupabase, supabaseConfigured } from "../sync/supabaseClient";
+import { emailLink, getSupabase, supabaseConfigured } from "../sync/supabaseClient";
 import { CafeButton } from "./CafeLink";
 import { motionReduced } from "./motion";
 import { navigate } from "./router";
@@ -62,6 +62,7 @@ export function Landing() {
   // Las secciones de más abajo aparecen al llegar a la vista, una sola vez. Sin script (o sin la clase "js") ya están visibles.
   const root = useRef<HTMLDivElement>(null);
   const [ready, setReady] = useState(false);
+  useEffect(() => void emailLink.then((problem) => problem && navigate("/app")), []); // el aviso del enlace fallido vive en la app
   useEffect(() => {
     setReady(true);
     const seen = new IntersectionObserver(

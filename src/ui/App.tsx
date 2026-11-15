@@ -58,6 +58,9 @@ function Shell() {
   useEncounter("shortcuts", playing && shortcutsOn); // el aviso de atajos sale cuando suena la primera canción (solo con puntero)
   const userId = auth.session?.user.id ?? null;
   useEffect(() => setSyncUser(userId), [userId]);
+  useEffect(() => {
+    if (auth.linkProblem) setAccount(true); // el enlace del correo no sirvió: se explica en el diálogo de cuenta
+  }, [auth.linkProblem]);
 
   // Sin pista no hay reproductor que mostrar: se quita el panel de la URL. Se reemplaza la entrada del historial
   // (no se retrocede): al recargar con ?panel=player, "atrás" sacaba al usuario de la app.
@@ -111,7 +114,15 @@ function Shell() {
         {queuePanel.mounted && <QueuePanel closing={queuePanel.closing} />}
         <PlayerBar queueOpen={queue} />
         {playerPanel.mounted && <NowPlaying backdrop={<Backdrop />} closing={playerPanel.closing} queueOpen={queue} />}
-        {account && <AuthDialog auth={auth} onClose={() => setAccount(false)} />}
+        {account && (
+          <AuthDialog
+            auth={auth}
+            onClose={() => {
+              setAccount(false);
+              auth.clearLinkProblem();
+            }}
+          />
+        )}
         <ShortcutsHelp />
       </div>
     </PaletteContext.Provider>

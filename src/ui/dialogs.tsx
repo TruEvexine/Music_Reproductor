@@ -27,6 +27,51 @@ export function AuthDialog({ auth, onClose }: { auth: AuthController; onClose: (
     );
   }
 
+  if (auth.linkProblem && !auth.session) {
+    const otherBrowser = auth.linkProblem === "other-browser";
+    return (
+      <Dialog onClose={onClose} title="El enlace no funcionó">
+        <p>{otherBrowser ? "Abre el enlace en el mismo navegador donde lo pediste." : "El enlace caducó o ya se usó."}</p>
+        <p className="subtitle">
+          {otherBrowser
+            ? "Si era el de confirmar tu correo, puede que ya esté confirmado: prueba a iniciar sesión con tu contraseña. Si no, pide uno nuevo aquí y ábrelo en este navegador."
+            : "Pide uno nuevo aquí y ábrelo en este navegador."}
+        </p>
+        <form
+          className="form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void auth.resendLink(email.trim());
+          }}
+        >
+          <label>
+            Correo electrónico
+            <input autoComplete="email" inputMode="email" onChange={(event) => setEmail(event.currentTarget.value)} required type="email" value={email} />
+          </label>
+          {auth.authError && (
+            <p className="error" role="alert">
+              {auth.authError}
+            </p>
+          )}
+          {auth.authNotice && <p role="status">{auth.authNotice}</p>}
+          <button className="button primary" disabled={auth.isSubmitting} type="submit">
+            {auth.isSubmitting ? "Un momento…" : "Pedir un enlace nuevo"}
+          </button>
+        </form>
+        <button
+          className="link"
+          onClick={() => {
+            auth.clearLinkProblem();
+            auth.clearAuthMessages();
+          }}
+          type="button"
+        >
+          Iniciar sesión con mi contraseña
+        </button>
+      </Dialog>
+    );
+  }
+
   if (auth.session) {
     return (
       <Dialog onClose={onClose} title="Tu cuenta">

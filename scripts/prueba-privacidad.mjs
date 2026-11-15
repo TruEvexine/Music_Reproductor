@@ -5,6 +5,7 @@
 import { chromium } from "@playwright/test";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { loadEnv } from "vite";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const shots = process.argv[3];
@@ -19,12 +20,13 @@ const check = (name, ok, detail = "") => {
 };
 const wait = (page, ms) => page.waitForTimeout(ms);
 
-// Sesión de mentira que supabase-js acepta sin red: la vuelta de un enlace de correo con los tokens en el hash.
+// Sesión de mentira que supabase-js acepta sin red: se deja en localStorage antes de cargar, como si se hubiera iniciado sesión antes.
 const user = { id: "00000000-0000-4000-8000-000000000001", aud: "authenticated", role: "authenticated", email: "prueba@example.com", app_metadata: {}, user_metadata: {}, created_at: "2026-01-02T03:04:05Z" };
 const b64 = (value) => Buffer.from(JSON.stringify(value)).toString("base64url");
 const exp = Math.floor(Date.now() / 1000) + 3600;
 const token = `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ sub: user.id, aud: "authenticated", role: "authenticated", email: user.email, exp })}.firma-falsa`;
-const hash = `#access_token=${token}&expires_at=${exp}&expires_in=3600&refresh_token=refresco-falso&token_type=bearer&type=magiclink`;
+const storageKey = `sb-${new URL(loadEnv("development", process.cwd(), "VITE_").VITE_SUPABASE_URL).hostname.split(".")[0]}-auth-token`;
+const session = { access_token: token, refresh_token: "refresco-falso", expires_at: exp, expires_in: 3600, token_type: "bearer", user };
 const sessionKeys = (page) => page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith("sb-")));
 
 const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"], });
@@ -46,7 +48,9 @@ async function open({ signedIn = false, viewport = { width: 1440, height: 900 },
     if (pathname === "/rest/v1/playlist_tracks") return route.fulfill({ json: [{ playlist_id: "11111111-1111-4111-8111-111111111111", track_identifier: "track:v1:a%7Cb%7Cc%7C60", position: 0 }] });
     return route.abort();
   });
-  await page.goto(`${base}/app${signedIn ? hash : ""}`);
+  // Solo en la primera carga: tras «Borrar datos» la página se recarga y la sesión no debe reaparecer.
+  if (signedIn) await context.addInitScript(({ key, session }) => sessionStorage.getItem("sembrado") || (sessionStorage.setItem("sembrado", "1"), localStorage.setItem(key, JSON.stringify(session))), { key: storageKey, session });
+  await page.goto(`${base}/app`);
   await wait(page, 600);
   return { context, page };
 }

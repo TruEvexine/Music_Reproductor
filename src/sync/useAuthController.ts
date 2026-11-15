@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { createAttemptLimiter, SIGN_UP_SENT, signInMessage, signUpMessage } from "../core/authMessages";
-import { getSupabase, supabaseConfigured } from "./supabaseClient";
+import { createAttemptLimiter, LINK_SENT, resendMessage, SIGN_UP_SENT, signInMessage, signUpMessage } from "../core/authMessages";
+import { emailLink, emailRedirectTo, getSupabase, supabaseConfigured } from "./supabaseClient";
+import type { EmailLinkProblem } from "./supabaseClient";
 
 const signInLimiter = createAttemptLimiter();
 
@@ -22,6 +23,11 @@ export function useAuthController() {
       supabaseConfigured ? "checking" : "not-configured",
     );
   const [databaseError, setDatabaseError] = useState<string | null>(null);
+  const [linkProblem, setLinkProblem] = useState<EmailLinkProblem | null>(null);
+
+  useEffect(() => {
+    void emailLink.then(setLinkProblem);
+  }, []);
 
   useEffect(() => {
     if (!supabaseConfigured) return;
@@ -117,7 +123,7 @@ export function useAuthController() {
         const { data, error } = await (await getSupabase()).auth.signUp({
           email,
           password,
-          options: { data: { display_name: displayName } },
+          options: { data: { display_name: displayName }, emailRedirectTo: emailRedirectTo() },
         });
         if (error) throw error;
         if (!data.session) setAuthNotice(SIGN_UP_SENT);
@@ -131,6 +137,24 @@ export function useAuthController() {
     },
     [],
   );
+
+  /** Enlace de confirmación nuevo, pedido desde este navegador (con PKCE solo funcionará aquí). Mismo aviso exista o no la cuenta. */
+  const resendLink = useCallback(async (email: string) => {
+    setIsSubmitting(true);
+    setAuthError(null);
+    setAuthNotice(null);
+    try {
+      const { error } = await (await getSupabase()).auth.resend({ type: "signup", email, options: { emailRedirectTo: emailRedirectTo() } });
+      if (error) throw error;
+      setAuthNotice(LINK_SENT);
+    } catch (error: unknown) {
+      const message = resendMessage(error);
+      setAuthError(message.error ?? null);
+      setAuthNotice(message.notice ?? null);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, []);
 
   const signOut = useCallback(async () => {
     if (!supabaseConfigured) return;
@@ -146,15 +170,19 @@ export function useAuthController() {
     setAuthError(null);
     setAuthNotice(null);
   }, []);
+  const clearLinkProblem = useCallback(() => setLinkProblem(null), []);
 
   return {
     authError,
     authNotice,
     clearAuthMessages,
+    clearLinkProblem,
     databaseError,
     databaseState,
     isConfigured: supabaseConfigured,
     isSubmitting,
+    linkProblem,
+    resendLink,
     session,
     signIn,
     signOut,

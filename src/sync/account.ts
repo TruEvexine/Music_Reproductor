@@ -14,8 +14,8 @@ export async function signOutForWipe(): Promise<void> {
     const { error } = await supabase.auth.signOut().catch((failure: unknown) => ({ error: failure }));
     if (error) await supabase.auth.signOut({ scope: "local" });
   } finally {
-    // Último recurso (sin red ni SDK): la sesión vive en localStorage como `sb-<proyecto>-auth-token`.
-    for (const key of Object.keys(localStorage)) if (/^sb-.+-auth-token(-code-verifier)?$/.test(key)) localStorage.removeItem(key);
+    // Último recurso (sin red ni SDK): la sesión vive en localStorage como `sb-<proyecto>-auth-token`, y los verificadores PKCE con sufijos.
+    for (const key of Object.keys(localStorage)) if (/^sb-.+-auth-token(-.+)?$/.test(key)) localStorage.removeItem(key);
   }
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createAttemptLimiter, SIGN_IN_FAILED, SIGN_UP_SENT, signInMessage, signUpMessage } from "./authMessages";
+import { createAttemptLimiter, LINK_SENT, resendMessage, SIGN_IN_FAILED, SIGN_UP_SENT, signInMessage, signUpMessage } from "./authMessages";
 
 describe("mensajes de Auth", () => {
   it("el inicio de sesión responde igual exista o no el correo", () => {
@@ -11,6 +11,11 @@ describe("mensajes de Auth", () => {
 
   it("registrar un correo existente se ve como un registro correcto", () => {
     expect(signUpMessage({ code: "user_already_exists" })).toEqual({ notice: SIGN_UP_SENT });
+  });
+
+  it("pedir otro enlace responde igual exista, esté confirmada o no la cuenta", () => {
+    for (const error of [{ code: "email_address_not_authorized" }, { code: "user_not_found" }, {}]) expect(resendMessage(error)).toEqual({ notice: LINK_SENT });
+    expect(resendMessage({ status: 429 }).error).toMatch(/Demasiados/);
   });
 
   it("distingue red y límite de peticiones", () => {
