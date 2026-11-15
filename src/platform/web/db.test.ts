@@ -63,6 +63,49 @@ describe("esquema local versionado", () => {
     v3.close();
   });
 
+  it("v3 interrumpida a mitad: no se pierde nada, se reintenta, termina y no quedan letras duplicadas ni huérfanas", async () => {
+    const v2 = await openDatabase("test-v3-corte", migrations.slice(0, 2));
+    for (const id of ["a", "b", "c", "d"]) await v2.put("tracks", { id, title: id, lyrics: { plain: `letra ${id}` } });
+    await v2.put("tracks", { id: "e", title: "Sin letra" });
+    v2.close();
+
+    // La migración real, con un corte (abort) justo después de la segunda letra movida.
+    const cortada: Migration = async (db, tx) => {
+      let moved = 0;
+      tx.done.catch(() => {}); // idb deja `done` sin atender al abortar; sin esto Vitest lo da por error no capturado
+      const store = (name: string) => {
+        const real = tx.objectStore(name);
+        const put = async (value: unknown) => {
+          const key = await real.put(value);
+          if (++moved === 2) tx.abort();
+          return key;
+        };
+        return name !== "lyrics" ? real : new Proxy(real, { get: (target, prop) => (prop === "put" ? put : Reflect.get(target, prop)) });
+      };
+      const spy = new Proxy(tx, { get: (target, prop) => (prop === "objectStore" ? store : Reflect.get(target, prop)) }) as typeof tx;
+      await Promise.resolve(migrations[2](db, spy)).catch(() => {}); // tras el abort, las escrituras siguientes fallan: es lo esperado
+    };
+    await expect(openDatabase("test-v3-corte", [...migrations.slice(0, 2), cortada])).rejects.toThrow();
+
+    // Tras el corte la base sigue en v2 y con todas las letras en su sitio.
+    const raw = await openDatabase("test-v3-corte", migrations.slice(0, 2));
+    expect(raw.version).toBe(2);
+    expect([...raw.objectStoreNames]).not.toContain("lyrics");
+    expect((await raw.getAll("tracks")).filter((track) => track.lyrics).length).toBe(4);
+    raw.close();
+
+    const v3 = await openDatabase("test-v3-corte");
+    expect(v3.version).toBe(3);
+    const tracks = await v3.getAll("tracks");
+    expect(tracks.map((track) => track.id).sort()).toEqual(["a", "b", "c", "d", "e"]);
+    expect(tracks.some((track) => "lyrics" in track)).toBe(false);
+    const lyricIds = (await v3.getAllKeys("lyrics")).sort();
+    expect(lyricIds).toEqual(["a", "b", "c", "d"]);
+    for (const id of lyricIds) expect(await v3.get("lyrics", id)).toEqual({ id, lyrics: { plain: `letra ${id}` } });
+    expect(tracks.filter((track) => track.hasLyrics).map((track) => track.id).sort()).toEqual(lyricIds);
+    v3.close();
+  });
+
   it("clearDatabase vacía todos los almacenes y conserva el esquema", async () => {
     const db = await openDatabase("test-clear");
     await db.put("kv", { volume: 0.5 }, "settings");
