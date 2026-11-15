@@ -844,6 +844,12 @@ Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMT
 
    Skills aplicadas en los dos puntos: ponytail; design-motion-principles (evento raro: movimiento de marca permitido, sin bucle, salida más corta que la entrada), make-interfaces-feel-better, impeccable (contexto cargado), design-taste-frontend y ui-ux-pro-max (sin buscador: no hay Python).
 
+### 11.1m Ajustes, Ayuda y menú ≡ en escritorio (2026-11-14)
+
+Inventario a 1024, 1280, 1440, 1920 y 2560 px: Ajustes y Ayuda eran una columna de 592 px pegada a la izquierda; el menú ≡ no dejaba ver el ecualizador entero en su alto fijo. Biblioteca, playlists, cola, reproductor y diálogos, bien. Elegido por el usuario: Ajustes con índice + contenido, Ayuda en dos columnas, menú de 31 rem desde 1000 px (ecualizador en una fila). Móvil y lo de N3-1 (alto del menú, vuelta aleatoria) sin cambios.
+
+Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel-better (revisión rápida).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

@@ -495,7 +495,8 @@ function popoverStyle(anchor: HTMLElement | null): CSSProperties {
   if (!anchor) return {};
   const rect = anchor.getBoundingClientRect();
   const margin = 8;
-  const width = Math.min(22 * 16, window.innerWidth - 2 * margin);
+  // Escritorio (≥1000 px): 31 rem para que las 10 bandas del ecualizador quepan en una fila (menu.css) y Fondo respire.
+  const width = Math.min((window.matchMedia("(min-width: 1000px)").matches ? 31 : 22) * 16, window.innerWidth - 2 * margin);
   const right = Math.min(Math.max(window.innerWidth - rect.right, margin), window.innerWidth - width - margin);
   const up = rect.top > window.innerHeight / 2;
   const free = up ? rect.top - 2 * margin : window.innerHeight - rect.bottom - 2 * margin;
