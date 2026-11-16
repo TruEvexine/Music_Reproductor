@@ -26,6 +26,7 @@ siguen cerradas, y bloquea abrirlas) · **No verificable en el código** (depend
 | No guardo copia de nada de esto [salvo las playlists sincronizadas] | T9 | Verificado | Solo `sync/` habla con un servidor y solo de playlists y perfil |
 | Lo que creas sin cuenta (playlists, nombre, foto) no me llega | T7 sin cuentas | Verificado | Perfil en `kv` (`state/profile.ts`), no se sincroniza; sin cuentas el SDK de Supabase no entra en el build (`vite.config.ts`, guardia) |
 | Nombre y foto de perfil: la foto reducida y sin metadatos | A, almacenamiento | Verificado | Recorte y recodificación a JPEG en un canvas (`state/profile.ts:27`) |
+| Lo que editas de tus canciones (datos y carátula reducida y sin metadatos) se queda en el dispositivo y tus archivos no cambian | A, almacenamiento | Verificado | Almacén `edits` (`platform/web/db.ts`, v4), nunca en `tracks` ni en el archivo (`state/library.ts` `flush` con `originalOf`); carátula recodificada a JPEG ≤ 1024 px en el worker (`platform/web/cover.worker.ts` `make`); `track:v1` con los originales (`core/track.ts`), así que la nube no recibe lo editado; `scripts/prueba-edicion.mjs` |
 | Sin cookies, analítica, publicidad ni rastreo | A | Verificado | Ningún SDK en `package.json`; la CSP bloquearía otras conexiones (`vercel.json:9`); `LEGAL_BORRADORES.md` §1.3 |
 | Vercel recibe IP y datos técnicos del navegador y deduce país y ciudad | A «Al visitar la web» | No verificable en el código | Aviso de privacidad de Vercel (`INVESTIGACION_LEGAL.md` §2.7). La app no recibe esos datos |
 | «Vercel los conserva según su propia política» | A | No verificable en el código | Vercel no fija plazo en su aviso; plazo real **no confirmado** |
@@ -61,6 +62,5 @@ siguen cerradas, y bloquea abrirlas) · **No verificable en el código** (depend
 ## Lo que se dejó fuera a propósito
 
 - **«Funciona sin conexión»:** no hay service worker (`docs/COPY_LANDING.md`); el texto de almacenamiento dejó de decirlo el 16-11-2026.
-- **«Elige tu carátula»:** la app no deja elegir portadas a mano; solo la foto de perfil.
 - **Plazos de conservación de Vercel o Supabase:** no confirmados; los textos remiten a sus políticas.
 - **Un tope de responsabilidad en dinero:** omitido por la LFPC (art. 90, fr. II); pregunta para la abogada.

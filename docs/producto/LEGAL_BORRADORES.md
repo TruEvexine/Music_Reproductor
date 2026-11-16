@@ -28,8 +28,9 @@ Comprobado leyendo el código (`src/platform/web/db.ts`, `src/platform/web/libra
 | IndexedDB, `kv`, claves `profile.name` y `profile.avatar` | Nombre visible (opcional, hasta 60 caracteres) y foto de perfil (opcional: JPEG de 256 × 256 px recortado y recodificado, sin metadatos). No se suben ni se sincronizan | Si la persona los pone en Ajustes → Perfil | Ajustes → Perfil, o borrar los datos del dispositivo |
 | IndexedDB, almacén `tracks` | Por pista: título, artista, álbum, artista del álbum, año, género, número, duración, formato y calidad, ReplayGain, nombre de archivo, ruta relativa, tamaño, fecha de modificación, huella `track:v2`, fecha en que se añadió y **fecha de la última reproducción** (un valor por pista, no un historial) | Al añadir música o reproducir | Quitar la carpeta, o borrar los datos del dispositivo |
 | IndexedDB, almacén `lyrics` | Letras sacadas de las etiquetas del archivo o de un `.lrc` con el mismo nombre (migración v3) | Al leer metadatos | Ídem |
+| IndexedDB, almacén `edits` | Lo que la persona edita de cada canción (título, artista, artista del álbum, álbum, año, género, n.º de pista y de disco) y, si elige una, el hash de su carátula, guardada en `covers` recodificada a ≤ 1024 px y sin metadatos (migración v4). Nunca se escribe en el archivo ni se sube: las playlists y la nube siguen usando lo que trae el archivo | Al guardar en «Editar información» | «Restablecer» en «Editar información», quitar la carpeta, o borrar los datos del dispositivo |
 | IndexedDB, almacén `roots` | Nombre de cada carpeta elegida y su permiso de **solo lectura** | Al elegir una carpeta | Ídem |
-| IndexedDB, almacén `covers` | Portadas sacadas de los archivos o de la imagen de la carpeta del álbum, y sus miniaturas | Al leer metadatos | Ídem |
+| IndexedDB, almacén `covers` | Portadas sacadas de los archivos o de la imagen de la carpeta del álbum, las carátulas elegidas en «Editar información», y sus miniaturas | Al leer metadatos | Ídem |
 | IndexedDB, almacén `playlists` | Nombre de cada playlist, identidades de sus pistas, dueño (id de usuario o ninguno) | Al crear o editar playlists | Borrar datos del dispositivo (con sesión abierta, las de la cuenta vuelven a bajar) |
 | IndexedDB, almacén `outbox` | Cambios de playlists pendientes de subir, con el id de usuario | Con sesión, hasta que el cambio llega a Supabase | Se vacía al sincronizar o al borrar los datos del dispositivo |
 | OPFS, carpeta `biblioteca/` | **Copia de los archivos de audio**, solo si el navegador no permite recordar la carpeta (Firefox, Safari); la app pide almacenamiento persistente | Al añadir música en esos navegadores | Quitar la carpeta, o borrar los datos locales |
@@ -48,7 +49,7 @@ Comprobado leyendo el código (`src/platform/web/db.ts`, `src/platform/web/libra
 
 **Identidad de las pistas sincronizadas:** `track:v1` es `título|artista|álbum|duración` en texto y `track:v2` es una huella SHA-256 de
 tamaño + primer y último MiB del archivo (`src/core/track.ts`; v2 se usa si la pista se añadió así). La nube no recibe audio, pero sí los
-títulos y artistas de cada playlist, y una huella que identifica un archivo concreto sin permitir reconstruirlo. Las playlists creadas
+títulos y artistas de cada playlist (los del archivo: lo editado en la app no cambia `track:v1` ni se sube), y una huella que identifica un archivo concreto sin permitir reconstruirlo. Las playlists creadas
 antes de iniciar sesión solo se suben si la persona elige «Subir» en el diálogo de adopción.
 
 ### 1.3 Lo que no existe (comprobado)
@@ -100,7 +101,7 @@ fr. V); se mantiene uno breve que lo dice (`INVESTIGACION_LEGAL.md` §2.7).
 > {{CORREO_PRIVACIDAD}}.
 >
 > **Lo que nunca sale de tu dispositivo.** Tus archivos de audio: la app los lee en tu navegador y no los sube a ningún servidor. Tampoco
-> salen tu biblioteca, las letras y portadas, tu cola, tus ajustes ni el nombre y la foto de perfil que pongas: se guardan en el
+> salen tu biblioteca, las letras y portadas, lo que edites de tus canciones, tu cola, tus ajustes ni el nombre y la foto de perfil que pongas: se guardan en el
 > almacenamiento de tu navegador y los borras desde Ajustes → Privacidad y datos. No uso cookies, analítica, publicidad ni herramientas
 > de rastreo.
 >
@@ -215,6 +216,7 @@ Basta con esta página (`/almacenamiento`; hoy solo accesible por su dirección,
 > | Qué | Para qué | Cómo borrarlo |
 > |---|---|---|
 > | Tu biblioteca: datos de cada canción (título, artista, portada, letra, ruta dentro de la carpeta que elegiste) y el permiso para leer esa carpeta | Que no tengas que volver a añadir tu música cada vez | Ajustes → Biblioteca → quitar la carpeta |
+> | Lo que cambies en «Editar información» (título, artista, álbum y demás datos, y la carátula que elijas, reducida y sin sus metadatos). Tus archivos no se modifican | Que la app muestre tus cambios | «Restablecer» en «Editar información», o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > | Copias de tus archivos, solo en navegadores que no permiten recordar carpetas (Firefox, Safari) | Que tu música siga disponible al volver | Ídem |
 > | Playlists, cola, posición de reproducción y ajustes de sonido y fondo | Que la app esté como la dejaste | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > | Tu nombre y tu foto de perfil, si los pones (la foto se guarda reducida y sin sus metadatos) | Mostrarlos en la app | Ajustes → Perfil, o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |

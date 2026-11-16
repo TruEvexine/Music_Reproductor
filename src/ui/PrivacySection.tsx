@@ -37,6 +37,7 @@ const count = (n: number, one: string, many: string) => `${n.toLocaleString("es"
 function StoredList({ auth }: { auth: AuthController }) {
   const tracks = useLibrary((state) => state.tracks.length);
   const roots = useLibrary((state) => state.roots.length);
+  const edited = useLibrary((state) => state.tracks.reduce((total, track) => total + (track.source ? 1 : 0), 0));
   const all = usePlaylists((state) => state.all);
   const pending = usePlaylists((state) => state.pending);
   const hasName = useProfile((state) => state.name !== "");
@@ -50,6 +51,7 @@ function StoredList({ auth }: { auth: AuthController }) {
   const rows: [string, string][] = [
     ["Canciones en la biblioteca", tracks === 0 ? "Ninguna todavía" : `${count(tracks, "canción", "canciones")} de ${count(roots, "carpeta", "carpetas")}`],
     ["Portadas", stored ? (stored.covers.count === 0 ? "Ninguna" : `${count(stored.covers.count, "portada", "portadas")} · ${formatBytes(stored.covers.bytes)}`) : "Calculando…"],
+    ["Información editada", edited === 0 ? "Ninguna" : `${count(edited, "canción", "canciones")}, solo aquí`],
     ["Copias de música", stored ? (stored.copies > 0 ? formatBytes(stored.copies) : "Ninguna: se lee de tus carpetas") : "Calculando…"],
     ["Playlists", `${count(all.length, "en este dispositivo", "en este dispositivo")} · ${count(synced, "sincronizada", "sincronizadas")}`],
     ["Perfil", hasName && hasPhoto ? "Nombre y foto, solo aquí" : hasName ? "Solo el nombre, solo aquí" : hasPhoto ? "Solo la foto, solo aquí" : "Vacío"],

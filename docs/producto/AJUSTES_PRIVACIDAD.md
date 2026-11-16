@@ -34,6 +34,7 @@ Una lista de solo lectura, con cifras reales del dispositivo. Nada de texto gen�
 |---|---|---|
 | Canciones en la biblioteca | `5 002 canciones de 3 carpetas` | `useLibrary` (pistas) y `roots` |
 | Portadas | `1 240 portadas · 84 MB` | almacén `covers` (sumar tamaños de los blobs) |
+| Información editada | `12 canciones, solo aquí` o `Ninguna` | pistas con ediciones (`source`, `core/edits.ts`); almacén `edits` |
 | Copias de música | `12,4 GB` o `Ninguna: se lee de tus carpetas` | OPFS `biblioteca/`; sin raíces `copy`, el texto alternativo |
 | Playlists | `8 en este dispositivo · 6 sincronizadas` | `usePlaylists` (por `ownerId`) |
 | Cambios pendientes de subir | `3` (solo si > 0) | almacén `outbox` |
