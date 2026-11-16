@@ -744,7 +744,7 @@ ol.track-list .row-album {
   }
 }
 
-/* Ayuda en escritorio: atajos y gestos en una columna, preguntas y «Nosotros» en la otra, hasta 88 rem y centrado.
+/* Ayuda en escritorio: empezar y atajos en una columna, gestos y preguntas en la otra (alturas parecidas), hasta 88 rem y centrado.
    Dos columnas fijas (no `columns`): abrir una pregunta no hace saltar secciones de una columna a otra. */
 .help-columns,
 .help-col {
@@ -773,7 +773,7 @@ ol.track-list .row-album {
   }
 }
 
-/* Ayuda: preguntas desplegables (<details> nativo, sin animar: se abren de vez en cuando), gestos y «Nosotros». */
+/* Ayuda: pasos, gestos y preguntas desplegables (<details> nativo, sin animar: se abren de vez en cuando); `.help-about` es «Sobre Satin» en Ajustes. */
 .help-group {
   display: grid;
   gap: var(--s1);

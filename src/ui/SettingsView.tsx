@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { MouseEvent } from "react";
+import { APP_NAME } from "../core/brand";
 import { useBackground, background } from "../state/background";
+import { supabaseConfigured } from "../sync/supabaseClient";
 import type { AuthController } from "../sync/useAuthController";
 import { CafeSection, hasCafe } from "./CafeLink";
 import { FoldersSection } from "./LibrarySheet";
@@ -22,6 +24,7 @@ const sections: [id: string, label: string][] = [
   ["set-a11y", "Accesibilidad"],
   ...(hasCafe ? ([["set-cafe", "Apoyar el proyecto"]] as [string, string][]) : []),
   ["set-data", "Privacidad y datos"],
+  ["set-about", "Acerca de"],
 ];
 
 // Índice de escritorio (styles/library.css lo oculta por debajo de 1000 px): salta a la sección y deja el foco en su título.
@@ -108,6 +111,15 @@ export function SettingsView({ auth }: { auth: AuthController }) {
           </section>
           <CafeSection />
           <PrivacySection auth={auth} />
+          <section aria-labelledby="set-about" className="settings-section">
+            <h2 id="set-about">Acerca de</h2>
+            <h3 className="settings-sub">Sobre {APP_NAME}</h3>
+            <div className="help-about">
+              <p>Detrás de {APP_NAME} hay una persona en México.</p>
+              <p>La idea es sencilla: tu música es tuya. Se queda en tu dispositivo, no hay anuncios, cookies ni analítica{supabaseConfigured ? ", y la cuenta es opcional: solo sirve para sincronizar tus playlists." : ", y no hay cuentas: no recogemos datos personales."}</p>
+              <p>El código es público, bajo la licencia PolyForm Noncommercial 1.0.0, para que cualquiera pueda ver cómo funciona.</p>
+            </div>
+          </section>
         </div>
       </div>
     </section>
