@@ -1,97 +1,91 @@
-# Borradores legales: aviso de privacidad, términos y almacenamiento local
+# Aviso de privacidad y almacenamiento local (borradores)
 
-> **Esto es un borrador para que lo revise un abogado.** No es asesoría legal ni está listo para publicarse. Lo escribí a partir del
-> código de la rama `desarrollo` (12 de noviembre de 2026) y del texto vigente de la ley. Todo lo marcado **[Decides tú]** necesita
-> una decisión tuya antes de la revisión; lo marcado **[Abogado]** es una duda jurídica que no puedo resolver con el texto de la ley.
+> **Borrador para revisión de una persona abogada; no es asesoría jurídica ni está listo para publicarse.** Reescrito el 16-11-2026 a partir
+> del código de la rama `desarrollo` y del texto vigente de la ley, leído ese día (`INVESTIGACION_LEGAL.md` tiene las fuentes y lo que no se
+> pudo confirmar). Cada afirmación sobre lo que hace la app tiene su fila en `COPY_LEGAL.md`. Lo marcado **[Decides tú]** es una decisión
+> pendiente; lo marcado **[Abogado]**, una duda jurídica. Esas notas llegan hasta el final de su párrafo y no se publican.
 
-> **Hecho 2026-11-13:** la app **renderiza** estos borradores en `/privacidad` (§3.1), `/terminos` (§4) y `/almacenamiento` (§5) (`src/ui/LegalPage.tsx`; sin las notas internas «[Decides tú]» y «[Abogado]»). **Solo aviso y términos se enlazan**, desde Ajustes → Acerca de (2026-11-16); ninguna otra navegación pública las enlaza, llevan la marca «Borrador pendiente de revisión legal» y piden no indexarse (`<meta robots>` y `X-Robots-Tag` en `vercel.json`). Los `{{MARCADORES}}` se sustituyen al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO`, `LEGAL_CORREO_PRIVACIDAD`, `LEGAL_NOMBRE_APP`, `LEGAL_FECHA_ACTUALIZACION` y `LEGAL_URL_APP` (entorno o `.env`, nunca en el repositorio) y **`npm run build` falla si queda alguno** en el resultado. Quedan sin comprobar los plazos entre corchetes (`[30]`, `[15]`), que dependen de decisiones pendientes. El nombre, la fecha y la URL ya son marcadores (`{{NOMBRE_APP}}`, `{{FECHA_ACTUALIZACION}}`, `{{URL_APP}}`): no se sustituyen por «Satin» hasta que el nombre esté registrado.
-
-Los textos para publicar están en las secciones 3, 4 y 5. Las secciones 1 y 2 son la base que el abogado necesita para revisarlos.
-
-> **Cuentas (2026-11-14):** el primer lanzamiento va **sin cuentas** (`VITE_CUENTAS` distinto de `1`): no hay registro, el SDK de Supabase
-> no entra en el build y la app no recoge datos personales. Lo que solo vale en uno de los dos estados va entre `<!-- cuentas -->…<!-- /cuentas -->`
-> o `<!-- sin cuentas -->…<!-- /sin cuentas -->`, y el build publica solo el bloque que corresponde (`forAccounts` en `scripts/docsContent.ts`).
-> Las filas de Supabase del inventario (§1.1 y §1.2) solo existen con cuentas.
+> **Cómo se publica.** `/privacidad` sale de §3.1 y `/almacenamiento` de §5 (`src/ui/LegalPage.tsx`, vía `virtual:docs`); los términos
+> están en `TERMINOS.md`. Solo aviso y términos se enlazan, desde Ajustes → Acerca de; ninguna otra navegación pública. Las páginas llevan
+> «Borrador pendiente de revisión legal» y piden no indexarse. Los `{{MARCADORES}}` se completan al compilar con `LEGAL_RESPONSABLE`,
+> `LEGAL_DOMICILIO`, `LEGAL_CORREO_PRIVACIDAD`, `LEGAL_NOMBRE_APP`, `LEGAL_FECHA_ACTUALIZACION` y `LEGAL_URL_APP` (entorno o `.env`;
+> valores en `docs/producto/privado/`, nunca en el repositorio) y **`npm run build` falla si queda alguno**. Lo que solo vale con cuentas va
+> entre `<!-- cuentas -->…<!-- /cuentas -->` y lo que solo vale sin ellas entre `<!-- sin cuentas -->…<!-- /sin cuentas -->`. El primer
+> lanzamiento va **sin cuentas** (`VITE_CUENTAS` distinto de `1`).
 
 ---
 
 ## 1. Inventario: qué datos existen y dónde viven
 
-Todo lo demás parte de esta tabla. Se comprobó leyendo el código (`src/platform/web/db.ts`, `src/platform/web/index.ts`,
-`src/platform/web/library.ts`, `src/state/*.ts`, `src/sync/*.ts`), la CSP de `vercel.json`, las migraciones de `supabase/migrations/`
-y, con una consulta de solo lectura al esquema `auth` del proyecto de Supabase, las columnas que guarda el servicio de autenticación.
+Comprobado leyendo el código (`src/platform/web/db.ts`, `src/platform/web/library.ts`, `src/state/*.ts`, `src/sync/*.ts`), la CSP de
+`vercel.json`, las migraciones de `supabase/migrations/` y, el 12-11-2026, una consulta de solo lectura al esquema `auth` de Supabase.
 
 ### 1.1 En el dispositivo (no sale de él)
 
 | Dónde | Qué guarda | Cuándo | Cómo se borra hoy |
 |---|---|---|---|
-| IndexedDB `reproductor`, almacén `kv` | `audio` (ecualizador, volumen, velocidad, fundidos, ReplayGain), `background` (fondo, HDR, reducir movimiento), `session` (cola de reproducción y posición), `position` (pista y segundo actuales) | Al cambiar un ajuste o al reproducir | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
-| IndexedDB, almacén `kv`, claves `profile.name` y `profile.avatar` | **Nombre visible** (opcional, vacío por defecto, hasta 60 caracteres) y **foto de perfil** (opcional: un JPEG de 256 × 256 px que sale de recortar y volver a codificar la imagen elegida, sin sus metadatos). No se suben ni se sincronizan con la cuenta | Solo si la persona los escribe o los elige en Ajustes → Perfil | Quitar la foto y vaciar el nombre en Ajustes → Perfil, o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
-| IndexedDB, almacén `tracks` | Por pista: título, artista, álbum, artista del álbum, año, género, número de pista, duración, formato y calidad, ReplayGain, letras, nombre de archivo, ruta relativa dentro de la carpeta elegida, tamaño, fecha de modificación, huella `track:v2` (SHA-256 de partes del archivo), fecha en que se añadió y **fecha de la última reproducción** (`playedAt`, un solo valor por pista, no un historial) | Al añadir música o reproducir | Quitar la carpeta, o borrar los datos del dispositivo |
-| IndexedDB, almacén `roots` | Nombre de cada carpeta elegida y su permiso de acceso (`FileSystemDirectoryHandle`) | Al elegir una carpeta | Ídem |
-| IndexedDB, almacén `covers` | Portadas extraídas de los archivos y sus miniaturas (96 y 600 px) | Al leer metadatos | Ídem |
-| IndexedDB, almacén `playlists` | Nombre de cada playlist, identidades de sus pistas, dueño (id de usuario o ninguno) | Al crear o editar playlists | Borrar datos de este dispositivo (si la sesión sigue abierta, las de la cuenta vuelven a bajar) |
-| IndexedDB, almacén `outbox` | Cambios de playlists pendientes de subir, con el id de usuario | Si hay sesión y el cambio aún no llega a Supabase | Se vacía al sincronizar o al borrar los datos del dispositivo |
-| OPFS (almacenamiento privado del navegador), carpeta `biblioteca/` | **Copia de los archivos de audio**, solo cuando el navegador no permite recordar la carpeta original (Firefox, Safari) | Al añadir música en esos navegadores | Quitar la carpeta, o borrar datos locales |
-| `localStorage`, clave `sb-<proyecto>-auth-token` | Sesión de Supabase: token de acceso, token de renovación y datos de la cuenta, incluido el correo | Al iniciar sesión (comportamiento por defecto de `supabase-js` con `persistSession: true`; el código no define otro almacenamiento) | Cerrar sesión, o la casilla «Cerrar también la sesión» de Borrar datos de este dispositivo (`docs/producto/AJUSTES_PRIVACIDAD.md`) |
-| Memoria | Archivos añadidos sueltos cuando no se pueden guardar | Durante la sesión | Al recargar |
-| Sistema operativo (Media Session) | Título, artista, álbum y portada de la pista actual, para la pantalla de bloqueo y los controles del sistema | Al reproducir | Lo gestiona el sistema operativo; no pasa por ningún servidor |
+| IndexedDB `reproductor`, almacén `kv` | `audio` (ecualizador, volumen, velocidad, fundidos, ReplayGain), `background` (fondo, HDR, reducir movimiento), `session` (cola y posición), `position` (pista y segundo actuales) | Al cambiar un ajuste o al reproducir | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
+| IndexedDB, `kv`, claves `profile.name` y `profile.avatar` | Nombre visible (opcional, hasta 60 caracteres) y foto de perfil (opcional: JPEG de 256 × 256 px recortado y recodificado, sin metadatos). No se suben ni se sincronizan | Si la persona los pone en Ajustes → Perfil | Ajustes → Perfil, o borrar los datos del dispositivo |
+| IndexedDB, almacén `tracks` | Por pista: título, artista, álbum, artista del álbum, año, género, número, duración, formato y calidad, ReplayGain, nombre de archivo, ruta relativa, tamaño, fecha de modificación, huella `track:v2`, fecha en que se añadió y **fecha de la última reproducción** (un valor por pista, no un historial) | Al añadir música o reproducir | Quitar la carpeta, o borrar los datos del dispositivo |
+| IndexedDB, almacén `lyrics` | Letras sacadas de las etiquetas del archivo o de un `.lrc` con el mismo nombre (migración v3) | Al leer metadatos | Ídem |
+| IndexedDB, almacén `edits` | Lo que la persona edita de cada canción (título, artista, artista del álbum, álbum, año, género, n.º de pista y de disco) y, si elige una, el hash de su carátula, guardada en `covers` recodificada a ≤ 1024 px y sin metadatos (migración v4). Nunca se escribe en el archivo ni se sube: las playlists y la nube siguen usando lo que trae el archivo | Al guardar en «Editar información» | «Restablecer» en «Editar información», quitar la carpeta, o borrar los datos del dispositivo |
+| IndexedDB, almacén `roots` | Nombre de cada carpeta elegida y su permiso de **solo lectura** | Al elegir una carpeta | Ídem |
+| IndexedDB, almacén `covers` | Portadas sacadas de los archivos o de la imagen de la carpeta del álbum, las carátulas elegidas en «Editar información», y sus miniaturas | Al leer metadatos | Ídem |
+| IndexedDB, almacén `playlists` | Nombre de cada playlist, identidades de sus pistas, dueño (id de usuario o ninguno) | Al crear o editar playlists | Borrar datos del dispositivo (con sesión abierta, las de la cuenta vuelven a bajar) |
+| IndexedDB, almacén `outbox` | Cambios de playlists pendientes de subir, con el id de usuario | Con sesión, hasta que el cambio llega a Supabase | Se vacía al sincronizar o al borrar los datos del dispositivo |
+| OPFS, carpeta `biblioteca/` | **Copia de los archivos de audio**, solo si el navegador no permite recordar la carpeta (Firefox, Safari); la app pide almacenamiento persistente | Al añadir música en esos navegadores | Quitar la carpeta, o borrar los datos locales |
+| `localStorage`, `sb-<proyecto>-auth-token` | Sesión de Supabase (tokens y datos de la cuenta, incluido el correo) | Al iniciar sesión | Cerrar sesión, o «Cerrar también la sesión» al borrar los datos del dispositivo |
+| Memoria | Archivos sueltos que no se pueden guardar | Durante la sesión | Al recargar |
+| Sistema operativo (Media Session) | Título, artista, álbum y portada de la pista actual para la pantalla de bloqueo | Al reproducir | Lo gestiona el sistema; no pasa por ningún servidor |
 
 ### 1.2 Fuera del dispositivo
 
 | Quién | Dónde | Qué recibe | Cuándo |
 |---|---|---|---|
-| **Supabase** (autenticación y base de datos) | Proyecto en `us-east-1`, **Estados Unidos** | Correo, contraseña cifrada (hash), nombre visible (`display_name`), fechas de alta, confirmación y último acceso; por sesión, **dirección IP y navegador** (`auth.sessions.ip`, `user_agent`); registro de auditoría con IP (`auth.audit_log_entries.ip_address`); tablas de la app: `profiles` (nombre visible; `avatar_url` existe pero la app no la usa), `playlists` (nombre), `playlist_tracks` (identidad de cada pista y posición) | Solo si la persona crea una cuenta |
-| Supabase (correo) | Ídem | Correo de confirmación de registro, enviado con el servidor de correo integrado de Supabase (no hay SMTP propio todavía, ver D9 en `DECISIONES_PENDIENTES.md`) | Al registrarse |
-| **Vercel** (alojamiento) | Red global | La petición HTTP de cada archivo de la web: IP, navegador, ruta. Es inherente a servir una página. No hay funciones de servidor ni analítica de Vercel activas. **No verifiqué si Vercel conserva esas IP ni cuánto tiempo** | Cada visita |
+| **Vercel** (alojamiento de la web) | Red global; procesamiento principal en EE. UU. | La petición de cada archivo de la web: **IP**, datos de configuración del navegador y ruta; Vercel deriva de la IP la ciudad y el país. No hay funciones de servidor ni analítica de Vercel activas. **[No confirmado]** cuánto conserva Vercel esos datos en un sitio estático y en qué plan está el proyecto (su DPA solo cubre Pro y Enterprise) | Cada visita, con y sin cuentas |
+| **Supabase** (autenticación y base de datos) | Proyecto en la región del este de **EE. UU.** (`us-east-1`) | Correo, contraseña cifrada (hash), nombre visible (`display_name`; **si la persona no da uno, el disparador guarda la parte del correo antes de la «@»** hasta que se aplique la migración `20261114120000_profile_display_name_sin_correo.sql`), fechas de alta, confirmación y último acceso; por sesión, **IP y navegador**; registro de auditoría con IP; `playlists` (nombre) y `playlist_tracks` (identidad de cada pista y posición) | Solo con cuentas, si la persona crea una |
+| Supabase (correo) | Ídem | Correos de confirmación con el servidor de correo integrado de Supabase (sin SMTP propio, D9) | Al registrarse |
+| Procesador del café (Stripe) | — | Lo que la persona escriba en la página de pago. **[No confirmado]** qué datos de la operación ve el responsable en Stripe | Solo si el café se publica y alguien aporta. Hoy no está publicado |
 
-**Detalle importante sobre las playlists sincronizadas:** la identidad `track:v1` es `título|artista|álbum|duración` en texto
-(`src/core/track.ts`). Es decir, la nube no recibe audio, pero **sí recibe los títulos y artistas** de las canciones de cada playlist.
-Eso debe decirse en el aviso: revela gustos musicales.
+**Identidad de las pistas sincronizadas:** `track:v1` es `título|artista|álbum|duración` en texto y `track:v2` es una huella SHA-256 de
+tamaño + primer y último MiB del archivo (`src/core/track.ts`; v2 se usa si la pista se añadió así). La nube no recibe audio, pero sí los
+títulos y artistas de cada playlist (los del archivo: lo editado en la app no cambia `track:v1` ni se sube), y una huella que identifica un archivo concreto sin permitir reconstruirlo. Las playlists creadas
+antes de iniciar sesión solo se suben si la persona elige «Subir» en el diálogo de adopción.
 
 ### 1.3 Lo que no existe (comprobado)
 
-- **Cookies:** la app no crea ninguna. `supabase-js` guarda la sesión en `localStorage`, no en cookies.
-- **Analítica, publicidad, rastreo, píxeles, reporte de errores a terceros:** no hay. La CSP (`connect-src 'self'` + el dominio de
-  Supabase) impediría cualquier otra conexión aunque alguien añadiera el script.
-- **Fuentes, scripts o imágenes de terceros:** la tipografía va empaquetada (`@fontsource`) y todo se sirve desde el propio dominio.
-- **Audio en servidores:** los archivos se leen en el dispositivo y nunca se suben (`AGENTS.md` §5, `docs/COPY_LANDING.md`).
-- **Recuperación de contraseña, cambio de correo, borrado de cuenta y edición del perfil de la cuenta desde la app:** no están implementados.
-  Hoy el borrado de cuenta solo puede hacerse a mano desde el panel de Supabase. (El nombre y la foto de Ajustes → Perfil existen, pero solo en el dispositivo: ver §1.1.)
-- **Datos sensibles** en el sentido del artículo 2, fracción VI, de la ley: no se piden. **[Abogado]** Los títulos de canciones
-  de una playlist podrían revelar creencias religiosas o políticas (música religiosa, himnos de partido). Conviene que el abogado
-  diga si eso basta para tratarlos como sensibles; mi lectura es que no, porque la app no los interpreta ni los clasifica.
+- **Cookies:** ninguna. La sesión va en `localStorage`.
+- **Analítica, publicidad, rastreo, píxeles, reporte de errores a terceros:** no hay. La CSP (`connect-src 'self'` y el dominio de
+  Supabase) bloquearía cualquier otra conexión.
+- **Fuentes, scripts o imágenes de terceros:** la tipografía va empaquetada y todo se sirve desde el propio dominio.
+- **Audio en servidores:** los archivos se leen en el dispositivo y nunca se suben.
+- **Recuperar contraseña, cambiar correo, eliminar la cuenta o aceptar los términos desde la app:** no existen. Eliminar una cuenta hoy
+  se hace a mano en el panel de Supabase. «Datos de tu cuenta» (exportación del perfil y las playlists de la nube) sí existe, en Ajustes →
+  Privacidad y datos; no incluye los datos de Auth (correo, fechas, IP).
+- **Datos sensibles** (art. 2, fr. VI): no se piden. **[Abogado]** Los títulos de una playlist podrían revelar creencias religiosas o
+  políticas; la app no los interpreta ni los clasifica.
 
 ---
 
-## 2. Ley aplicable en México
+## 2. Ley aplicable (resumen; fuentes y detalle en `INVESTIGACION_LEGAL.md` §2.5)
 
-**Ley vigente:** Ley Federal de Protección de Datos Personales en Posesión de los Particulares (LFPDPPP), **nueva ley publicada en el
-DOF el 20 de marzo de 2025**, en vigor al día siguiente (transitorio Primero). Abrogó la ley de 2010 (transitorio Segundo, fracción I).
-Última reforma: DOF 14 de noviembre de 2025, que solo modificó el artículo 4 (ley supletoria: Código Nacional de Procedimientos Civiles
-y Familiares). Fuente: texto vigente de la Cámara de Diputados,
-[diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf](https://www.diputados.gob.mx/LeyesBiblio/pdf/LFPDPPP.pdf), leído el 12-11-2026.
+LFPDPPP nueva (DOF 20-03-2025), última reforma DOF 14-11-2025; autoridad: Secretaría Anticorrupción y Buen Gobierno. Lo que fija el texto:
 
-**Autoridad:** la **Secretaría Anticorrupción y Buen Gobierno** (art. 2, fr. XV; arts. 38 y 39). Sustituye al INAI. Contra sus
-resoluciones procede el juicio de amparo (art. 51).
-
-Lo que importa para esta app:
-
-| Tema | Qué dice la ley | Consecuencia aquí |
+| Tema | Artículo | En el aviso |
 |---|---|---|
-| ¿Aplica? | Sí. La excepción del art. 1, fr. II es solo para uso personal sin divulgación ni uso comercial; esta app guarda datos de terceros (las cuentas) | Hace falta aviso de privacidad |
-| Consentimiento | Tácito por regla general (art. 7); no hace falta cuando los datos se requieren para cumplir la relación jurídica con el titular (art. 9, fr. IV). Expreso para datos financieros o patrimoniales (art. 7) | La cuenta y la sincronización entran en el art. 9, fr. IV. Si algún día cobras directamente, los datos de pago requieren consentimiento expreso (o los gestiona la pasarela) |
-| Revocación | Se puede revocar en cualquier momento; el aviso debe decir cómo (art. 7) | Incluir el medio en el aviso |
-| Contenido del aviso | Identidad y domicilio; datos tratados; finalidades; opciones para limitar uso; medios ARCO; cómo se avisarán cambios (art. 15, fr. I a VI) | Sección 3 |
-| Aviso simplificado | Si los datos se obtienen por medios electrónicos, se da en modalidad simplificada (fr. I a IV del art. 15) con enlace al integral (art. 16, fr. II) | Va en el formulario de registro (sección 3.2) |
-| Seguridad | Medidas administrativas, técnicas y físicas (art. 18). Las vulneraciones que afecten de forma significativa al titular se le informan de inmediato (art. 19) | Tener un procedimiento de aviso por correo |
-| Derechos ARCO | Acceso, rectificación, cancelación, oposición (arts. 21 a 26). Respuesta en **20 días hábiles** y ejecución en los **15 siguientes** (art. 31; "días" son hábiles, art. 2, fr. VIII). Gratuitos salvo costos de envío o copia (art. 34) | Un correo de contacto y, mejor, botones en la app |
-| Persona encargada vs. transferencia | Quien trata datos por cuenta del responsable es "persona encargada" (art. 2, fr. XII). Transferencia es la comunicación a alguien distinto del titular, el responsable o el encargado (art. 2, fr. XX). Las transferencias requieren cláusula en el aviso (art. 35) salvo los supuestos del art. 36 | Supabase y Vercel actúan como encargados: **no son transferencias**. Hoy no hay transferencias |
-| Sanciones | Multas de 100 a 320,000 UMA según la infracción (art. 59) | — |
+| Contenido mínimo | 15, fr. I a VI | Todas las fracciones cubiertas en §3.1 |
+| Simplificado | 16, fr. II (fr. I a IV del 15 y dónde está el integral) | §3.2, con domicilio (el borrador anterior lo omitía) |
+| Consentimiento | 7 (tácito, revocable), 9 fr. IV (no hace falta para la relación jurídica) | Finalidades necesarias, sin secundarias |
+| **Plazos de derechos** | 31: respuesta en **20 días hábiles**, ejecución en los **15 siguientes**, ampliables una vez por igual periodo; art. 2, fr. VIII: días hábiles | Sustituyen los `[30]` y `[15]` del borrador anterior |
+| Eliminar la cuenta | Es una solicitud de cancelación (arts. 24 y 31). La ley **no fija** otro plazo de borrado; art. 10: suprimir previo bloqueo | Se usan los plazos del art. 31 |
+| Ante la autoridad | 40: solicitud de protección en los **15 días** siguientes a la respuesta, o tras vencer el plazo sin respuesta | Se dice en el aviso |
+| Encargados | 2, fr. XII y XX: no son transferencias. Lineamientos 2013, Vigésimo sexto: no hace falta nombrarlos **[No confirmado: vigencia]** | Se nombran igual, por transparencia |
+| Vulneraciones | 19: aviso inmediato si afectan de forma significativa | Se promete |
+| Menores | La ley no dice nada; CCF arts. 646 y 450 | Cuentas: 18 años o autorización |
+| Domicilio | 15, fr. I sin precisar; Lineamientos: completo y el de oír y recibir notificaciones | `{{DOMICILIO}}`; opciones en `INVESTIGACION_LEGAL.md` §5 |
 
-**[Abogado]** La ley remite a un Reglamento en varios puntos (arts. 17, 40, 41, 49, 54, 57). No verifiqué si ya se publicó un
-Reglamento nuevo para la ley de 2025 ni qué exige sobre la relación con encargados (la ley de 2010 pedía formalizarla por contrato).
-Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
+**Sin cuentas:** la app no recaba datos; Vercel recibe la IP de cada visita. **[Opinión]** Puede bastar para que haga falta aviso (art. 2,
+fr. V); se mantiene uno breve que lo dice (`INVESTIGACION_LEGAL.md` §2.7).
 
 ---
 
@@ -102,124 +96,106 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 > **Aviso de privacidad de {{NOMBRE_APP}}**
 > Última actualización: {{FECHA_ACTUALIZACION}}
 >
-> **Quién es responsable.** {{RESPONSABLE}}, con domicilio en {{DOMICILIO}}, es responsable de los datos personales
-> que se tratan en {{NOMBRE_APP}} ("la app"). Contacto para cualquier asunto de privacidad: {{CORREO_PRIVACIDAD}}.
+> **Quién es responsable.** Yo, {{RESPONSABLE}}, persona física, con domicilio para oír y recibir notificaciones en {{DOMICILIO}}, soy
+> responsable de los datos personales que se tratan en {{NOMBRE_APP}} ({{URL_APP}}). Para cualquier asunto de privacidad escríbeme a
+> {{CORREO_PRIVACIDAD}}.
 >
-> **Lo que no recabamos.** Tu música no sale de tu dispositivo: la app lee los archivos en tu navegador y no los sube a ningún
-> servidor. Tampoco usamos cookies, analítica, publicidad ni herramientas de rastreo.
+> **Lo que nunca sale de tu dispositivo.** Tus archivos de audio: la app los lee en tu navegador y no los sube a ningún servidor. Tampoco
+> salen tu biblioteca, las letras y portadas, lo que edites de tus canciones, tu cola, tus ajustes ni el nombre y la foto de perfil que pongas: se guardan en el
+> almacenamiento de tu navegador y los borras desde Ajustes → Privacidad y datos. No uso cookies, analítica, publicidad ni herramientas
+> de rastreo.
 >
+> **Al visitar la web.** La web está alojada en Vercel, que, como cualquier servidor, recibe la dirección IP y datos técnicos de tu
+> navegador para entregarte la página, y puede deducir de la IP tu país y ciudad aproximados. No uso esos datos para
+> identificarte ni los combino con nada, y Vercel los conserva según su propia política.
+>
+> <!-- sin cuentas -->
+> **Esta versión de la app no tiene cuentas,** así que no te pido ni recabo ningún otro dato personal. Lo único que llega a un servidor
+> es lo descrito en «Al visitar la web», y su única finalidad es entregarte la página.
+> <!-- /sin cuentas -->
 > <!-- cuentas -->
-> **Si usas la app sin cuenta,** no tratamos ningún dato personal tuyo. Tu biblioteca, playlists, cola y ajustes, y el nombre y la foto de perfil si los pones, se guardan solo en
-> el almacenamiento de tu navegador y puedes borrarlos desde Ajustes → Privacidad y datos.
+> **Si usas la app sin cuenta,** no trato más datos que los de «Al visitar la web».
 >
-> **Si creas una cuenta,** tratamos:
-> - Correo electrónico y contraseña (la contraseña se guarda cifrada; nadie puede leerla).
-> - El nombre visible que elijas.
-> - Fechas de registro, confirmación y último acceso; dirección IP y tipo de navegador de cada sesión iniciada.
-> - Tus playlists sincronizadas: su nombre y, por cada canción, el título, artista, álbum y duración tal como aparecen en tus
->   archivos. No recibimos los archivos de audio.
+> **Si creas una cuenta,** trato:
+> - Tu correo y tu contraseña (guardada cifrada; nadie puede leerla).
+> - El nombre visible que elijas. Si no escribes ninguno, por ahora se guarda la parte de tu correo antes de la «@».
+> - Las fechas de registro, confirmación y último acceso, y la dirección IP y el navegador de cada sesión, que quedan en un registro de
+>   seguridad.
+> - Tus playlists sincronizadas: su nombre y, por cada canción, el título, el artista, el álbum y la duración que trae tu archivo, o una
+>   huella del archivo que no permite reconstruirlo. Nunca recibo los archivos de audio. Las playlists que ya tenías antes de iniciar
+>   sesión solo se suben si eliges «Subir».
 >
-> No tratamos datos personales sensibles.
+> No trato datos personales sensibles.
 >
-> **Para qué.** Usamos estos datos solo para: (a) crear y mantener tu cuenta; (b) sincronizar tus playlists entre tus dispositivos;
-> (c) proteger tu cuenta (detectar accesos indebidos y limitar intentos); (d) enviarte correos necesarios del servicio, como la
-> confirmación de registro o un aviso de seguridad. Estas finalidades son necesarias para darte el servicio que pides. No hay
-> finalidades secundarias: no usamos tus datos para publicidad, perfiles comerciales ni los vendemos.
-> **[Decides tú]** Si algún día añades analítica o correos de novedades, se agregan aquí como finalidades secundarias con su propia
-> casilla, desactivada por defecto.
+> **Para qué.** Solo para: (a) crear y mantener tu cuenta; (b) sincronizar tus playlists entre tus dispositivos; (c) proteger tu cuenta y
+> el servicio (detectar accesos indebidos y limitar intentos); (d) enviarte los correos necesarios del servicio, como la confirmación de
+> registro o un aviso de seguridad. Son necesarias para darte lo que pides; no hay finalidades secundarias: no uso tus datos para
+> publicidad ni perfiles y no los vendo.
 >
-> **Con quién.** Nos apoyamos en dos proveedores que tratan datos por nuestra cuenta y bajo nuestras instrucciones:
-> - Supabase, Inc. (autenticación y base de datos), con servidores en Estados Unidos.
-> - Vercel, Inc. (alojamiento de la web), que recibe la dirección IP de cada visita para entregar la página.
+> **Quién me ayuda.** Dos proveedores tratan datos por mi cuenta y bajo mis instrucciones: Supabase (autenticación, base de datos y
+> correos de la cuenta), con servidores en Estados Unidos, y Vercel (alojamiento de la web). No transfiero tus datos a terceros; solo los
+> entregaría si una autoridad competente lo ordena conforme a la ley.
 >
-> No transferimos tus datos a terceros. Solo los entregaríamos si una autoridad competente lo ordena conforme a la ley.
+> **Cuánto tiempo.** Mientras tengas tu cuenta. Puedes pedir su eliminación en cualquier momento (ver «Tus derechos»): es una solicitud de
+> cancelación y se rige por los mismos plazos. Los registros técnicos y las copias de respaldo de los proveedores pueden conservar datos
+> durante el tiempo que fijen sus políticas, hasta que se sobrescriban.
 >
-> **Cuánto tiempo.** Mientras tengas cuenta. Si la eliminas, borramos tus datos en un máximo de [30] días, salvo lo que debamos
-> conservar por obligación legal. **[Decides tú]** el plazo; **[Abogado]** si hay obligación de conservar algo.
+> **[Decides tú]** Si se quiere un plazo de borrado más corto que el legal, ponerlo aquí. **[Abogado]** Si hay que bloquear (no borrar) algún
+> dato durante un plazo de prescripción.
+> <!-- /cuentas -->
 >
-> **Tus derechos (ARCO).** Puedes pedir acceso, rectificación, cancelación u oposición, o revocar tu consentimiento, escribiendo a
-> {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta, con tu nombre, lo que pides y, si es rectificación, el dato correcto.
-> Respondemos en un máximo de 20 días hábiles y, si procede, lo aplicamos en los 15 días hábiles siguientes. Es gratuito.
-> Desde la app también puedes: cerrar sesión, borrar tus playlists y borrar todos los datos de tu dispositivo.
-> **[Decides tú]** Cuando exista "Eliminar cuenta" en la app, mencionarlo aquí.
+> **Si aportas con «Comprar un café».** El pago se hace en la página de un procesador de pagos, fuera de la app, y se rige por su propio
+> aviso de privacidad. De esa operación recibo solo lo que el procesador me muestre, y lo uso únicamente para registrar la aportación,
+> atender aclaraciones y cumplir mis obligaciones fiscales.
+>
+> **[Decides tú]** Este párrafo solo tiene sentido con el café publicado; confirmar contra Stripe qué datos se ven (nombre, correo, importe).
+> **[Abogado]** Si el importe cuenta como dato patrimonial y exige consentimiento expreso (art. 7).
+>
+> **Tus derechos.** Puedes pedirme acceso, rectificación, cancelación u oposición, o revocar tu consentimiento, escribiendo a
+> {{CORREO_PRIVACIDAD}}.
+> <!-- cuentas -->
+> Escríbeme desde el correo de tu cuenta, que me sirve para comprobar que eres tú.
+> <!-- /cuentas -->
+> Indica tu nombre, un medio para responderte, qué datos y qué derecho quieres ejercer y, si es una rectificación, el dato correcto. Te
+> respondo en un máximo de 20 días hábiles y, si procede, lo aplico en los 15 días hábiles siguientes; si un caso lo justifica, puedo
+> ampliar cada plazo una sola vez por el mismo tiempo y te lo diré. Es gratuito.
+> <!-- cuentas -->
+> En la app también puedes cerrar sesión, borrar tus playlists, descargar lo que guarda tu cuenta (Ajustes → Privacidad y datos → Datos
+> de tu cuenta) y borrar todos los datos de tu dispositivo.
+>
+> **Menores de edad.** Para crear una cuenta hay que tener 18 años o la autorización de madre, padre o tutor. Si sé que una persona menor
+> creó una cuenta sin esa autorización, la eliminaré.
+>
+> **Seguridad.** La conexión va cifrada (HTTPS), la contraseña se guarda cifrada y la base de datos solo deja a cada cuenta leer y cambiar
+> sus propios datos. Si ocurre una vulneración que afecte de forma significativa tus derechos, te avisaré por correo de inmediato.
 > <!-- /cuentas -->
 > <!-- sin cuentas -->
-> **Esta versión de la app no tiene cuentas,** así que no recabamos ningún dato personal tuyo. Tu biblioteca, playlists, cola y ajustes,
-> y el nombre y la foto de perfil si los pones, se guardan solo en el almacenamiento de tu navegador y puedes borrarlos desde
-> Ajustes → Privacidad y datos.
->
-> **Con quién.** La web está alojada en Vercel, Inc., que recibe la dirección IP de cada visita para entregar la página. Nosotros no
-> recibimos esos datos ni los usamos. No transferimos datos a terceros.
->
-> **Dudas.** Para cualquier asunto de privacidad, escribe a {{CORREO_PRIVACIDAD}}. Desde la app puedes borrar tus playlists y todos
-> los datos de tu dispositivo.
+> Desde la app también puedes borrar tus playlists y todos los datos de tu dispositivo.
 > <!-- /sin cuentas -->
 >
-> **Si no estás conforme** con nuestra respuesta, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno.
+> **Si no estás conforme** con mi respuesta, o no te respondo a tiempo, puedes acudir a la Secretaría Anticorrupción y Buen Gobierno en
+> los 15 días hábiles siguientes a mi respuesta o al vencimiento del plazo.
 >
-> **Cambios a este aviso.** Publicaremos cualquier cambio en {{URL_APP}}/privacidad con su fecha.
+> **Cambios a este aviso.** Publicaré cada versión con su fecha en {{URL_APP}}/privacidad.
 > <!-- cuentas -->
-> Si el cambio afecta a lo que hacemos con tus datos, te avisaremos por correo antes de aplicarlo.
+> Si un cambio afecta lo que hago con tus datos, te avisaré por correo antes de aplicarlo, y si quisiera usarlos para algo nuevo te
+> pediría tu consentimiento.
 > <!-- /cuentas -->
 
-### 3.2 Aviso simplificado (bajo el botón de registro)
+### 3.2 Aviso simplificado (bajo «Crear cuenta»)
 
-> {{RESPONSABLE}} usa tu correo, tu nombre visible y tus playlists sincronizadas solo para darte tu cuenta y sincronizar
-> entre dispositivos. Tu música no se sube. Puedes limitar el uso o borrar tus datos escribiendo a {{CORREO_PRIVACIDAD}}. Aviso completo:
-> {{URL_APP}}/privacidad.
+> {{RESPONSABLE}}, con domicilio en {{DOMICILIO}}, usa tu correo, tu nombre visible, los datos de tus sesiones y tus playlists
+> sincronizadas solo para darte tu cuenta, protegerla y sincronizar entre tus dispositivos. Tu música no se sube. Puedes limitar el uso
+> o borrar tus datos escribiendo a {{CORREO_PRIVACIDAD}}. Aviso completo: {{URL_APP}}/privacidad.
+
+**No implementado:** el formulario de registro (`src/ui/dialogs.tsx`) aún no muestra este texto ni la casilla de los términos (S-17 de
+`PLAN_SEGURIDAD.md`). Requisito antes de abrir cuentas.
 
 ---
 
-## 4. Términos y condiciones (borrador)
+## 4. Términos y condiciones
 
-> **Términos de uso de {{NOMBRE_APP}}**
-> Última actualización: {{FECHA_ACTUALIZACION}}
->
-> **1. Qué es.** {{NOMBRE_APP}} es un reproductor de música que funciona en tu navegador con archivos que ya tienes. La app no
-> vende, presta ni distribuye música.
-> <!-- cuentas -->
-> La cuenta es opcional y solo sirve para sincronizar playlists.
-> <!-- /cuentas -->
->
-> **2. Tu música es tu responsabilidad.** Solo debes reproducir archivos que tengas derecho a usar. La app no sube tus archivos ni
-> verifica su origen.
->
-> <!-- sin cuentas -->
-> **3. Cuentas.** Esta versión no tiene cuentas. Si algún día se añaden, actualizaremos estos términos antes.
-> <!-- /sin cuentas -->
-> <!-- cuentas -->
-> **3. Tu cuenta.** Debes dar un correo válido y cuidar tu contraseña. Puedes dejar de usar la cuenta y pedir su eliminación en
-> cualquier momento. Podemos suspender una cuenta que se use para atacar el servicio o a otras personas (por ejemplo, intentos
-> automatizados de acceso o abuso de la sincronización).
-> **[Decides tú]** edad mínima. Sugerencia: 13 años con autorización de padre, madre o tutor hasta los 18. **[Abogado]** validez de
-> esa fórmula en México.
-> <!-- /cuentas -->
->
-> **4. Licencia de uso.** Te damos permiso personal, gratuito y no exclusivo para usar la app. No puedes usarla para ofrecer un
-> servicio a terceros ni intentar saltarte sus límites técnicos.
-> El código fuente se publica bajo la **PolyForm Noncommercial License 1.0.0** (archivo `LICENSE` del repositorio): se puede leer,
-> usar y modificar sin fines comerciales; usarlo para vender o lucrar requiere permiso del titular. **[Abogado]** si esta cláusula y
-> la licencia son coherentes entre sí y qué cuenta como «no comercial» (por ejemplo, un uso interno en una empresa).
->
-> **5. Disponibilidad.** La app se ofrece tal como está, sin garantía de que funcione en todos los navegadores o dispositivos ni de
-> que esté siempre disponible. Lo que guardas en tu navegador depende de él: si borras sus datos o el navegador libera espacio,
-> puede perderse. Usa la copia de seguridad (Ajustes → Privacidad y datos) para conservar tus playlists y ajustes.
->
-> **6. Límite de responsabilidad.** En la medida en que la ley lo permita, no respondemos por pérdida de datos guardados en tu
-> dispositivo ni por fallos del navegador o del sistema operativo. **[Abogado]** alcance frente a la Ley Federal de Protección al
-> Consumidor, sobre todo si hay funciones de pago.
->
-> **7. Apoyo voluntario.** Si eliges apoyar el proyecto con una aportación, es voluntaria y no te da derecho a funciones, soporte
-> prioritario ni reembolsos, salvo error en el cobro. **[Decides tú]** política de reembolso; **[Abogado]** tratamiento fiscal y de
-> consumo de las aportaciones (ver `MONETIZACION.md`).
->
-> **8. Cambios.** Publicaremos los cambios con su fecha en {{URL_APP}}/terminos. Si son relevantes, avisaremos por correo a quien tenga
-> cuenta con al menos [15] días de anticipación.
->
-> **9. Ley y jurisdicción.** Estos términos se rigen por las leyes de México. **[Decides tú]** tribunales competentes (por ejemplo,
-> los de [ciudad]). **[Abogado]** si esa cláusula es válida frente a consumidores.
->
-> **10. Contacto.** {{CORREO_PRIVACIDAD}}.
+Desde el 2026-11-16 viven en `TERMINOS.md` (fuente de `/terminos`), con su fundamento por cláusula. Este archivo ya no los contiene.
 
 ---
 
@@ -229,28 +205,29 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 en el navegador es lo que la persona pide al usarla (su biblioteca, sus ajustes, su sesión) y no se usa para nada más. Un banner
 aquí sería ruido y daría a entender un rastreo que no existe.
 
-Basta con esta página, enlazada desde el pie de la landing y desde Ajustes:
+Basta con esta página (`/almacenamiento`; hoy solo accesible por su dirección, sin enlace):
 
 > **Cookies y almacenamiento local**
 >
 > {{NOMBRE_APP}} no usa cookies ni herramientas de rastreo.
 >
-> Para funcionar sin conexión y sin cuenta, guarda en el almacenamiento de tu navegador:
+> Para recordar tu música y tus ajustes sin pedirte una cuenta, guarda en el almacenamiento de tu navegador:
 >
 > | Qué | Para qué | Cómo borrarlo |
 > |---|---|---|
-> | Tu biblioteca: datos de cada canción (título, artista, portada, ruta dentro de la carpeta que elegiste) y el permiso para leer esa carpeta | Que no tengas que volver a añadir tu música cada vez | Ajustes → Biblioteca → quitar la carpeta |
+> | Tu biblioteca: datos de cada canción (título, artista, portada, letra, ruta dentro de la carpeta que elegiste) y el permiso para leer esa carpeta | Que no tengas que volver a añadir tu música cada vez | Ajustes → Biblioteca → quitar la carpeta |
+> | Lo que cambies en «Editar información» (título, artista, álbum y demás datos, y la carátula que elijas, reducida y sin sus metadatos). Tus archivos no se modifican | Que la app muestre tus cambios | «Restablecer» en «Editar información», o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > | Copias de tus archivos, solo en navegadores que no permiten recordar carpetas (Firefox, Safari) | Que tu música siga disponible al volver | Ídem |
 > | Playlists, cola, posición de reproducción y ajustes de sonido y fondo | Que la app esté como la dejaste | Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > | Tu nombre y tu foto de perfil, si los pones (la foto se guarda reducida y sin sus metadatos) | Mostrarlos en la app | Ajustes → Perfil, o Ajustes → Privacidad y datos → Borrar datos de este dispositivo |
 > <!-- cuentas -->
 > | Tu sesión, si iniciaste sesión | No pedirte la contraseña cada vez | Cerrar sesión |
 >
-> Nada de esto se envía a nosotros, salvo tus playlists si tienes cuenta (ver el aviso de privacidad).
+> Nada de esto me llega, salvo tus playlists si tienes cuenta (ver el aviso de privacidad).
 > <!-- /cuentas -->
 > <!-- sin cuentas -->
 >
-> Nada de esto se envía a nosotros.
+> Nada de esto me llega.
 > <!-- /sin cuentas -->
 
 **Si algún día se añade analítica:** elegir una que no use cookies ni identificadores persistentes (ver `AJUSTES_PRIVACIDAD.md` §4) y,
@@ -284,27 +261,26 @@ Y en la app: un botón "Eliminar cuenta" y una exportación de los datos de la c
 
 ---
 
-## 7. Decisiones tuyas
+## 7. Decisiones
 
-| # | Decisión | Por qué importa |
+| # | Decisión | Estado |
 |---|---|---|
-| L1 | **Resuelta 2026-11-12:** persona física. Responsable: `{{RESPONSABLE}}` | Va en la primera línea del aviso |
-| L2 | **Resuelta 2026-11-12:** se publica el domicilio particular, `{{DOMICILIO}}`. **[Pendiente: confirmar con el abogado que basta]** | Art. 15, fr. I |
-| L3 | **Resuelta en parte 2026-11-12:** `{{CORREO_PRIVACIDAD}}` es un correo temporal de Gmail. **[Pendiente: correo en el dominio propio, cuando exista]** | Medio ARCO |
-| L4 | Plazo de borrado tras eliminar la cuenta | Aviso, sección "Cuánto tiempo" |
-| L5 | Edad mínima | Términos, cláusula 3 |
-| L6 | **Resuelta 2026-11-12:** PolyForm Noncommercial 1.0.0, repositorio público; archivo `LICENSE` añadido con `{{RESPONSABLE}}` como titular. **[Pendiente: completar el titular al publicar; revisión del abogado]** | Términos, cláusula 4 |
-| L7 | Tribunales competentes | Términos, cláusula 9 |
-| L8 | **Resuelta 2026-11-12:** no se dirige a la UE por ahora; la sección 6 **no aplica hasta que eso cambie** (se reabre si se anuncia allí, se aceptan euros o se traduce para ese público). Versión en inglés: después, cuando haya nombre en inglés | Sección 6 |
-| L9 | **Resuelta 2026-11-12:** sí, «Eliminar cuenta» y «Datos de tu cuenta» se implementan **antes de abrir registros** | Aviso, sección «Tus derechos» |
+| L1 | Responsable: persona física, nombre completo (`{{RESPONSABLE}}`) | **Resuelta** 2026-11-12; reconfirmada 2026-11-16 |
+| L2 | Domicilio (`{{DOMICILIO}}`) | **Resuelta 2026-11-16: domicilio particular**, tras ver las opciones (oficina virtual, despacho, persona moral) en `INVESTIGACION_LEGAL.md` §5. Se puede cambiar sin tocar el texto: solo el valor en `privado/` |
+| L3 | Correo (`{{CORREO_PRIVACIDAD}}`) | **Resuelta 2026-11-16:** alias en el dominio propio, ya funcional (valor en `privado/`). Sirve también para términos y avisos de derechos de autor |
+| L4 | Plazo de borrado tras eliminar la cuenta | **Propuesta:** los del art. 31 (20 + 15 días hábiles), porque eliminar la cuenta es una cancelación. Pendiente si se quiere uno más corto |
+| L5 | Edad mínima | **Propuesta:** 18 años o autorización de madre, padre o tutor (solo con cuentas). Pendiente de confirmar |
+| L6 | Licencia del código | **Resuelta** 2026-11-12: PolyForm Noncommercial 1.0.0. Su relación con los términos, en `TERMINOS.md` cláusula 5 |
+| L7 | Tribunales | **Resuelta 2026-11-16:** leyes de México sin fijar ciudad (`TERMINOS.md` cláusula 17) |
+| L8 | Unión Europea | **Resuelta** 2026-11-12: no se dirige a la UE; §6 no aplica |
+| L9 | «Eliminar cuenta» y «Datos de tu cuenta» en la app antes de abrir registros | **Resuelta** 2026-11-12. «Datos de tu cuenta» existe; «Eliminar cuenta», no |
 
 ## 8. Lo omitido y los riesgos
 
-- **No verifiqué** si ya existe un Reglamento de la ley de 2025, ni la política de retención de IP de Vercel en sitios estáticos.
-- **No cubrí** la app nativa: Google Play pide su propio formulario de seguridad de datos y borrado de cuenta dentro de la app y por
-  enlace web (`PLAN.md`, Fase 11). Cuando exista, el inventario cambia (Keystore, permisos de almacenamiento).
-- **Riesgo actual:** el proyecto de Supabase es compartido con otra app (`SUPABASE.md`). Para el aviso, ambas apps tienen el mismo
-  encargado y la misma región; si la otra app tiene otro responsable, hay que separar proyectos antes de publicar el aviso.
-- **Riesgo actual:** no hay forma de eliminar la cuenta desde la app. Un aviso que promete borrar en 30 días obliga a hacerlo a mano.
-- **Riesgo actual:** el correo de confirmación sale del remitente genérico de Supabase; parece suplantación y no lleva el nombre del
-  responsable. Se resuelve con SMTP propio (D9).
+- **Antes de abrir cuentas** (bloqueante): aviso simplificado y casilla de términos en el registro, con registro de la versión aceptada;
+  «Eliminar cuenta» en la app; aplicar la migración que deja vacío el nombre visible en vez de copiar el correo (o mantener la frase del
+  aviso que lo dice); separar el proyecto de Supabase si la otra app que lo comparte tiene otro responsable (`SUPABASE.md`); SMTP propio
+  para que los correos no salgan del remitente genérico (D9). Lista priorizada en `REVISION_ABOGADO.md`.
+- **No verificado:** vigencia de los Lineamientos de 2013 y si hay Reglamento nuevo; retención de IP de Vercel y plan del proyecto; qué
+  datos ve el responsable en Stripe.
+- **No cubierto:** la app nativa (Google Play pide su formulario de seguridad de datos y borrado de cuenta dentro de la app y por web).

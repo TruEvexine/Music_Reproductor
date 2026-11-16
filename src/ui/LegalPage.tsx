@@ -8,7 +8,7 @@ export type LegalDoc = keyof typeof legal;
 export const LEGAL_PATHS: Record<string, LegalDoc> = { "/privacidad": "aviso", "/terminos": "terminos", "/almacenamiento": "almacenamiento" };
 
 /**
- * Renderiza un borrador de docs/producto/LEGAL_BORRADORES.md (§3.1, §4 o §5; el texto sale de `virtual:docs`, sin las notas internas y con los
+ * Renderiza un borrador de docs/producto (LEGAL_BORRADORES.md §3.1 o §5, o la sección «Texto» de TERMINOS.md; el texto sale de `virtual:docs`, sin las notas internas y con los
  * datos personales sustituidos al compilar). Mientras sea borrador lo dice arriba y pide a los buscadores que no lo indexen.
  */
 export function LegalPage({ doc }: { doc: LegalDoc }) {

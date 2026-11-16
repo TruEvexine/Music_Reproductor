@@ -4,6 +4,9 @@ import { sha256 } from "./sha256";
 
 export type MetadataStatus = "loading" | "available" | "partial" | "error";
 
+/** Campos que el usuario puede editar (core/edits.ts). */
+export type EditableField = "title" | "artist" | "albumArtist" | "album" | "year" | "genre" | "trackNumber" | "discNumber" | "coverHash";
+
 export interface Track {
   id: string;
   title: string;
@@ -27,6 +30,7 @@ export interface Track {
   playedAt?: number;
   duration?: number;
   trackNumber?: number;
+  discNumber?: number;
   year?: number;
   genre?: string;
   bitrate?: number;
@@ -42,6 +46,8 @@ export interface Track {
   unplayable?: boolean;
   /** El navegador dice que no sabe decodificar el formato (canPlayType): se marca al importar, no al fallar. */
   unsupported?: boolean;
+  /** Solo en memoria: los valores del archivo de los campos que el usuario editó (core/edits.ts). La pista muestra lo editado; su identidad sale de aquí. */
+  source?: Partial<Pick<Track, EditableField>>;
 }
 
 export const UNKNOWN_ARTIST = "Artista desconocido";
@@ -65,9 +71,11 @@ export function folderOf(path: string): string {
 /**
  * Identidad `track:v1` para playlists: título|artista|álbum|duración.
  * No cambiar el algoritmo: las playlists guardadas dependen de él (track:v2 llegará como añadido, no como reemplazo).
+ * Siempre con los metadatos del archivo: si la pista trae ediciones (`source`), cuentan los originales.
  */
-export function trackV1Id(track: { title: string; artist: string; album: string; duration?: number }): string {
-  const normalized = [track.title, track.artist, track.album, track.duration ? Math.round(track.duration) : ""]
+export function trackV1Id(track: { title: string; artist: string; album: string; duration?: number; source?: Partial<Pick<Track, "title" | "artist" | "album">> }): string {
+  const { title, artist, album } = { ...track, ...track.source };
+  const normalized = [title, artist, album, track.duration ? Math.round(track.duration) : ""]
     .map((value) => String(value).trim().normalize("NFKC").toLocaleLowerCase())
     .join("|");
   return `track:v1:${encodeURIComponent(normalized)}`;

@@ -32,11 +32,13 @@ No. La app lee tus canciones en tu dispositivo y nunca las envía a ningún lado
 <!-- /sin cuentas -->
 <!-- cuentas -->
 No. La app lee tus canciones en tu dispositivo y nunca las envía a ningún lado. Si inicias sesión, tu cuenta solo guarda tus playlists:
-el nombre de cada una y, por canción, el título, el artista, el álbum y la duración.
+el nombre de cada una y, por canción, el título, el artista, el álbum y la duración tal como vienen en el archivo (lo que edites en la
+app no se sube).
 <!-- /cuentas -->
 
 Comprobado en: `vercel.json` (`connect-src`: el propio dominio y el servidor de cuentas), `src/sync/` (solo playlists),
-`src/sync/playlistService.ts` (`track_identifier` = `track:v1` de `src/core/track.ts`: título|artista|álbum|duración).
+`src/sync/playlistService.ts` (`track_identifier` = `track:v1` de `src/core/track.ts`: título|artista|álbum|duración, siempre con los
+originales del archivo aunque haya ediciones: `source` en `src/core/edits.ts`).
 
 ### ¿Necesito una cuenta?
 <!-- sin cuentas -->
@@ -70,10 +72,12 @@ Comprobado en: `src/ui/LibraryView.tsx` (`ACCEPT`), `PLAN.md` Fase 3 (marcado po
 
 ### ¿Por qué una canción no tiene portada?
 Porque el archivo no trae portada (o la que trae no se puede leer) y junto a él no hay una imagen llamada cover, folder, front o album.
-En ese caso la app le pone una funda de color con una onda, la misma para todas las canciones del álbum.
+En ese caso la app le pone una funda de color con una onda, la misma para todas las canciones del álbum. Puedes elegir una imagen tú
+en **Editar información**: mantén pulsada la canción (o haz clic derecho) o toca el lápiz del reproductor.
 
 Comprobado en: `src/platform/web/metadata.worker.ts` (portada incrustada, si no la de la carpeta; ≤ 12 MB y tipo admitido),
-`src/core/library.ts` (`isFolderCover`), `src/core/coverArt.ts` (funda estable por álbum), `DESIGN.md` «Funda generada».
+`src/core/library.ts` (`isFolderCover`), `src/core/coverArt.ts` (funda estable por álbum), `DESIGN.md` «Funda generada»,
+`src/ui/EditDialog.tsx` («Elegir imagen»; se abre desde la hoja de acciones de la fila y desde el lápiz del reproductor grande).
 
 ### ¿Funciona sin internet?
 Mientras la app está abierta, sí: puedes escuchar tu música y crear playlists sin conexión.

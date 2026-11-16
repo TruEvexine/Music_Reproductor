@@ -27,7 +27,7 @@ UI (src/ui)  →  estado (src/state)  →  core (src/core) + motor (src/engine) 
 
 | Carpeta | Qué contiene | Regla |
 |---|---|---|
-| `src/core/` | Cola, shuffle, identidad de pista (v1 y v2), formato, búsqueda, paleta, mensajes de Auth, ajustes de audio y de fondo, ritmo, calidad adaptativa, biblioteca (escaneo por diferencias, vistas, orden), letras, outbox de playlists y copia de seguridad | **TypeScript puro**: sin `window`, `document` ni Capacitor. Todo con test en Vitest |
+| `src/core/` | Cola, shuffle, identidad de pista (v1 y v2), ediciones de metadatos superpuestas (`edits.ts`: la identidad sale siempre de lo del archivo), formato, búsqueda, paleta, mensajes de Auth, ajustes de audio y de fondo, ritmo, calidad adaptativa, biblioteca (escaneo por diferencias, vistas, orden), letras, outbox de playlists y copia de seguridad | **TypeScript puro**: sin `window`, `document` ni Capacitor. Todo con test en Vitest |
 | `src/engine/` | `PlayerEngine`: único dueño del `<audio>` (y del grafo Web Audio) | No conoce React, la cola ni la biblioteca |
 | `src/state/` | Stores Zustand: `player` (fuente única de verdad de la reproducción), `library` (biblioteca persistente), `playlists` (locales primero), `background`; `covers` (URLs de portada con conteo de uso) | La UI solo lee el store y llama a `player.*` / `library.*` |
 | `src/platform/` | Fronteras (`types.ts`) y su implementación web (`web/`) | Una interfaz por frontera, nada más |
@@ -46,7 +46,7 @@ UI (src/ui)  →  estado (src/state)  →  core (src/core) + motor (src/engine) 
 Una base de código, tres destinos (web, Android, iPhone con Capacitor). Ver `PLAN.md` §3.7 y `docs/ARQUITECTURA_APP.md`.
 
 - Fronteras: `LocalLibrary`, `AudioSession`, `SecureStore`, `Storage`, `Connectivity`. Hoy solo existe la versión web; la nativa se escribe cuando haya Android Studio.
-- Pruebas de navegador: `scripts/prueba-biblioteca.mjs` (biblioteca, Chromium/Firefox/WebKit, 5 000 pistas de `node scripts/gen-biblioteca.mjs`), `prueba-audio.mjs`, `prueba-menu.mjs`, `prueba-fondo.mjs`, `prueba-enlace-magico.mjs` (vuelta del enlace de correo con PKCE y adopción de playlists, con Supabase interceptado; `--sin-cuentas` comprueba el build sin cuentas). Todas aceptan la URL base como primer argumento. Las que abren la cuenta (`prueba-enlace-magico`, `prueba-privacidad`, `prueba-movimiento`, `verificar-csp`) necesitan un servidor con `VITE_CUENTAS=1`.
+- Pruebas de navegador: `scripts/prueba-biblioteca.mjs` (biblioteca, Chromium/Firefox/WebKit, 5 000 pistas de `node scripts/gen-biblioteca.mjs`), `prueba-audio.mjs`, `prueba-menu.mjs`, `prueba-fondo.mjs`, `prueba-edicion.mjs` (editar, restablecer, reescanear, identidad estable y carátula), `prueba-enlace-magico.mjs` (vuelta del enlace de correo con PKCE y adopción de playlists, con Supabase interceptado; `--sin-cuentas` comprueba el build sin cuentas). Todas aceptan la URL base como primer argumento. Las que abren la cuenta (`prueba-enlace-magico`, `prueba-privacidad`, `prueba-movimiento`, `verificar-csp`) necesitan un servidor con `VITE_CUENTAS=1`.
 - Variantes por plataforma con `data-platform="web|android|ios"` en `<html>` y CSS; nunca forks de componentes enteros.
 - `VITE_TARGET=web|android|ios`. En nativo: `base: './'`, router con hash, CSP por `<meta>`, sin dominios absolutos.
 - **Todo el estado del usuario se escribe primero en IndexedDB** y funciona sin red. Supabase es sincronización opcional. La UI nunca espera a la red.

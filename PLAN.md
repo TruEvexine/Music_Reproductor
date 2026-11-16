@@ -836,6 +836,8 @@ Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMT
 
    **Consecuencia:** `npm run build` en local exige esas tres variables (o valores de prueba). Skills aplicadas en los seis puntos: ponytail; design-taste-frontend, ui-ux-pro-max (sin buscador: no hay Python), design-motion-principles, make-interfaces-feel-better e impeccable (no se ejecutó `impeccable context`: solo se leyó su guía).
 
+   **2026-11-16 — textos legales verificados:** los términos pasan a `docs/producto/TERMINOS.md` (`parseLegal` los lee de su sección «Texto»; `prueba-legal.mjs` actualizada), el aviso se reescribe con plazos de ley citados y cada afirmación sobre la app queda en `COPY_LEGAL.md`; investigación en `INVESTIGACION_LEGAL.md`, avisos de terceros generados por `scripts/licencias.mjs` y preguntas para la abogada en `REVISION_ABOGADO.md` (D28). Las páginas siguen sin enlace público salvo Ajustes → Acerca de.
+
 ### 11.1l Barra de progreso «confirmar al soltar» y animación de carga (2026-11-13)
 
 1. **Barra de progreso**: antes buscaba en cada movimiento del arrastre (se oía a trompicones, como a doble velocidad). Ahora `Range` tiene `commit`: arrastrando solo se mueven el tirador y el tiempo de destino; al soltar, tocar o con cada flecha, una sola búsqueda. `PlayerEngine.seek`, sonando con Web Audio, baja el volumen general 40 ms (reloj de audio), salta y lo sube al llegar `seeked` (respaldo de 1 s si no llega); una búsqueda a mitad de otra anula la anterior, y cambiar de pista o parar devuelve el volumen. En pausa o sin Web Audio salta directo. Pruebas: `scripts/prueba-progreso.mjs` (cuenta escrituras de `currentTime` con audio real: 0 arrastrando, 1 al soltar, 1 por toque y por flecha; volumen entero tras interrumpir) y `scripts/prueba-chasquido.mjs` (mayor salto entre muestras al buscar: **0,55 antes, 0,035 después**, igual que el tono sonando; también interrumpida por otras dos).
@@ -849,6 +851,18 @@ Lo pendiente o bloqueado (foto en la nube, `mp_play_daily`, eliminar cuenta, SMT
 Inventario a 1024, 1280, 1440, 1920 y 2560 px: Ajustes y Ayuda eran una columna de 592 px pegada a la izquierda; el menú ≡ no dejaba ver el ecualizador entero en su alto fijo. Biblioteca, playlists, cola, reproductor y diálogos, bien. Elegido por el usuario: Ajustes con índice + contenido, Ayuda en dos columnas, menú de 31 rem desde 1000 px (ecualizador en una fila). Móvil y lo de N3-1 (alto del menú, vuelta aleatoria) sin cambios.
 
 Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel-better (revisión rápida).
+
+### 11.1n Editar la información de cada canción (2026-11-16)
+
+- [x] **Datos:** migración v4, que solo añade el almacén `edits` `{ id, campos editados }` con la clave del id de pista (`raíz:ruta`, que sobrevive al reescaneo). Una clave presente significa que el campo está editado; `null`, que se vació a propósito. `tracks` sigue guardando solo lo leído del archivo. Prueba de migración interrumpida como la de v3.
+- [x] **Superposición** (`core/edits.ts`): la pista en memoria muestra lo editado y guarda los originales en `source`. La biblioteca la reaplica al arrancar, en cada parche de metadatos (reescaneo o archivo cambiado) y al insertar pistas. Álbumes (por álbum y artista del álbum editados), artistas, búsqueda, orden (con n.º de disco, que ahora se lee del archivo), carrusel, funda por defecto estable por álbum, Media Session y fondo usan lo editado.
+- [x] **Identidad:** `trackV1Id` lee siempre `source`: playlists y nube usan lo del archivo. Cola, historial y letras van por id; `track:v2` es el contenido. Comprobado en `core/edits.test.ts` y `scripts/prueba-edicion.mjs`.
+- [x] **Carátula elegida:** JPEG/PNG/WebP comprobado por los primeros bytes (`sniffImageType`), ≤ 12 MB y ≤ 40 MP. Se recodifica en el worker de portadas a ≤ 1024 px sin EXIF, con miniaturas de 600 y 96 y paleta con `paletteVersion`. Se guarda en `covers` al pulsar «Guardar» y se borra al restablecerla si ya nadie la usa. Manda sobre la del archivo y sobre la funda (D27).
+- [x] **UI** (`ui/EditDialog.tsx`): se abre desde la hoja de acciones de la fila (biblioteca y cola) y con el lápiz del reproductor grande. «Original» y restablecer por campo, «Restablecer todo», errores junto al campo con foco. Hoja en móvil con «Guardar» fijo abajo; desde 1000 px, carátula a la izquierda y campos en dos columnas (patrón de Ajustes). Usa la entrada y salida de los diálogos y no se anima con movimiento reducido.
+- [x] **Privacidad:** local y sin subir; «Borrar datos de este dispositivo» vacía `edits`. Fila «Información editada» en Privacidad y datos; aviso, almacenamiento, FAQ y `COPY_LEGAL.md` al día.
+- [ ] Edición en lote y «aplicar a todo el álbum»: D29.
+
+Skills aplicadas: ponytail, impeccable (contexto y craft floor), make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max, design-motion-principles (solo los tokens existentes, sin animación nueva).
 
 ### 11.2 Funciones nuevas (alcance)
 

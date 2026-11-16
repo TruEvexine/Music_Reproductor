@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { storage } from "../platform";
-import { coverPalette, scaleCover } from "../platform/web/covers";
+import { coverPalette, makeCover, scaleCover } from "../platform/web/covers";
 import { hueOf } from "../core/coverArt";
+import { sniffImageType } from "../core/coverMime";
+import { sha256Hex } from "../core/track";
 import { fallbackPalette, PALETTE_VERSION, paletteIsCurrent, sleevePalette } from "../core/palette";
 import type { Palette } from "../core/palette";
 
@@ -9,7 +11,7 @@ import type { Palette } from "../core/palette";
 // (para no recrearlas al hacer scroll) y el resto se revocan. Además, las portadas grandes se sirven al tamaño real de pantalla
 // (ancho × densidad): si lo guardado se queda corto, un worker lo rehace desde el original (platform/web/covers.ts) y el resultado se cachea aquí.
 export type CoverSize = "small" | "large";
-interface CoverRecord {
+export interface CoverRecord {
   hash: string;
   small: Blob;
   large: Blob;
@@ -138,6 +140,26 @@ function paletteOf(hash: string): Promise<Palette> {
     palettes.set(hash, found);
   }
   return found;
+}
+
+/** Mismo tope que las portadas incrustadas. */
+export const MAX_CHOSEN_COVER_BYTES = 12 * 1024 * 1024;
+
+/**
+ * Carátula elegida por el usuario para una pista: tipo comprobado por contenido (JPEG, PNG o WebP), ≤ 12 MB, recodificada a ≤ 1024 px sin EXIF, con sus miniaturas
+ * y su paleta (con `paletteVersion`). No se guarda aquí: la guarda la biblioteca junto con la edición (al pulsar «Guardar»).
+ */
+export async function prepareCover(file: Blob): Promise<CoverRecord | "size" | "type" | "unreadable"> {
+  if (file.size > MAX_CHOSEN_COVER_BYTES) return "size";
+  const type = sniffImageType(new Uint8Array(await file.slice(0, 12).arrayBuffer()));
+  if (!type) return "type";
+  const made = await makeCover(file.slice(0, file.size, type)).catch(() => undefined);
+  if (!made) return "unreadable";
+  const { palette, ...blobs } = made;
+  const hash = (await sha256Hex(new Uint8Array(await made.master.arrayBuffer()))).slice(0, 32);
+  resolved.set(hash, palette);
+  palettes.set(hash, Promise.resolve(palette));
+  return { hash, ...blobs, palette, paletteVersion: PALETTE_VERSION };
 }
 
 /** Paleta de la portada `hash`. Sin portada, la de la funda generada (`seed`: su tono tiñe el ambiente; el acento es el neutro); sin semilla o con portada sin color, la neutra. */

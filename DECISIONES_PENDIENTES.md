@@ -106,7 +106,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 ### D24 — Cuentas: orden antes de abrir registros (2026-11-12)
 - **Decidido:** antes de abrir registros, los cuatro: eliminar cuenta, exportar datos de la cuenta, recuperar contraseña y SMTP propio. No se abre a la UE por ahora; el inglés queda para después.
 - **Dependencia que bloquea:** el SMTP propio y el correo de privacidad en dominio propio necesitan **dominio**, y este necesita **nombre** (D22). Hasta entonces los registros no se deben abrir al público.
-- **Sin decidir todavía:** edad mínima (L5), plazo de borrado tras eliminar la cuenta (L4), tribunales (L7) y si las playlists locales se conservan al eliminar la cuenta (`AJUSTES_PRIVACIDAD.md` §2.3).
+- **Sin decidir todavía:** edad mínima (L5, propuesta: 18 o autorización), plazo de borrado tras eliminar la cuenta (L4, propuesta: los del art. 31 LFPDPPP) y si las playlists locales se conservan al eliminar la cuenta (`AJUSTES_PRIVACIDAD.md` §2.3). Tribunales (L7): resuelto el 16-11-2026, leyes de México sin fijar ciudad.
 
 ### D25 — Perfil y recaps: decisiones y un punto por reconciliar (2026-11-12)
 - **Decidido:** nombre visible vacío por defecto; foto local y, con cuenta, en bucket privado; solo nombre y foto como datos de perfil; recaps compartidos como imagen generada en el dispositivo (sin enlace público).
@@ -125,3 +125,14 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Decidido:** ninguna de las tres propuestas. El usuario aportó una guía propia (funda cuadrada, estática y mate; un solo motivo de forma de onda; márgenes amplios; solo color y motivo en miniaturas; el tono tiñe el fondo reactivo, que concentra el movimiento; solo para fundas generadas). Implementada y revisada contra `DESIGN.md`: `core/coverArt.ts`, `ui/parts.tsx`, `sleevePalette` en `core/palette.ts`.
 - **Revisión de la guía:** estable «por álbum o por pista suelta» (misma clave que Álbumes); **sin título ni artista en la funda** porque la interfaz ya los muestra junto a ella en todos los sitios (no hay dónde no duplicarlos); el acento sigue siendo el neutro y solo el ambiente toma el tono. Borrados «campos», inicial, nota, tarjeta, `COVER_STYLE` y `--drift`.
 - **Pendiente:** que la mires en un dispositivo real; las capturas de `docs/capturas/` se regeneran al final de la tanda.
+
+### D28 — Textos legales: revisión de una persona abogada (2026-11-16)
+- **Hecho:** `INVESTIGACION_LEGAL.md`, `TERMINOS.md` (fuente de `/terminos`), aviso reescrito en `LEGAL_BORRADORES.md`, `COPY_LEGAL.md`, `LICENCIAS_TERCEROS.md` (con `public/licencias-terceros.txt`).
+- **Decidido 2026-11-16:** nombre completo como responsable; correo de privacidad en el dominio propio (valor en `docs/producto/privado/`); domicilio particular; leyes de México sin fijar ciudad.
+- **Pendiente tuyo:** llevar `REVISION_ABOGADO.md` a la consulta (P0 antes de publicar los textos; P1 antes de abrir cuentas; P2 antes del café). Concretar «reincidente» (TERMINOS cláusula 6) y confirmar el compromiso de gratuidad (cláusula 15).
+
+### D29 — Edición en lote y «aplicar a todo el álbum» (2026-11-16)
+- **Qué:** hoy «Editar información» edita una canción a la vez (PLAN §11.1n). Falta elegir varias y cambiar un campo común (álbum, artista del álbum, año, género, carátula) de una vez, y un atajo «aplicar a todo el álbum» desde la cabecera de un álbum.
+- **Bloquea:** nada; queda fuera a propósito en esta tanda.
+- **Cambio mínimo que haría falta:** (1) `library.saveEdits(changes: { id, edit }[], cover?)` en `state/library.ts`, que haga lo mismo que `saveEdit` en una sola escritura de `edits` y un solo `setState`; (2) en `core/edits.ts`, una función que mezcle un parche común sobre la edición de cada pista (los campos sin tocar quedan como estaban); (3) en `ui/EditDialog.tsx`, un modo «varias» que reciba los ids, muestre «Varios valores» como marcador en los campos que difieren y solo guarde los campos tocados; (4) la entrada: «Editar el álbum» en la cabecera de grupo de Álbumes (`LibraryView.tsx`) con los `trackIds` del grupo. La selección múltiple en listas no existe: es otra decisión.
+- **Recomendación:** empezar por «Editar el álbum» desde su cabecera, sin selección múltiple.

@@ -33,6 +33,10 @@ export const migrations: Migration[] = [
       await cursor.update({ ...track, hasLyrics: true });
     }
   },
+  // v4: ediciones de metadatos por pista { id, ...campos editados } (core/edits.ts). Se superponen a lo leído del archivo; `tracks` no cambia.
+  (db) => {
+    db.createObjectStore("edits", { keyPath: "id" });
+  },
 ];
 
 export const DB_NAME = "reproductor";

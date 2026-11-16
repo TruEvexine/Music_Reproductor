@@ -13,6 +13,7 @@ export type TrackMetadata = Partial<
     | "albumArtist"
     | "duration"
     | "trackNumber"
+    | "discNumber"
     | "year"
     | "genre"
     | "bitrate"

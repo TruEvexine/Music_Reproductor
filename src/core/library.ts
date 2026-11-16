@@ -128,6 +128,7 @@ export function sortGroups(groups: TrackGroup[], sort: GroupSort): TrackGroup[] 
 const albumOrder = (a: Track, b: Track) =>
   unknownLast(a.album, b.album) ||
   collator.compare(a.album, b.album) ||
+  (a.discNumber ?? 1) - (b.discNumber ?? 1) ||
   (a.trackNumber ?? Infinity) - (b.trackNumber ?? Infinity) ||
   collator.compare(a.title, b.title);
 
