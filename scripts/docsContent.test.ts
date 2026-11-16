@@ -35,7 +35,7 @@ describe("comprobación de build", () => {
 });
 
 function parseLegalAll() {
-  return Object.values(parseLegal(read("LEGAL_BORRADORES.md"))).join("\n");
+  return Object.values(parseLegal(read("LEGAL_BORRADORES.md"), read("TERMINOS.md"))).join("\n");
 }
 
 describe("FAQ.md", () => {
@@ -54,8 +54,8 @@ describe("FAQ.md", () => {
   });
 });
 
-describe("LEGAL_BORRADORES.md", () => {
-  const legal = parseLegal(read("LEGAL_BORRADORES.md"));
+describe("LEGAL_BORRADORES.md y TERMINOS.md", () => {
+  const legal = parseLegal(read("LEGAL_BORRADORES.md"), read("TERMINOS.md"));
 
   it("extrae aviso, términos y almacenamiento sin notas internas", () => {
     for (const [name, text] of Object.entries(legal)) {
@@ -63,7 +63,9 @@ describe("LEGAL_BORRADORES.md", () => {
       expect(text, name).not.toMatch(/Decides tú|\[Abogado\]/);
     }
     expect(legal.aviso).toContain("{{RESPONSABLE}}");
-    expect(legal.terminos).toContain("**10. Contacto.**");
+    expect(legal.terminos).toMatch(/^\*\*Términos de uso de \{\{NOMBRE_APP\}\}\*\*/);
+    expect(legal.terminos).toContain("**18. Contacto.**");
+    expect(legal.terminos).not.toContain("Por qué cada cláusula"); // la tabla de fundamentos es interna
     expect(legal.almacenamiento).toContain("| Qué | Para qué | Cómo borrarlo |");
   });
 
@@ -76,7 +78,7 @@ describe("LEGAL_BORRADORES.md", () => {
 
 describe("textos legales publicados", () => {
   it("no llevan datos pendientes entre corchetes que el build no detectaría: nombre, fecha y URL son marcadores", () => {
-    expect(Object.values(parseLegal(read("LEGAL_BORRADORES.md"))).join("\n")).not.toMatch(/\[(Nombre de la app|fecha|URL|ciudad)\]/);
+    expect(parseLegalAll()).not.toMatch(/\[(Nombre de la app|fecha|URL|ciudad)\]/);
   });
 });
 
@@ -107,7 +109,7 @@ describe("forAccounts", () => {
 describe("FAQ y borradores en los dos estados de cuentas", () => {
   const publish = (enabled: boolean) => {
     const faq = parseFaq(forAccounts(read("FAQ.md"), enabled));
-    const legal = parseLegal(forAccounts(read("LEGAL_BORRADORES.md"), enabled));
+    const legal = parseLegal(forAccounts(read("LEGAL_BORRADORES.md"), enabled), forAccounts(read("TERMINOS.md"), enabled));
     return { faq: JSON.stringify(faq), questions: faq.flatMap((group) => group.items.map((item) => item.question)), legal: Object.values(legal).join("\n") };
   };
   it("no publica ningún marcador", () => {
@@ -120,7 +122,7 @@ describe("FAQ y borradores en los dos estados de cuentas", () => {
     const { questions, legal, faq } = publish(false);
     expect(questions).not.toContain("Olvidé mi contraseña.");
     expect(questions).not.toContain("Si creo una cuenta, ¿qué se guarda en ella?");
-    expect(legal).not.toMatch(/Si creas una cuenta|Supabase|Tu sesión/);
+    expect(legal).not.toMatch(/Si creas una cuenta|Supabase|Tu sesión|contra-aviso|Datos de tu cuenta|desde el correo de la cuenta/);
     expect(legal).toMatch(/no tiene cuentas/);
     expect(faq).toMatch(/sin dar ningún dato personal/);
   });
@@ -158,6 +160,7 @@ describe("FAQ para personas, en los dos estados de cuentas", () => {
     for (const text of ["Sube o baja los graves", "AMOLED (negro puro)", "en Chrome y Edge"]) expect(text).not.toMatch(FORBIDDEN);
   });
 });
+
 // Avisos de terceros (scripts/licencias.mjs): si se añade una dependencia de producción sin regenerar la lista, falla.
 describe("licencias de terceros", () => {
   it("el resumen nombra cada dependencia de producción de package.json", () => {

@@ -54,7 +54,7 @@ function buildGuard(mode: string): Plugin {
 // LEGAL_DOMICILIO, LEGAL_CORREO_PRIVACIDAD, LEGAL_NOMBRE_APP, LEGAL_FECHA_ACTUALIZACION y LEGAL_URL_APP (entorno o .env, ignorado por git).
 function docsContent(mode: string): Plugin {
   const resolved = "\0virtual:docs";
-  const files = ["FAQ.md", "LEGAL_BORRADORES.md"].map((name) => normalizePath(fileURLToPath(new URL(`./docs/producto/${name}`, import.meta.url))));
+  const files = ["FAQ.md", "LEGAL_BORRADORES.md", "TERMINOS.md"].map((name) => normalizePath(fileURLToPath(new URL(`./docs/producto/${name}`, import.meta.url))));
   return {
     name: "docs-content",
     resolveId: (source) => (source === "virtual:docs" ? resolved : undefined),
@@ -66,7 +66,7 @@ function docsContent(mode: string): Plugin {
       const fill = (text: string) => fillMarkers(text, values);
       const read = (file: string) => forAccounts(readFileSync(file, "utf8"), accountsOn(mode));
       const faq = parseFaq(read(files[0])).map(({ group, items }) => ({ group, items: items.map(({ question, answer }) => ({ question, answer: answer.map(fill) })) }));
-      const legal = Object.fromEntries(Object.entries(parseLegal(read(files[1]))).map(([name, text]) => [name, fill(text)]));
+      const legal = Object.fromEntries(Object.entries(parseLegal(read(files[1]), read(files[2]))).map(([name, text]) => [name, fill(text)]));
       return `export const faq = ${JSON.stringify(faq)};\nexport const legal = ${JSON.stringify(legal)};`;
     },
     configureServer(server) {

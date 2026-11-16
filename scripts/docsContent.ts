@@ -1,4 +1,4 @@
-// Contenido de la app que sale de docs/producto (FAQ.md y LEGAL_BORRADORES.md), para que ayuda y páginas legales no se desfasen del documento.
+// Contenido de la app que sale de docs/producto (FAQ.md, LEGAL_BORRADORES.md y TERMINOS.md), para que ayuda y páginas legales no se desfasen del documento.
 // Puro y sin DOM: vite.config.ts lo usa en el módulo virtual `virtual:docs` y scripts/docsContent.test.ts lo comprueba.
 
 export interface FaqGroup {
@@ -90,10 +90,11 @@ export interface LegalDocs {
   almacenamiento: string;
 }
 
-export function parseLegal(markdown: string): LegalDocs {
+/** Aviso y almacenamiento salen de LEGAL_BORRADORES.md; los términos, de la sección «Texto» de TERMINOS.md. */
+export function parseLegal(markdown: string, terms: string): LegalDocs {
   return {
     aviso: legalSection(markdown, /^### 3\.1 /),
-    terminos: legalSection(markdown, /^## 4\. /),
+    terminos: legalSection(terms, /^## Texto$/),
     almacenamiento: legalSection(markdown, /^## 5\. /),
   };
 }

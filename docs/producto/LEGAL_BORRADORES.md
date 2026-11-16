@@ -170,56 +170,9 @@ Pregunta concreta: ¿basta aceptar los términos y el DPA de Supabase y Vercel?
 
 ---
 
-## 4. Términos y condiciones (borrador)
+## 4. Términos y condiciones
 
-> **Términos de uso de {{NOMBRE_APP}}**
-> Última actualización: {{FECHA_ACTUALIZACION}}
->
-> **1. Qué es.** {{NOMBRE_APP}} es un reproductor de música que funciona en tu navegador con archivos que ya tienes. La app no
-> vende, presta ni distribuye música.
-> <!-- cuentas -->
-> La cuenta es opcional y solo sirve para sincronizar playlists.
-> <!-- /cuentas -->
->
-> **2. Tu música es tu responsabilidad.** Solo debes reproducir archivos que tengas derecho a usar. La app no sube tus archivos ni
-> verifica su origen.
->
-> <!-- sin cuentas -->
-> **3. Cuentas.** Esta versión no tiene cuentas. Si algún día se añaden, actualizaremos estos términos antes.
-> <!-- /sin cuentas -->
-> <!-- cuentas -->
-> **3. Tu cuenta.** Debes dar un correo válido y cuidar tu contraseña. Puedes dejar de usar la cuenta y pedir su eliminación en
-> cualquier momento. Podemos suspender una cuenta que se use para atacar el servicio o a otras personas (por ejemplo, intentos
-> automatizados de acceso o abuso de la sincronización).
-> **[Decides tú]** edad mínima. Sugerencia: 13 años con autorización de padre, madre o tutor hasta los 18. **[Abogado]** validez de
-> esa fórmula en México.
-> <!-- /cuentas -->
->
-> **4. Licencia de uso.** Te damos permiso personal, gratuito y no exclusivo para usar la app. No puedes usarla para ofrecer un
-> servicio a terceros ni intentar saltarte sus límites técnicos.
-> El código fuente se publica bajo la **PolyForm Noncommercial License 1.0.0** (archivo `LICENSE` del repositorio): se puede leer,
-> usar y modificar sin fines comerciales; usarlo para vender o lucrar requiere permiso del titular. **[Abogado]** si esta cláusula y
-> la licencia son coherentes entre sí y qué cuenta como «no comercial» (por ejemplo, un uso interno en una empresa).
->
-> **5. Disponibilidad.** La app se ofrece tal como está, sin garantía de que funcione en todos los navegadores o dispositivos ni de
-> que esté siempre disponible. Lo que guardas en tu navegador depende de él: si borras sus datos o el navegador libera espacio,
-> puede perderse. Usa la copia de seguridad (Ajustes → Privacidad y datos) para conservar tus playlists y ajustes.
->
-> **6. Límite de responsabilidad.** En la medida en que la ley lo permita, no respondemos por pérdida de datos guardados en tu
-> dispositivo ni por fallos del navegador o del sistema operativo. **[Abogado]** alcance frente a la Ley Federal de Protección al
-> Consumidor, sobre todo si hay funciones de pago.
->
-> **7. Apoyo voluntario.** Si eliges apoyar el proyecto con una aportación, es voluntaria y no te da derecho a funciones, soporte
-> prioritario ni reembolsos, salvo error en el cobro. **[Decides tú]** política de reembolso; **[Abogado]** tratamiento fiscal y de
-> consumo de las aportaciones (ver `MONETIZACION.md`).
->
-> **8. Cambios.** Publicaremos los cambios con su fecha en {{URL_APP}}/terminos. Si son relevantes, avisaremos por correo a quien tenga
-> cuenta con al menos [15] días de anticipación.
->
-> **9. Ley y jurisdicción.** Estos términos se rigen por las leyes de México. **[Decides tú]** tribunales competentes (por ejemplo,
-> los de [ciudad]). **[Abogado]** si esa cláusula es válida frente a consumidores.
->
-> **10. Contacto.** {{CORREO_PRIVACIDAD}}.
+Desde el 2026-11-16 viven en `TERMINOS.md` (fuente de `/terminos`), con su fundamento por cláusula. Este archivo ya no los contiene.
 
 ---
 
