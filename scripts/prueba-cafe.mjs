@@ -46,8 +46,9 @@ if (expected === "ninguno") {
   check("la landing también lo enseña, uno solo", inLanding.length === 1 && new URL(inLanding[0].href).href === new URL(expected).href);
   await page.goto(`${base}/app/ajustes`);
   await page.waitForTimeout(500);
-  const text = await page.locator("#set-cafe").locator("..").innerText();
-  check("el texto es cercano y sin presión: voluntario y no desbloquea nada", /voluntario/.test(text) && /no desbloquea nada/.test(text) && !/no te lo pierdas|solo hoy|¡/i.test(text), text.replace(/\n+/g, " / "));
+  const text = await page.locator("#set-about").locator("..").locator(".about-cafe").innerText();
+  check("el café va en Ajustes → Acerca de, sin sección ni entrada de índice propias", text.length > 0 && (await page.getByText("Apoyar el proyecto").count()) === 0);
+  check("el texto es honesto y en primera persona: te sirve, invitarme un café, voluntario, no desbloquea nada", /te sirve, puedes invitarme un café/.test(text) && /voluntario/.test(text) && /no desbloquea nada/.test(text) && !/no te lo pierdas|solo hoy|¡/i.test(text), text.replace(/\n+/g, " / "));
   await page.getByRole("link", { name: "Comprar un café" }).scrollIntoViewIfNeeded();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth > innerWidth || [...document.querySelectorAll(".main")].some((el) => el.scrollWidth > el.clientWidth + 1));
   check("sin scroll horizontal", !overflow);

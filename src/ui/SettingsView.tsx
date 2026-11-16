@@ -3,7 +3,7 @@ import type { MouseEvent } from "react";
 import { APP_NAME } from "../core/brand";
 import { useBackground, background } from "../state/background";
 import type { AuthController } from "../sync/useAuthController";
-import { CafeSection, hasCafe } from "./CafeLink";
+import { CafeNote } from "./CafeLink";
 import { FoldersSection } from "./LibrarySheet";
 import { tutorials } from "../state/tutorials";
 import { PrivacySection } from "./PrivacySection";
@@ -21,7 +21,6 @@ const sections: [id: string, label: string][] = [
   ["set-play", "Reproducción"],
   ["set-lib", "Biblioteca"],
   ["set-a11y", "Accesibilidad"],
-  ...(hasCafe ? ([["set-cafe", "Apoyar el proyecto"]] as [string, string][]) : []),
   ["set-data", "Privacidad y datos"],
   ["set-about", "Acerca de"],
 ];
@@ -108,7 +107,6 @@ export function SettingsView({ auth }: { auth: AuthController }) {
               </section>
             </div>
           </section>
-          <CafeSection />
           <PrivacySection auth={auth} />
           <section aria-labelledby="set-about" className="settings-section">
             <h2 id="set-about">Acerca de</h2>
@@ -119,6 +117,7 @@ export function SettingsView({ auth }: { auth: AuthController }) {
                 {APP_NAME} es un reproductor para la música que ya tienes guardada, sin anuncios y sin pedirte nada a cambio. Tus canciones son tuyas: se quedan en tu dispositivo y {APP_NAME} solo las lee ahí. Todo lo que hace con tu música local es gratis. Gracias por darle una oportunidad.
               </p>
             </div>
+            <CafeNote />
           </section>
         </div>
       </div>

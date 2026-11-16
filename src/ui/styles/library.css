@@ -976,3 +976,17 @@ ol.track-list .row-album {
 .cafe-actions {
   justify-content: flex-start;
 }
+
+.about-cafe {
+  display: grid;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  padding: 0 var(--s1);
+}
+
+.about-cafe p:not(.hint) {
+  max-width: 62ch;
+  margin: 0;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
