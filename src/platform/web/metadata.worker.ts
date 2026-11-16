@@ -69,6 +69,7 @@ async function read({ file, folderCover }: MetadataJob): Promise<Omit<MetadataRe
       albumArtist: tags.albumartist?.trim() || undefined,
       duration: positive(metadata.format.duration),
       trackNumber: positive(tags.track.no),
+      discNumber: positive(tags.disk.no),
       year: positive(tags.year),
       genre: tags.genre?.join(", ") || undefined,
       bitrate: positive(metadata.format.bitrate),
