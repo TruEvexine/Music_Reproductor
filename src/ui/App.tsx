@@ -148,7 +148,7 @@ function Shell() {
 export default function App() {
   const { path } = useRoute();
   const legalDoc = LEGAL_PATHS[path];
-  if (legalDoc) return <LegalPage doc={legalDoc} />; // sin enlace desde la navegación pública: se llega por su dirección
+  if (legalDoc) return <LegalPage doc={legalDoc} />; // enlazadas solo desde Ajustes → Acerca de (aviso y términos)
   // La app nativa no tiene landing: siempre abre el reproductor.
   if (path === "/" && !isNative) return <Landing />;
   return <Shell />;

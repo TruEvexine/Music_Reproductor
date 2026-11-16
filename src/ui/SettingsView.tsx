@@ -8,6 +8,7 @@ import { FoldersSection } from "./LibrarySheet";
 import { tutorials } from "../state/tutorials";
 import { PrivacySection } from "./PrivacySection";
 import { ProfileSection } from "./ProfileSection";
+import { navigate } from "./router";
 import { openShortcutHelp } from "./ShortcutsHelp";
 import { useReducedMotion } from "./motion";
 import { BackgroundPage, EqPage, SoundControls, SwitchRow } from "./PlayerMenu";
@@ -23,6 +24,12 @@ const sections: [id: string, label: string][] = [
   ["set-a11y", "Accesibilidad"],
   ["set-data", "Privacidad y datos"],
   ["set-about", "Acerca de"],
+];
+
+// Borradores (LegalPage.tsx): solo se enlazan desde aquí. navigate() porque en la app nativa la ruta va en el hash.
+const legalLinks: [to: string, label: string][] = [
+  ["/privacidad", "Aviso de privacidad"],
+  ["/terminos", "Términos de uso"],
 ];
 
 // Índice de escritorio (styles/library.css lo oculta por debajo de 1000 px): salta a la sección y deja el foco en su título.
@@ -118,6 +125,13 @@ export function SettingsView({ auth }: { auth: AuthController }) {
               </p>
             </div>
             <CafeNote />
+            <div className="about-links">
+              {legalLinks.map(([to, label]) => (
+                <a className="link" href={to} key={to} onClick={(event) => (event.preventDefault(), navigate(to))}>
+                  {label}
+                </a>
+              ))}
+            </div>
           </section>
         </div>
       </div>

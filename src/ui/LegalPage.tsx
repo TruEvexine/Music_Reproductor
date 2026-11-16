@@ -4,7 +4,7 @@ import { Markdown } from "./Markdown";
 import { navigate } from "./router";
 
 export type LegalDoc = keyof typeof legal;
-/** Rutas de las páginas legales. No hay ningún enlace a ellas en la navegación pública (decisión: se enlazan al publicar). */
+/** Rutas de las páginas legales. Aviso y términos se enlazan solo desde Ajustes → Acerca de; almacenamiento, por su dirección. */
 export const LEGAL_PATHS: Record<string, LegalDoc> = { "/privacidad": "aviso", "/terminos": "terminos", "/almacenamiento": "almacenamiento" };
 
 /**

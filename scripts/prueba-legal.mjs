@@ -3,7 +3,7 @@
 // .env.local), así que da igual lo que haya en .env.local o en las LEGAL_* de quien la lanza.
 //   "marcadores": LEGAL_* vacías: los {{MARCADORES}} se ven tal cual (el build de producción los rechaza).
 //   "completo": valores ficticios (abajo): se ven los valores y no queda ningún marcador.
-// En ambos casos: las tres páginas rinden sin las notas internas, no están enlazadas desde la navegación pública, piden no indexarse y caben en móvil.
+// En ambos casos: las tres páginas rinden sin las notas internas, solo Ajustes → Acerca de enlaza aviso y términos, piden no indexarse y caben en móvil.
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -76,7 +76,7 @@ for (const [label, viewport] of [["escritorio", { width: 1440, height: 900 }], [
   await page.close();
 }
 
-// Sin enlaces desde la navegación pública: landing, app, ajustes y ayuda.
+// Enlaces: solo Ajustes → Acerca de enlaza, y solo a aviso y términos; landing, biblioteca, playlists y ayuda, a ninguna.
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await page.route("**/demoCatalog.dev.ts*", (route) => route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }));
 const linked = [];
@@ -86,7 +86,18 @@ for (const path of ["/", "/app", "/app/playlists", "/app/ajustes", "/app/ayuda"]
   const hrefs = await page.locator("a[href]").evaluateAll((links) => links.map((a) => new URL(a.href).pathname));
   linked.push(...hrefs.filter((href) => /^\/(privacidad|terminos|almacenamiento)\/?$/.test(href)).map((href) => `${path} → ${href}`));
 }
-check("ninguna página pública enlaza a las legales", linked.length === 0, linked.join(" | "));
+check("solo Ajustes enlaza a las legales, y solo a aviso y términos", linked.join("|") === "/app/ajustes → /privacidad|/app/ajustes → /terminos", linked.join(" | "));
+for (const [label, title] of [["Aviso de privacidad", /^Aviso de privacidad de /], ["Términos de uso", /^Términos de uso de /]]) {
+  await page.goto(`${base}/app/ajustes`);
+  await page.waitForTimeout(600);
+  const about = page.getByRole("region", { name: "Acerca de" });
+  await about.getByRole("link", { name: label }).click();
+  await page.waitForSelector(".legal h1", { timeout: 8000 }).catch(() => {});
+  check(`Acerca de → «${label}» abre su página`, title.test(await page.locator(".legal h1").innerText().catch(() => "")), page.url());
+  await page.goBack();
+  await page.waitForTimeout(600);
+  check(`desde «${label}», atrás vuelve a Ajustes`, new URL(page.url()).pathname === "/app/ajustes" && (await page.getByRole("heading", { level: 1, name: "Ajustes" }).count()) === 1);
+}
 await page.close();
 }
 

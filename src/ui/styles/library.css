@@ -984,6 +984,19 @@ ol.track-list .row-album {
   padding: 0 var(--s1);
 }
 
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--s4);
+  margin-top: var(--s2);
+}
+
+.about-links .link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--s1);
+}
+
 .about-cafe p:not(.hint) {
   max-width: 62ch;
   margin: 0;
