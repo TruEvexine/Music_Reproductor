@@ -158,3 +158,11 @@ describe("FAQ para personas, en los dos estados de cuentas", () => {
     for (const text of ["Sube o baja los graves", "AMOLED (negro puro)", "en Chrome y Edge"]) expect(text).not.toMatch(FORBIDDEN);
   });
 });
+// Avisos de terceros (scripts/licencias.mjs): si se añade una dependencia de producción sin regenerar la lista, falla.
+describe("licencias de terceros", () => {
+  it("el resumen nombra cada dependencia de producción de package.json", () => {
+    const list = read("LICENCIAS_TERCEROS.md");
+    const deps = Object.keys(JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).dependencies);
+    for (const name of deps) expect(list, name).toContain(`| \`${name}\` |`);
+  });
+});
