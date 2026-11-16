@@ -1,11 +1,14 @@
 // Prueba de la biblioteca local (Fase 3) en navegadores reales contra `npm run dev`.
 // Uso: node scripts/prueba-biblioteca.mjs [url-base] [--rapida]
 // Antes: `npm run test:audio` y `node scripts/gen-biblioteca.mjs` (5 000 pistas sintéticas). Nunca usa música real.
+// El scroll rápido se mide en el build de producción (lo compila y lo sirve con vite preview); el resto, contra la URL dada.
 // --rapida omite la parte de 5 000 pistas y el archivo enorme. Sale con 1 si algo falla.
 import { chromium, firefox, webkit } from "@playwright/test";
+import { execSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { preview } from "vite";
 
 const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const quick = process.argv.includes("--rapida");
@@ -269,6 +272,44 @@ for (const type of [firefox, webkit]) {
   await browser.close();
 }
 
+/** p95 del scroll rápido en el build de producción (vite preview): el de desarrollo mide el compilador, no la app. Importa las 5 000 pistas en un origen limpio y devuelve la mediana de 3 pasadas. */
+async function scrollP95Production() {
+  execSync("npm run build", { cwd: root, stdio: "ignore" });
+  const server = await preview({ root, preview: { host: "127.0.0.1", port: 0 }, logLevel: "silent" });
+  const { browser, page } = await open(chromium);
+  try {
+    await page.addInitScript(() => delete window.showDirectoryPicker);
+    await page.goto(`${server.resolvedUrls.local[0]}app`);
+    await page.getByLabel("Elegir una carpeta de música").setInputFiles(big);
+    await page.waitForFunction(() => document.querySelector(".view-header .subtitle")?.textContent === "5000 canciones", null, { timeout: 180_000 });
+    await scanDone(page, 600_000);
+    const p95s = [];
+    for (let pass = 0; pass < 3; pass++) {
+      p95s.push(
+        await page.evaluate(async () => {
+          const main = document.querySelector(".main");
+          main.scrollTop = 0;
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          const gaps = [];
+          let last = performance.now();
+          for (let i = 0; i < 120; i++) {
+            main.scrollTop += 900;
+            await new Promise(requestAnimationFrame);
+            const now = performance.now();
+            gaps.push(now - last);
+            last = now;
+          }
+          return gaps.sort((a, b) => a - b)[114];
+        }),
+      );
+    }
+    return p95s.sort((a, b) => a - b);
+  } finally {
+    await browser.close();
+    await server.close();
+  }
+}
+
 // --- 3. 5 000 pistas sintéticas: escaneo, virtualización, búsqueda, restauración < 1 s y sin red ---
 if (!quick) {
   let { browser, context, page, errors } = await open(chromium);
@@ -299,7 +340,9 @@ if (!quick) {
     gaps.sort((a, b) => a - b);
     return { p50: gaps[60], p95: gaps[114], max: gaps.at(-1) };
   });
-  check("scroll rápido: cuadros por debajo de 50 ms (p95)", frames.p95 < 50, `p50 ${frames.p50.toFixed(1)} ms · p95 ${frames.p95.toFixed(1)} ms · máx ${frames.max.toFixed(1)} ms`);
+  console.log(`INFO scroll rápido en desarrollo (solo informativo): p50 ${frames.p50.toFixed(1)} ms · p95 ${frames.p95.toFixed(1)} ms · máx ${frames.max.toFixed(1)} ms`);
+  const prod = await scrollP95Production();
+  check("scroll rápido en producción: cuadros por debajo de 50 ms (mediana de 3 pasadas del p95)", prod[1] < 50, `p95 por pasada ${prod.map((value) => value.toFixed(1)).join(" / ")} ms`);
   check("al final de la lista se pinta la última fila", (await page.locator(".virtual-row").last().getAttribute("aria-posinset")) === "5000");
 
   const searchTime = await page.evaluate(async () => {
