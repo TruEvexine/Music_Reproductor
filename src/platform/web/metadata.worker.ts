@@ -23,7 +23,6 @@ const MASTER_RAW_BYTES = 512 * 1024;
 
 async function coverFrom(bytes: Uint8Array<ArrayBuffer>, type: string): Promise<MetadataReply["cover"]> {
   try {
-    // Sin contexto seguro (http en la red local) no hay crypto.subtle: se pierde la portada, no las etiquetas.
     const hash = (await sha256Hex(bytes)).slice(0, 32);
     if (known.has(hash)) return { hash };
     const original = new Blob([bytes], { type });
@@ -36,8 +35,9 @@ async function coverFrom(bytes: Uint8Array<ArrayBuffer>, type: string): Promise<
     bitmap.close();
     known.add(hash);
     return { hash, small, large, master, largeSide: Math.min(THUMB_SIZES.large, side) };
-  } catch {
-    return undefined; // imagen corrupta o sin hash: la pista queda con el degradado de respaldo
+  } catch (error) {
+    console.warn("Portada descartada, se usa la funda generada:", (error as Error)?.name); // sin datos del archivo
+    return undefined; // imagen corrupta: la pista queda con el degradado de respaldo
   }
 }
 
