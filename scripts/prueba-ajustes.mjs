@@ -1,5 +1,5 @@
 // Prueba de la página Ajustes (/app/ajustes) en Chromium contra `npm run dev`. Uso: node scripts/prueba-ajustes.mjs [url-base]
-// Comprueba: las cinco secciones existen; el interruptor HDR es el mismo del menú (un solo estado); «Reducir movimiento» apaga transiciones
+// Comprueba: las siete secciones existen, «Acerca de» al final (Sobre Satin, enlaces legales, índice y teclado); el interruptor HDR es el mismo del menú (un solo estado); «Reducir movimiento» apaga transiciones
 // y persiste; los controles de sonido escriben en el reproductor; Exportar descarga una copia con los ajustes; Borrar datos vacía biblioteca y
 // ajustes tras confirmar. No toca la prueba de restaurar biblioteca.
 import { chromium } from "@playwright/test";
@@ -32,8 +32,26 @@ await page.getByRole("link", { name: "Ajustes", exact: true }).click();
 await wait(page, 500);
 check("la pestaña Ajustes abre /app/ajustes con su título", new URL(page.url()).pathname === "/app/ajustes" && (await page.getByRole("heading", { level: 1, name: "Ajustes" }).count()) === 1);
 const sections = await page.locator(".settings-section > h2").allInnerTexts();
-check("seis secciones: perfil, apariencia, reproducción, biblioteca, accesibilidad y privacidad", sections.join("|") === "Perfil|Apariencia y luces|Reproducción|Biblioteca|Accesibilidad|Privacidad y datos", sections.join("|"));
+check("siete secciones, «Acerca de» al final", sections.join("|") === "Perfil|Apariencia y luces|Reproducción|Biblioteca|Accesibilidad|Privacidad y datos|Acerca de", sections.join("|"));
 check("no hay ajustes de tema ni de idioma (la app no los tiene)", (await page.locator(".settings").getByText(/idioma|tema claro/i).count()) === 0);
+
+// Acerca de: «Sobre Satin» en primera persona (60–100 palabras, sin «nosotros»), el café solo si hay enlace y los dos enlaces legales.
+const index = await page.getByRole("navigation", { name: "Apartados de Ajustes" }).getByRole("link").allInnerTexts();
+check("el índice de escritorio tiene las mismas secciones, «Acerca de» incluida", index.join("|") === sections.join("|"), index.join("|"));
+const about = page.getByRole("region", { name: "Acerca de" });
+const aboutText = await about.locator(".help-about").innerText();
+const words = aboutText.split(/\s+/).filter(Boolean).length;
+check("«Sobre Satin»: título, una sola persona en México, de 60 a 100 palabras y sin «nosotros»", (await about.getByRole("heading", { level: 3, name: "Sobre Satin" }).count()) === 1 && /una sola persona en México, y soy yo/.test(aboutText) && words >= 60 && words <= 100 && !/nosotros/i.test(aboutText), `${words} palabras`);
+check("sin VITE_CAFE_URL no hay café en Acerca de", (await about.getByText(/café/).count()) === 0);
+await page.getByRole("navigation", { name: "Apartados de Ajustes" }).getByRole("link", { name: "Acerca de" }).click();
+await wait(page, 200);
+check("el índice lleva a «Acerca de» y enfoca su título", await page.evaluate(() => document.activeElement?.id === "set-about"));
+await page.keyboard.press("Tab");
+const firstLink = await page.evaluate(() => document.activeElement?.textContent);
+await page.keyboard.press("Tab");
+const secondLink = await page.evaluate(() => document.activeElement?.textContent);
+check("teclado: desde el título, Tab pasa por «Aviso de privacidad» y «Términos de uso»", firstLink === "Aviso de privacidad" && secondLink === "Términos de uso", `${firstLink} → ${secondLink}`);
+await page.locator(".main").evaluate((main) => (main.scrollTop = 0));
 
 // HDR: un solo estado compartido con el menú del reproductor.
 const hdrSwitch = page.locator(".settings").getByRole("switch", { name: "HDR simulado en toda la app" });

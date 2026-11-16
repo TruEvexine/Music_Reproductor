@@ -1,6 +1,7 @@
 // Prueba de los avisos de primera vez en Chromium contra `npm run dev`. Uso: node scripts/prueba-tutoriales.mjs [url-base] [carpeta-capturas]
 // Comprueba: uno a la vez y solo al encontrar cada cosa; en el flujo (no tapan nada); «Entendido» y «Omitir todos» se guardan en local;
-// hacer el gesto también lo da por visto; Ajustes → «Ver tutoriales otra vez» los devuelve; con movimiento reducido no hay transiciones.
+// hacer el gesto también lo da por visto; Ajustes → Accesibilidad → «Ver tutoriales otra vez» los devuelve; Ayuda no dispara ninguno; con
+// movimiento reducido no hay transiciones.
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -102,6 +103,11 @@ async function swipe(page, from, to) {
   await page.getByRole("button", { name: "Ver tutoriales otra vez" }).click();
   await page.waitForTimeout(300);
   check("móvil: «Ver tutoriales otra vez» confirma sin abrir nada encima", (await tips(page).count()) === 0 && (await page.getByText("volverá a salir").count()) === 1);
+  check("móvil: «Ver tutoriales otra vez» sigue en Ajustes → Accesibilidad (no se movió a Acerca de)", (await page.getByRole("region", { name: "Accesibilidad" }).getByRole("button", { name: "Ver tutoriales otra vez" }).count()) === 1);
+  // Ayuda explica con texto (Empezar, atajos, gestos): visitarla no dispara ningún aviso, ni siquiera con todos recién devueltos.
+  await page.locator(".nav").getByRole("link", { name: "Ayuda", exact: true }).click();
+  await page.waitForTimeout(500);
+  check("móvil: en Ayuda no sale ningún aviso de primera vez", (await tips(page).count()) === 0 && (await page.getByRole("heading", { level: 2, name: "Empezar" }).count()) === 1);
   await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
   await page.waitForTimeout(600);
   check("móvil: de vuelta en la biblioteca el aviso de deslizar vuelve a salir", (await tips(page).count()) === 1 && /Desliza una canción/.test(await tipText(page)));
