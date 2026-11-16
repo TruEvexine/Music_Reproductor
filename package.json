@@ -22,7 +22,7 @@
     "idb": "^8.0.4",
     "lucide-react": "^1.71.0",
     "music-metadata": "^11.16.1",
-    "react": "^19.1.1",
+    "react": "^19.3.1",
     "react-dom": "^19.1.1",
     "zustand": "^5.1.0"
   },
