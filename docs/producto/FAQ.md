@@ -1,10 +1,15 @@
 # Preguntas frecuentes
 
-Regla, igual que en `docs/COPY_LANDING.md`: cada respuesta se comprueba en el código de la rama `desarrollo` (12-11-2026). La línea
+Regla, igual que en `docs/COPY_LANDING.md`: cada respuesta se comprueba en el código de la rama `desarrollo`. La línea
 **Comprobado en** es para el mantenimiento y no se publica. Si una función cambia, se cambia la respuesta. Donde la respuesta es «todavía
 no», se dice así.
 
 El nombre del producto es **Satin** (`MARCA.md`); en las respuestas se dice «la app» y los textos legales lo toman de `LEGAL_NOMBRE_APP`. Tono decidido el 2026-11-12: cercano, de tú.
+
+**Reescrita el 2026-11-16:** solo preguntas **de usuario**, máximo 10, respuestas de 1 a 3 frases. Nada de tecnologías, pruebas,
+versiones ni cómo se verificó algo (eso va en «Comprobado en»); la única explicación técnica es el ecualizador, en palabras sencillas.
+`scripts/docsContent.test.ts` falla si una pregunta o respuesta publicada lleva una palabra de su lista de prohibidas. Sin medios de
+contacto hasta que se decida cuál publicar.
 
 **Cuentas (2026-11-14):** el primer lanzamiento va sin cuentas (`VITE_CUENTAS` distinto de `1`). Lo que solo es verdad en uno de los dos
 estados va entre `<!-- cuentas -->…<!-- /cuentas -->` o `<!-- sin cuentas -->…<!-- /sin cuentas -->`, cada marcador en su línea; el build
@@ -12,225 +17,101 @@ publica solo el bloque que corresponde (`forAccounts` en `scripts/docsContent.ts
 
 ---
 
-## Tu música y tus datos
+## Preguntas frecuentes
 
-### ¿Mi música se sube a algún servidor?
-<!-- cuentas -->
-No. La app lee los archivos en tu navegador y nunca los envía. Ni siquiera puede: la web solo tiene permiso para conectarse a su propio
-dominio y al servidor de cuentas.
-<!-- /cuentas -->
+### ¿Cuesta algo?
+No. Todo lo que hace la app con la música de tu dispositivo es gratis y no hay funciones de pago. Si ves «Comprar un café» en Ajustes,
+es un apoyo voluntario que no desbloquea nada.
+
+Comprobado en: no hay pagos en el código; `src/ui/CafeLink.tsx` solo pinta el enlace si el build trae `VITE_CAFE_URL` (https);
+`MONETIZACION.md` (todo lo local, gratis). Si se activa premium, actualizar.
+
+### ¿Mi música se sube a internet?
 <!-- sin cuentas -->
-No. La app lee los archivos en tu navegador y nunca los envía. Ni siquiera puede: la web solo tiene permiso para conectarse a su propio
-dominio y al servidor de cuentas, que esta versión no usa.
+No. La app lee tus canciones en tu dispositivo y nunca las envía a ningún lado.
 <!-- /sin cuentas -->
+<!-- cuentas -->
+No. La app lee tus canciones en tu dispositivo y nunca las envía a ningún lado. Si inicias sesión, tu cuenta solo guarda tus playlists:
+el nombre de cada una y, por canción, el título, el artista, el álbum y la duración.
+<!-- /cuentas -->
 
-Comprobado en: `vercel.json` (`connect-src`), `AGENTS.md` §5, `src/sync/` (solo playlists).
+Comprobado en: `vercel.json` (`connect-src`: el propio dominio y el servidor de cuentas), `src/sync/` (solo playlists),
+`src/sync/playlistService.ts` (`track_identifier` = `track:v1` de `src/core/track.ts`: título|artista|álbum|duración).
 
 ### ¿Necesito una cuenta?
-<!-- cuentas -->
-No. Sin cuenta tienes toda la app: biblioteca, playlists, ecualizador, fondos y copia de seguridad. La cuenta solo sirve para
-sincronizar tus playlists entre dispositivos.
-<!-- /cuentas -->
 <!-- sin cuentas -->
-No. Esta versión no tiene cuentas: tienes toda la app (biblioteca, playlists, ecualizador, fondos y copia de seguridad) sin registrarte
-y sin dar ningún dato personal.
+No. La app no tiene cuentas: la usas completa sin registrarte y sin dar ningún dato personal.
 <!-- /sin cuentas -->
+<!-- cuentas -->
+No. Sin cuenta tienes toda la app; la cuenta es opcional y solo sirve para tener tus playlists en varios dispositivos.
+<!-- /cuentas -->
 
 Comprobado en: `src/state/playlists.ts` (locales primero), `src/sync/playlistSync.ts`, `src/sync/supabaseClient.ts` (`VITE_CUENTAS`).
 
-<!-- cuentas -->
-### Si creo una cuenta, ¿qué se guarda en ella?
-Tu correo, tu nombre visible y tus playlists: el nombre de cada una y, por canción, el título, artista, álbum y duración tal como vienen
-en tus archivos. No se guardan los archivos ni tu biblioteca completa.
+### ¿Cómo agrego mi música?
+En **Biblioteca**, pulsa **Añadir** y elige **Carpeta completa** o **Archivos**. En la computadora también puedes arrastrar tus
+canciones o carpetas a la ventana.
 
-Comprobado en: `src/core/track.ts` (identidad `track:v1`), `supabase/migrations/`.
+Comprobado en: `src/ui/LibraryView.tsx` (`AddSplit`, `dropProps`), `src/platform/web/library.ts` (`dropped`, carpetas incluidas).
 
-### Hice playlists sin cuenta y luego inicié sesión. ¿Qué pasa con ellas?
-La app te pregunta antes de subir nada: **Subir**, **No subir** o **Decidir luego**. Si las subes, tu cuenta guarda su nombre y, por
-canción, el título, artista, álbum y duración, y desde ese momento se sincronizan como las demás. Si eliges **No subir**, se quedan
-solo en este dispositivo, marcadas «sin subir», y no te lo vuelve a preguntar por ellas. Con **Decidir luego**, te lo pregunta la
-próxima vez que abras la app.
+### ¿Tengo que agregarla cada vez que abro la app?
+No: la app la recuerda, y si algún día no puede guardarla te lo avisa. A veces el navegador vuelve a pedir permiso y basta con pulsar
+**Reconectar**. Las canciones nuevas que pongas en tu carpeta no aparecen solas: en Chrome y Edge, pulsa **Buscar cambios** junto a la
+carpeta en **Ajustes → Biblioteca**.
 
-Comprobado en: `src/ui/dialogs.tsx` (`AdoptDialog`), `src/ui/App.tsx`, `src/state/playlists.ts` (`adoptOwnerless`, `decline`), `scripts/prueba-enlace-magico.mjs`.
-<!-- /cuentas -->
+Comprobado en: `src/platform/web/library.ts` (carpeta recordada o copia privada en Firefox y Safari, aviso si no hay espacio),
+`src/ui/LibrarySheet.tsx` (`Reconectar`, `Buscar cambios en …` solo en carpetas recordadas), `DECISIONES_PENDIENTES.md` D16.
 
-### ¿Usa cookies o analítica?
-No usa cookies, analítica, publicidad ni rastreo de ningún tipo.
+### ¿Qué formatos reproduce?
+MP3, FLAC, WAV, M4A/AAC, OGG y Opus. Que suene depende de tu navegador: si no puede con un archivo, la canción aparece marcada desde que
+la agregas, en lugar de fallar al darle play.
 
-Comprobado en: `vercel.json` (CSP), búsqueda en `src/` de `document.cookie`, `gtag`, `analytics`, `sendBeacon` sin resultados.
+Comprobado en: `src/ui/LibraryView.tsx` (`ACCEPT`), `PLAN.md` Fase 3 (marcado por `canPlayType`), `src/state/library.ts` (`markUnplayable`).
 
-### ¿Dónde se guardan mis datos y cómo los borro?
-En el almacenamiento de tu navegador. **Ajustes → Privacidad y datos** te enseña qué guarda la app en este dispositivo, con cifras reales.
-Para borrarlos: **Borrar datos de este dispositivo**. Se borran tu biblioteca, las copias de música, tus playlists y tus ajustes; tus
-archivos originales no se tocan.
-<!-- cuentas -->
-Si tienes sesión iniciada, el diálogo trae la casilla **Cerrar también la sesión**, marcada por defecto: si la desmarcas, la sesión sigue
-abierta y las playlists de tu cuenta vuelven a bajar.
-<!-- /cuentas -->
-Aparte, **Borrar el historial de Recientes** olvida solo cuándo sonó cada canción.
+### ¿Por qué una canción no tiene portada?
+Porque el archivo no trae portada (o la que trae no se puede leer) y junto a él no hay una imagen llamada cover, folder, front o album.
+En ese caso la app le pone una funda de color con una onda, la misma para todas las canciones del álbum.
 
-Comprobado en: `src/ui/PrivacySection.tsx`, `src/sync/account.ts` (`signOutForWipe`), `src/state/library.ts` (`wipeAll`, `clearPlayed`), `src/platform/web/db.ts` (`clearDatabase`).
-
-### ¿Puedo poner mi nombre y una foto?
-Sí, en **Ajustes → Perfil**. Los dos son opcionales y el nombre empieza vacío. Se guardan solo en tu dispositivo:
-<!-- cuentas -->
-no se suben ni se sincronizan con tu cuenta (el nombre del perfil es aparte del que escribes al crear la cuenta).
-<!-- /cuentas -->
-<!-- sin cuentas -->
-no se suben a ningún sitio.
-<!-- /sin cuentas -->
-La foto se recorta a un cuadrado y se guarda reducida a 256 píxeles; al reducirla se pierde la información oculta de la original, como la ubicación. Aceptamos JPG, PNG,
-WebP y GIF de hasta 12 MB.
-
-Comprobado en: `src/ui/ProfileSection.tsx`, `src/state/profile.ts` (`reencode`), `src/core/profile.ts` (`checkAvatar`, `AVATAR_PX`), `src/sync/` sin referencias al perfil local.
-
-<!-- cuentas -->
-### ¿Puedo descargar lo que hay en mi cuenta?
-Sí, con la sesión iniciada: **Ajustes → Privacidad y datos → Datos de tu cuenta**. Descargas un archivo JSON con tu perfil (nombre visible y
-fecha de alta) y todas tus playlists tal como están guardadas; ese archivo también se puede importar como copia de seguridad.
-
-Comprobado en: `src/ui/PrivacySection.tsx` (`AccountExport`), `src/sync/account.ts` (`fetchAccountData`), `src/core/backup.ts` (`buildAccountExport`, con test de importación).
-
-### ¿Cómo elimino mi cuenta?
-Todavía no se puede desde la app. Escribe a {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta y la eliminamos junto con tus playlists.
-
-Comprobado en: no hay llamada de borrado de usuario en `src/sync/`.
-
-### Olvidé mi contraseña.
-La app todavía no tiene recuperación de contraseña. Escribe a {{CORREO_PRIVACIDAD}} desde el correo de tu cuenta.
-
-Comprobado en: `src/sync/useAuthController.ts` (solo registro, entrada y salida).
-<!-- /cuentas -->
-
----
-
-## Añadir música
-
-### ¿Qué formatos acepta?
-MP3, FLAC, WAV, M4A/AAC, OGG y Opus (también `.oga` y `.webm`). Que suene depende de tu navegador: si no sabe decodificar un formato,
-la canción aparece marcada desde que la añades, en lugar de fallar al darle play.
-
-Comprobado en: `src/ui/LibraryView.tsx` (`ACCEPT`), `PLAN.md` Fase 3 (marcado por `canPlayType`).
-
-### ¿Cómo añado mi música?
-Tres formas: elegir una **carpeta completa**, elegir **archivos sueltos** o **arrastrarlos** a la ventana. Junto a la música, la app lee
-las letras `.lrc` y las portadas `cover`, `folder`, `front` o `album` (.jpg, .png, .webp).
-
-Comprobado en: `src/platform/web/library.ts` (`pickFolder`, `dropped`), `PLAN.md` Fase 3.
-
-### ¿Tengo que volver a añadir la música cada vez que abro la app?
-No. En Chrome y Edge la app recuerda la carpeta; a veces el navegador vuelve a pedir permiso y basta con pulsar **Reconectar**. En
-Firefox y Safari, que no permiten recordar carpetas, la app guarda una copia privada de los archivos dentro del navegador. Si no hay
-espacio para la copia, la música suena solo hasta que recargas, y la app te lo avisa.
-
-En Safari esto todavía no se ha probado en un Mac o iPhone reales.
-
-Comprobado en: `src/platform/web/library.ts` (`copyIn`, OPFS), `src/ui/LibrarySheet.tsx` («Reconectar»), `DECISIONES_PENDIENTES.md` D16.
-
-### Añadí canciones a mi carpeta. ¿Aparecen solas?
-No solas: en **Ajustes → Biblioteca**, pulsa **Buscar cambios** junto a la carpeta. La app solo lee los archivos nuevos o cambiados y
-quita los que ya no están. Un navegador no puede vigilar una carpeta con la pestaña cerrada.
-
-Comprobado en: `src/ui/LibrarySheet.tsx` (`library.rescan`), `PLAN.md` §2 (re-escaneo en segundo plano imposible en web).
-
-### ¿Cuántas canciones aguanta?
-Se prueba con una biblioteca de 5 000 canciones en Chrome, Firefox y WebKit. Las listas solo dibujan las filas visibles, así que el
-tamaño de la biblioteca no frena el desplazamiento.
-
-Comprobado en: `scripts/prueba-biblioteca.mjs`, `scripts/gen-biblioteca.mjs`, `src/ui/VirtualList.tsx`.
-
----
-
-## Reproducción y sonido
-
-### ¿Qué ajustes de sonido tiene?
-Ecualizador de 10 bandas de ±12 dB con 7 ajustes de partida (Plano, Graves, Agudos, Voz, Rock, Electrónica, Acústica), ReplayGain por
-pista o por álbum, fundido entre canciones de hasta 12 segundos, fundido al pausar, velocidad de 0,5× a 2×, balance y temporizador de
-apagado (a los 5, 15, 30, 45, 60 o 90 minutos, o al terminar la canción).
-
-Comprobado en: `src/core/audio.ts` (`EQ_BANDS`, `EQ_LIMIT_DB`, `EQ_PRESETS`, `MAX_CROSSFADE`, `SPEED_RANGE`), `src/ui/PlayerMenu.tsx` (`sleepChoices`).
-
-### ¿El sonido es bit-perfect?
-No. El audio pasa por el motor de audio del navegador (Web Audio), que es lo que permite el ecualizador y los fundidos.
-
-Comprobado en: `src/engine/PlayerEngine.ts`, `docs/COPY_LANDING.md` (no se afirma bit-perfect).
-
-### ¿Qué significa la etiqueta Hi-Res?
-Que el archivo es sin pérdida y tiene más de 16 bits o más de 48 kHz. Los archivos sin pérdida muestran su resolución (por ejemplo
-«FLAC 24/96») y los comprimidos su tasa de bits («MP3 320»).
-
-Comprobado en: `src/core/format.ts` (`isHiRes`, `qualityLabel`).
-
-### ¿Muestra letras?
-Sí, si vienen con tu música: archivos `.lrc` junto a la canción o letras incrustadas en el archivo (USLT, y SYLT sincronizada). La app no
-busca letras en internet.
-
-Comprobado en: `src/core/lyrics.ts`, CSP sin dominios de letras.
-
-### ¿Tiene atajos de teclado?
-Sí: **Espacio** reproduce o pausa; **← / →** cambian de canción; **Mayús + ← / →** retroceden o avanzan 5 segundos; **↑ / ↓** suben o
-bajan el volumen; **M** silencia; **X** activa el orden aleatorio; **P** cambia la repetición (desactivada, cola, canción); **Q** abre o cierra la cola;
-**?** muestra la lista. No actúan al escribir; un deslizador, botón o enlace enfocado conserva sus propias teclas, y puedes apagarlos en Ajustes → Accesibilidad.
-
-Comprobado en: `src/core/shortcuts.ts`, `src/ui/useShortcuts.ts`.
-
-### ¿Funciona con los controles de la pantalla de bloqueo y los auriculares?
-La app los usa a través del navegador (Media Session): reproducir, pausar, siguiente, anterior y avanzar o retroceder. Está probado en
-Chrome de escritorio; en un teléfono real todavía no.
-
-Comprobado en: `src/platform/web/index.ts` (`audioSession`), `docs/COPY_LANDING.md` (lo no verificado).
-
-### Una canción aparece marcada o no suena. ¿Por qué?
-Tres causas posibles: el navegador no sabe decodificar ese formato (aparece marcada desde que la añades), el archivo está dañado (se
-marca al intentar reproducirla y la app pasa a la siguiente; tras tres fallos seguidos se detiene), o el navegador retiró el permiso de
-la carpeta (la app te pide **Reconectar**).
-
-Comprobado en: `AGENTS.md` §3 (errores de reproducción), `src/state/library.ts` (`markUnplayable`, `accessFor`).
-
----
-
-## La app
+Comprobado en: `src/platform/web/metadata.worker.ts` (portada incrustada, si no la de la carpeta; ≤ 12 MB y tipo admitido),
+`src/core/library.ts` (`isFolderCover`), `src/core/coverArt.ts` (funda estable por álbum), `DESIGN.md` «Funda generada».
 
 ### ¿Funciona sin internet?
-Mientras la página está abierta, sí: puedes reproducir y crear playlists sin conexión.
+Mientras la app está abierta, sí: puedes escuchar tu música y crear playlists sin conexión.
 <!-- cuentas -->
-Si tienes cuenta, los cambios se suben cuando vuelve la red.
+Si tienes cuenta, tus cambios se suben cuando vuelve la conexión.
 <!-- /cuentas -->
-Lo que todavía no funciona es **abrir o recargar** la página sin conexión.
+Lo que todavía no se puede es abrirla o recargarla sin internet.
 
-Comprobado en: `src/core/outbox.ts`, `DECISIONES_PENDIENTES.md` D18.
+Comprobado en: `src/core/outbox.ts`, `index.html` y `src/` sin service worker, `DECISIONES_PENDIENTES.md` D18.
 
-### ¿Se puede instalar como app? ¿Hay app para Android o iPhone?
-Todavía no. No existen apps nativas ni versión instalable; están en el plan.
+### ¿Para qué sirve el ecualizador?
+Sube o baja zonas del sonido: las primeras barras son los graves (el bajo y el bombo), las del centro los medios (las voces y las
+guitarras) y las últimas los agudos (los platillos y el brillo). Si no sabes por dónde empezar, usa un preajuste como Graves, Voz o
+Rock. Lo encuentras en el menú ≡ del reproductor, en **Sonido → Ecualizador**, y en **Ajustes → Reproducción**.
 
-Comprobado en: `PLAN.md` Fases 6 y 11, `index.html` sin manifest.
+Comprobado en: `src/core/audio.ts` (`EQ_BANDS` de 31 Hz a 16 kHz en orden, `EQ_PRESETS`), `src/ui/PlayerMenu.tsx` («Preajuste»;
+elegir uno enciende el ecualizador), `src/ui/SettingsView.tsx`.
 
-### ¿El fondo animado gasta batería?
-Se detiene cuando la pestaña no está visible. Si quieres que gaste menos, en **Ajustes** puedes activar **Reducir movimiento** (el fondo
-se queda quieto) o elegir el fondo **AMOLED** (negro puro).
+### ¿Puedo cambiar el fondo?
+Sí, en **Ajustes → Apariencia y luces** o en el menú ≡ del reproductor, en **Fondo**. Puedes elegir Portada (los colores de la canción en
+movimiento), Ritmo (se mueve con la música), Estático (quieto) o AMOLED (negro puro).
 
-Comprobado en: `src/ui/Backdrop.tsx` (`visibilitychange`), `src/ui/SettingsView.tsx`, `src/core/background.ts`.
-
-### ¿Cómo paso mis playlists a otro dispositivo sin cuenta?
-Con la copia de seguridad: **Ajustes → Privacidad y datos → Copia de seguridad → Exportar** y luego **Importar** en el otro dispositivo. Incluye playlists y
-ajustes de sonido y fondo. Las canciones se reconocen por sus datos (título, artista, álbum y duración) o por su huella, así que el
-otro dispositivo necesita tener los mismos archivos.
-
-Comprobado en: `src/core/backup.ts`, `src/ui/LibrarySheet.tsx` (`BackupSection`).
-
-### ¿Cuánto cuesta?
-Nada: la app es gratis y no hay funciones de pago. Si ves un botón «Comprar un café» en Ajustes, es un apoyo voluntario que no desbloquea nada.
-
-Comprobado en: no hay pagos en el código; `src/ui/CafeLink.tsx` solo pinta un enlace si el build trae `VITE_CAFE_URL` (https). Si se activa premium, actualizar: `MONETIZACION.md`.
+Comprobado en: `src/ui/PlayerMenu.tsx` (`modes`, `BackgroundPage`), `src/ui/SettingsView.tsx`.
 
 ---
 
-## Preguntas que quedan fuera hasta que exista la función
+## Preguntas que se quitaron el 2026-11-16
+
+- **De ingeniería:** cookies y analítica, cuántas canciones aguanta, la lista de ajustes de sonido, bit-perfect, Hi-Res, letras
+  incrustadas, atajos (ya están en Ayuda), pantalla de bloqueo y auriculares.
+- **Con medio de contacto** (no decidido): eliminar la cuenta y olvidé mi contraseña.
+- **De detalle:** qué guarda la cuenta, playlists al iniciar sesión, descargar la cuenta, dónde se guardan los datos y cómo borrarlos
+  (Ajustes → Privacidad y datos se explica sola), nombre y foto, si se puede instalar, batería del fondo, pasar playlists a otro
+  dispositivo, una canción que no suena (va dentro de formatos).
 
 No publicar respuestas sobre: recaps y estadísticas (`PERFIL_Y_RECAPS.md`), la foto en la nube, eliminar cuenta desde la app
-(`AJUSTES_PRIVACIDAD.md`), premium y apoyo (`MONETIZACION.md`), app instalable. Se añaden aquí cuando estén en el código.
+(`AJUSTES_PRIVACIDAD.md`), premium (`MONETIZACION.md`), app instalable. Se añaden cuando estén en el código.
 
 ## Riesgos
 
-- Dos respuestas remiten a `{{CORREO_PRIVACIDAD}}`, que se completa al publicar (valor en `privado/`). Es un correo temporal.
-- La respuesta sobre Safari depende de D16; al probarla en un dispositivo real, actualizarla.
+- «¿Tengo que agregarla…?» depende de D16 (Safari sin probar en un dispositivo real); si cambia, actualizarla.

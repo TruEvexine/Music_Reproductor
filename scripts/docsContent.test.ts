@@ -1,6 +1,5 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { SHORTCUTS } from "../src/core/shortcuts";
 import { fillMarkers, findMarkers, forAccounts, parseFaq, parseLegal, stripNotes, unfilledMarkers } from "./docsContent";
 
 const read = (name: string) => readFileSync(new URL(`../docs/producto/${name}`, import.meta.url), "utf8");
@@ -43,9 +42,8 @@ describe("FAQ.md", () => {
   const faq = parseFaq(read("FAQ.md"));
   const questions = faq.flatMap((group) => group.items);
 
-  it("publica los grupos con preguntas y no la sección de lo que queda fuera ni los riesgos", () => {
-    expect(faq.map((group) => group.group)).toEqual(["Tu música y tus datos", "Añadir música", "Reproducción y sonido", "La app"]);
-    expect(questions.length).toBeGreaterThanOrEqual(20);
+  it("publica un solo grupo y no la sección de lo que se quitó ni los riesgos", () => {
+    expect(faq.map((group) => group.group)).toEqual(["Preguntas frecuentes"]);
   });
 
   it("cada pregunta tiene respuesta y ninguna lleva la línea de mantenimiento", () => {
@@ -81,23 +79,6 @@ describe("textos legales publicados", () => {
     expect(Object.values(parseLegal(read("LEGAL_BORRADORES.md"))).join("\n")).not.toMatch(/\[(Nombre de la app|fecha|URL|ciudad)\]/);
   });
 });
-
-describe("FAQ de atajos", () => {
-  it("nombra exactamente las teclas de SHORTCUTS: si el mapa cambia y la FAQ no, falla", () => {
-    const answer = questionsOf("FAQ.md").find(({ question }) => question.includes("atajos"))?.answer.join(" ") ?? "";
-    // «**Mayús + ← / →**» → «Mayús + ←», «Mayús + →»
-    const inFaq = [...answer.matchAll(/\*\*([^*]+)\*\*/g)].flatMap(([, keys]) => {
-      const parts = keys.split(" + ");
-      const last = parts.pop() ?? "";
-      return last.split(" / ").map((key) => [...parts, key].join(" + "));
-    });
-    expect(inFaq.sort()).toEqual(SHORTCUTS.map(({ keys }) => keys.join(" + ")).sort());
-  });
-});
-
-function questionsOf(name: string) {
-  return parseFaq(read(name)).flatMap((group) => group.items);
-}
 
 describe("forAccounts", () => {
   const doc = [
@@ -144,9 +125,36 @@ describe("FAQ y borradores en los dos estados de cuentas", () => {
     expect(faq).toMatch(/sin dar ningún dato personal/);
   });
   it("con cuentas mantiene lo de la cuenta", () => {
-    const { questions, legal } = publish(true);
-    expect(questions).toContain("Olvidé mi contraseña.");
+    const { faq, legal } = publish(true);
+    expect(faq).toMatch(/tu cuenta solo guarda tus playlists/);
     expect(legal).toMatch(/Si creas una cuenta/);
     expect(legal).not.toMatch(/no tiene cuentas/);
+  });
+});
+
+// La FAQ es para quien usa la app: nada de tecnologías, pruebas, versiones ni cómo se comprobó algo (eso va en «Comprobado en»).
+const FORBIDDEN = /IndexedDB|\bCSP\b|PKCE|Supabase|AVIF|OPFS|Web Audio|Media Session|ReplayGain|WebKit|Vercel|JSON|SHA-?256|\bhash|worker|\bbuild|compil|prueba|prob(?:ad|am|é|ó)|versi[oó]n|c[oó]digo|servidor/i;
+
+describe("FAQ para personas, en los dos estados de cuentas", () => {
+  for (const enabled of [true, false]) {
+    const items = parseFaq(forAccounts(read("FAQ.md"), enabled)).flatMap((group) => group.items);
+    it(`${enabled ? "con" : "sin"} cuentas: de 1 a 10 preguntas`, () => {
+      expect(items.length).toBeGreaterThan(0);
+      expect(items.length).toBeLessThanOrEqual(10);
+    });
+    it(`${enabled ? "con" : "sin"} cuentas: ninguna pregunta ni respuesta lleva una palabra prohibida`, () => {
+      for (const { question, answer } of items) expect(`${question} ${answer.join(" ")}`, question).not.toMatch(FORBIDDEN);
+    });
+    it(`${enabled ? "con" : "sin"} cuentas: cada respuesta tiene de 1 a 3 frases`, () => {
+      for (const { question, answer } of items) {
+        const sentences = answer.join(" ").match(/[.?!](?=\s|$)/g)?.length ?? 0;
+        expect(sentences, question).toBeGreaterThanOrEqual(1);
+        expect(sentences, question).toBeLessThanOrEqual(3);
+      }
+    });
+  }
+  it("la lista de prohibidas detecta lo que debe", () => {
+    for (const text of ["Se guarda en IndexedDB", "la CSP lo impide", "un build nuevo", "Lo probamos en Safari", "En esta versión", "con pruebas"]) expect(text).toMatch(FORBIDDEN);
+    for (const text of ["Sube o baja los graves", "AMOLED (negro puro)", "en Chrome y Edge"]) expect(text).not.toMatch(FORBIDDEN);
   });
 });
