@@ -88,6 +88,10 @@ const vercel = JSON.parse(readFileSync(new URL("./vercel.json", import.meta.url)
 const globalHeaders = Object.fromEntries(
   (vercel.headers.find((rule) => rule.source === "/(.*)")?.headers ?? []).map(({ key, value }) => [key, value]),
 );
+// Solo para pruebas por http con la IP de la red local (PREVIEW_HTTP=1): sin upgrade-insecure-requests, que pediría los assets por https y la app no cargaría.
+if (process.env.PREVIEW_HTTP === "1") {
+  globalHeaders["Content-Security-Policy"] = globalHeaders["Content-Security-Policy"]?.replace(/;\s*upgrade-insecure-requests/, "");
+}
 
 // VITE_TARGET=android|ios: la app se sirve desde archivos, así que las rutas de los assets son relativas.
 const native = process.env.VITE_TARGET === "android" || process.env.VITE_TARGET === "ios";

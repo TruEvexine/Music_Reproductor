@@ -1,5 +1,5 @@
 // Portadas abiertas por http con la IP de la red local (contexto NO seguro), como un móvil con `npm run dev:lan`.
-// Uso: node scripts/prueba-lan-portadas.mjs http://<ip-de-la-lan>:5173 (también vale `vite preview --host`). En escritorio y en Pixel 7:
+// Uso: node scripts/prueba-lan-portadas.mjs http://<ip-de-la-lan>:5173 (o el build con `PREVIEW_HTTP=1 npx vite preview --host`). En escritorio y en Pixel 7:
 // la carátula incrustada se ve como imagen decodificada y la pista sin carátula lleva la funda generada; nunca imagen rota. Sale con 1 si algo falla.
 import { chromium, devices } from "@playwright/test";
 import { join } from "node:path";
