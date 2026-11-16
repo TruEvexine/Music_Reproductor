@@ -1,4 +1,5 @@
-// Prueba del perfil básico (Ajustes → Perfil) en Chromium contra `npm run dev`. Uso: node scripts/prueba-perfil.mjs [url-base] [carpeta-capturas]
+// Prueba del perfil básico (Ajustes → Perfil) en Chromium. Uso: node scripts/prueba-perfil.mjs [carpeta-capturas]
+// Levanta su propio servidor con VITE_CUENTAS=1 (como prueba-legal), así que no depende de cómo arranque quien la lanza.
 // Comprueba: el nombre empieza vacío, se limpia, se corta a 60 y persiste; la foto se recorta a 256 × 256, se vuelve a codificar SIN el EXIF
 // (aquí, una marca falsa de ubicación GPS inyectada en la foto de prueba), se rechaza lo que no es imagen o pesa más de 12 MB, se puede quitar
 // y nada de esto sale por la red. Sale con 1 si algo falla.
@@ -6,9 +7,13 @@ import { chromium } from "@playwright/test";
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createServer } from "vite";
 
-const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
-const shots = process.argv[3];
+process.env.VITE_CUENTAS = "1";
+const server = await createServer({ server: { host: "127.0.0.1", port: 0 }, logLevel: "silent" });
+await server.listen();
+const base = server.resolvedUrls.local[0].replace(/\/$/, "");
+const shots = process.argv[2];
 if (shots) mkdirSync(shots, { recursive: true });
 const work = mkdtempSync(join(tmpdir(), "perfil-"));
 
@@ -149,4 +154,5 @@ if (shots) await page.screenshot({ path: join(shots, "perfil-390x844.png") });
 check("nada del perfil salió por la red", outside.length === 0, outside.join(" | "));
 check("sin errores de página", errors.length === 0, errors.join(" | "));
 await browser.close();
+await server.close();
 process.exit(failed ? 1 : 0);
