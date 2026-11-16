@@ -1,6 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
-import { AudioLines, ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Pause, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
+import { AudioLines, ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Pause, Pencil, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { trackCoverSeed } from "../core/coverArt";
 import { SWIPE_LABELS } from "../core/gestures";
 import { hasPlayed } from "../core/queue";
@@ -12,6 +12,7 @@ import { isNative } from "../platform";
 import { library, useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
 import { ActionSheet } from "./ActionSheet";
+import { EditDialog } from "./EditDialog";
 import { SwipeRow } from "./gestures";
 import { LibrarySheet } from "./LibrarySheet";
 import { queueAction } from "./toast";
@@ -79,6 +80,7 @@ export function TrackRow({ track, number, onPlay }: { track: Track; number?: num
   const played = usePlayer((state) => !isCurrent && hasPlayed(state.queue, track.id));
   const blocked = track.unplayable || track.unsupported;
   const [sheet, setSheet] = useState(false);
+  const [editing, setEditing] = useState(false);
   const playNext = { label: "Reproducir a continuación", icon: <ListStart {...iconSmall} />, run: () => queueAction("Sonará a continuación", () => player.playNext(track.id)) };
   const enqueue = { label: "Añadir a la cola", icon: <ListPlus {...iconSmall} />, run: () => queueAction("Añadida a la cola", () => player.enqueue(track.id)) };
   return (
@@ -132,11 +134,13 @@ export function TrackRow({ track, number, onPlay }: { track: Track; number?: num
           { label: "Reproducir", icon: <Play {...iconSmall} fill="currentColor" />, run: onPlay },
           ...(isCurrent ? [] : [playNext]),
           enqueue,
+          { label: "Editar información", icon: <Pencil {...iconSmall} />, run: () => setEditing(true) },
         ]}
         onClose={() => setSheet(false)}
         track={track}
       />
     )}
+    {editing && <EditDialog onClose={() => setEditing(false)} track={track} />}
     </>
   );
 }

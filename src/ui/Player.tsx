@@ -10,6 +10,7 @@ import {
   ListStart,
   MicVocal,
   Pause,
+  Pencil,
   Play,
   Repeat,
   Repeat1,
@@ -35,6 +36,7 @@ import { player, usePlayer } from "../state/player";
 import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
 import { ActionSheet } from "./ActionSheet";
+import { EditDialog } from "./EditDialog";
 import { backdropPreview } from "./Backdrop";
 import { SwipeRow, useCoverSwipe, useDragDismiss } from "./gestures";
 import { useMedia } from "./useMedia";
@@ -242,6 +244,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
     resetKey: neighbors.key,
   });
   const [lyrics, setLyrics] = useState(false);
+  const [editing, setEditing] = useState(false);
   const sheet = useRef<HTMLElement>(null);
   const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
   // Portada que se va al cambiar de pista sin gesto (botón, atajo o fin de pista): se disuelve sobre la nueva. Tras un gesto no hace falta: la portada ya llegó deslizando.
@@ -277,6 +280,9 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
           <ChevronDown {...icon} />
         </IconButton>
         <div className="now-actions">
+          <IconButton label="Editar información" onClick={() => setEditing(true)}>
+            <Pencil {...icon} />
+          </IconButton>
           {track.hasLyrics && (
             <IconButton label="Letra" onClick={() => setLyrics(true)}>
               <MicVocal {...icon} />
@@ -343,6 +349,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         <Transport large />
       </div>
       {lyrics && track.hasLyrics && <LyricsLoader id={track.id} onClose={() => setLyrics(false)} title={track.title} />}
+      {editing && <EditDialog onClose={() => setEditing(false)} track={track} />}
     </section>
   );
 }
@@ -351,6 +358,7 @@ type RowState = "played" | "current" | "next" | "later";
 
 function QueueRow({ entryKey, track, index, first, last, state, repeated }: { entryKey: string; track: Track; index: number; first: boolean; last: boolean; state: RowState; repeated: boolean }) {
   const [sheet, setSheet] = useState(false);
+  const [editing, setEditing] = useState(false);
   const id = track.id;
   const isCurrent = state === "current";
   const isNext = state === "next";
@@ -410,11 +418,13 @@ function QueueRow({ entryKey, track, index, first, last, state, repeated }: { en
           ...(first ? [] : [{ label: "Subir", icon: <ArrowUp {...iconSmall} />, run: () => player.move(index, index - 1) }]),
           ...(last ? [] : [{ label: "Bajar", icon: <ArrowDown {...iconSmall} />, run: () => player.move(index, index + 1) }]),
           ...(isCurrent ? [] : [remove]),
+          { label: "Editar información", icon: <Pencil {...iconSmall} />, run: () => setEditing(true) },
         ]}
         onClose={() => setSheet(false)}
         track={track}
       />
     )}
+    {editing && <EditDialog onClose={() => setEditing(false)} track={track} />}
     </>
   );
 }

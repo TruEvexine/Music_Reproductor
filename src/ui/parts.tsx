@@ -89,7 +89,7 @@ const Sleeve = ({ bars }: { bars: number[] }) => (
 );
 
 /** Diálogo modal nativo: atrapa el foco, cierra con Escape y con clic fuera. En móvil es una hoja inferior. */
-export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function Dialog({ title, onClose, children, className = "" }: { title: string; onClose: () => void; children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null);
   const drag = useDragDismiss(ref, onClose, { touchOnly: true }); // hoja inferior: arrastrar la cabecera la cierra (el arrastre ya animó la salida)
   const { closing, request } = useExit(onClose);
@@ -99,7 +99,7 @@ export function Dialog({ title, onClose, children }: { title: string; onClose: (
   return (
     <dialog
       aria-label={title}
-      className="dialog"
+      className={`dialog ${className}`}
       data-closing={closing}
       onCancel={(event) => {
         event.preventDefault(); // Escape: primero la salida, luego el cierre

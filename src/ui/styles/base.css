@@ -583,3 +583,125 @@ html:not([data-input="key"]) :is(.dialog, .menu) :focus-visible {
   outline: none;
   box-shadow: none;
 }
+
+/* Editar información de una canción (ui/EditDialog.tsx). Móvil: hoja con la carátula y sus botones arriba y los campos en una columna.
+   Desde 1000 px, el patrón de Ajustes: carátula fija a la izquierda y campos en dos columnas a la derecha. «Guardar» queda siempre a la vista, abajo. */
+.edit-form {
+  gap: var(--s5);
+}
+
+.edit-cover {
+  display: grid;
+  grid-template-columns: clamp(7.5rem, 36vw, 10rem) minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+}
+
+.edit-art {
+  width: 100%;
+  border-radius: var(--radius-m);
+}
+
+.edit-cover-actions {
+  display: grid;
+  justify-items: start;
+  gap: var(--s2);
+}
+
+.edit-fields {
+  display: grid;
+  gap: var(--s4);
+}
+
+.edit-field {
+  display: grid;
+  gap: var(--s2);
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+
+.edit-field label {
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.edit-input {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.edit-input input {
+  flex: 1;
+  min-width: 0;
+}
+
+.edit-input input[aria-invalid] {
+  outline: 2px solid var(--danger);
+  outline-offset: -2px;
+}
+
+.edit-field .hint {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.edit-field .hint:empty {
+  display: none;
+}
+
+.edit-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s3);
+}
+
+.edit-numbers input {
+  font-variant-numeric: tabular-nums;
+}
+
+.edit-note {
+  margin: 0;
+}
+
+.edit-actions {
+  position: sticky;
+  bottom: 0;
+  padding-block: var(--s3);
+  background: var(--surface-1);
+}
+
+.edit-reset {
+  margin-right: auto;
+}
+
+@media (min-width: 600px) {
+  .edit-dialog {
+    width: min(36rem, 100% - 2 * var(--s5));
+  }
+}
+
+@media (min-width: 1000px) {
+  .edit-dialog {
+    width: min(56rem, 100% - 2 * var(--s5));
+  }
+  .edit-form {
+    grid-template-columns: 15rem minmax(0, 1fr);
+    column-gap: var(--s6);
+  }
+  .edit-cover {
+    position: sticky;
+    top: 0;
+    grid-template-columns: 1fr;
+  }
+  .edit-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s4);
+  }
+  :is(.edit-title, .edit-numbers, .edit-note) {
+    grid-column: 1 / -1;
+  }
+  .edit-actions {
+    grid-column: 1 / -1;
+  }
+}
