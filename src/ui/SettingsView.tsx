@@ -2,7 +2,6 @@ import { useState } from "react";
 import type { MouseEvent } from "react";
 import { APP_NAME } from "../core/brand";
 import { useBackground, background } from "../state/background";
-import { supabaseConfigured } from "../sync/supabaseClient";
 import type { AuthController } from "../sync/useAuthController";
 import { CafeSection, hasCafe } from "./CafeLink";
 import { FoldersSection } from "./LibrarySheet";
@@ -115,9 +114,10 @@ export function SettingsView({ auth }: { auth: AuthController }) {
             <h2 id="set-about">Acerca de</h2>
             <h3 className="settings-sub">Sobre {APP_NAME}</h3>
             <div className="help-about">
-              <p>Detrás de {APP_NAME} hay una persona en México.</p>
-              <p>La idea es sencilla: tu música es tuya. Se queda en tu dispositivo, no hay anuncios, cookies ni analítica{supabaseConfigured ? ", y la cuenta es opcional: solo sirve para sincronizar tus playlists." : ", y no hay cuentas: no recogemos datos personales."}</p>
-              <p>El código es público, bajo la licencia PolyForm Noncommercial 1.0.0, para que cualquiera pueda ver cómo funciona.</p>
+              <p>Hola. Detrás de {APP_NAME} no hay una empresa ni un equipo: hay una sola persona en México, y soy yo.</p>
+              <p>
+                {APP_NAME} es un reproductor para la música que ya tienes guardada, sin anuncios y sin pedirte nada a cambio. Tus canciones son tuyas: se quedan en tu dispositivo y {APP_NAME} solo las lee ahí. Todo lo que hace con tu música local es gratis. Gracias por darle una oportunidad.
+              </p>
             </div>
           </section>
         </div>

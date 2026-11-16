@@ -119,6 +119,7 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Decidido:** presentación anónima («una persona en México»), sin universidad, sin historia personal, tono cercano.
 - **Pendiente:** seudónimo (si lo quiere), redes o contacto públicos, y la historia en sus palabras si más adelante quiere añadirla (no se redacta por el usuario).
 - **Efecto en la FAQ:** el texto ya está en tono cercano; solo falta el nombre (D22) y completar `{{CORREO_PRIVACIDAD}}` (D20) para publicarla.
+- **2026-11-16:** no hay un «nosotros». «Nosotros» pasa a **«Sobre Satin»** en Ajustes → Acerca de, en primera persona del singular (versión «cercana» elegida por el usuario, 69 palabras, sin datos personales). La FAQ queda en 10 preguntas de usuario y sin contacto; las dos que remitían a `{{CORREO_PRIVACIDAD}}` se quitaron hasta decidir el medio.
 
 ### D27 — Portada por defecto (2026-11-13, decidida 2026-11-14)
 - **Decidido:** ninguna de las tres propuestas. El usuario aportó una guía propia (funda cuadrada, estática y mate; un solo motivo de forma de onda; márgenes amplios; solo color y motivo en miniaturas; el tono tiñe el fondo reactivo, que concentra el movimiento; solo para fundas generadas). Implementada y revisada contra `DESIGN.md`: `core/coverArt.ts`, `ui/parts.tsx`, `sleevePalette` en `core/palette.ts`.

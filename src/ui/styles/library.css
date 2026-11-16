@@ -809,7 +809,6 @@ ol.track-list .row-album {
 }
 
 .help-list p,
-.help-about p,
 .faq-item p {
   margin: 0 0 var(--s2);
   color: var(--ink-2);
@@ -822,8 +821,17 @@ ol.track-list .row-album {
   color: var(--ink-3);
 }
 
+/* «Sobre Satin» se lee de corrido: tinta plena y tamaño de cuerpo, no de nota. */
 .help-about {
   padding: 0 var(--s1);
+}
+
+.help-about p {
+  max-width: 62ch;
+  margin: 0 0 var(--s2);
+  color: var(--ink);
+  line-height: 1.5;
+  text-wrap: pretty;
 }
 
 .faq-item {
