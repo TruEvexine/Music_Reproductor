@@ -522,10 +522,11 @@ export const library = {
     const track = byId().get(id);
     if (!track) return;
     const previous = edits.get(id);
+    // La carátula elegida, antes de que la pista la nombre: si no, la UI la buscaría en `covers` antes de que exista.
+    if (cover && edit?.coverHash === cover.hash) await storage.write("covers", [cover]);
     if (edit) edits.set(id, edit);
     else edits.delete(id);
     useLibrary.setState((state) => ({ tracks: state.tracks.map((item) => (item.id === id ? withEdit(item) : item)) }));
-    if (cover && edit?.coverHash === cover.hash) await storage.write("covers", [cover]);
     // Las pistas que no sobreviven a una recarga (archivos de esta sesión) tampoco guardan su edición: quedaría huérfana.
     if (persisted(track)) await storage.write("edits", edit ? [edit] : [], edit ? [] : [id]);
     await dropUnusedCovers([previous?.coverHash]);

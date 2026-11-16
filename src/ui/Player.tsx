@@ -244,7 +244,9 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
     resetKey: neighbors.key,
   });
   const [lyrics, setLyrics] = useState(false);
-  const [editing, setEditing] = useState(false);
+  // Se edita la pista que sonaba al abrir: si en medio pasa a la siguiente, «Guardar» no debe escribir en otra.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const editing = useLibrary((state) => (editingId ? state.tracks.find((item) => item.id === editingId) : undefined));
   const sheet = useRef<HTMLElement>(null);
   const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
   // Portada que se va al cambiar de pista sin gesto (botón, atajo o fin de pista): se disuelve sobre la nueva. Tras un gesto no hace falta: la portada ya llegó deslizando.
@@ -280,7 +282,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
           <ChevronDown {...icon} />
         </IconButton>
         <div className="now-actions">
-          <IconButton label="Editar información" onClick={() => setEditing(true)}>
+          <IconButton label="Editar información" onClick={() => setEditingId(track.id)}>
             <Pencil {...icon} />
           </IconButton>
           {track.hasLyrics && (
@@ -349,7 +351,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         <Transport large />
       </div>
       {lyrics && track.hasLyrics && <LyricsLoader id={track.id} onClose={() => setLyrics(false)} title={track.title} />}
-      {editing && <EditDialog onClose={() => setEditing(false)} track={track} />}
+      {editing && <EditDialog onClose={() => setEditingId(null)} track={editing} />}
     </section>
   );
 }

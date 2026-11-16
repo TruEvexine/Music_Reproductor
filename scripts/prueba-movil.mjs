@@ -99,7 +99,7 @@ await page.waitForTimeout(400);
 check("pulsación larga abre la hoja de acciones con la pista", (await count("dialog.dialog[open]")) === 1 && (await page.locator("dialog.dialog[open] h2").innerText()) === N);
 check("y no reproduce la pista al soltar", (await nowTitle()) === A);
 const actions = await page.locator("dialog.dialog[open] .sheet-action").allInnerTexts();
-check("la hoja ofrece reproducir, a continuación y a la cola (también si ya está en la cola)", actions.join("|") === "Reproducir|Reproducir a continuación|Añadir a la cola", actions.join("|"));
+check("la hoja ofrece reproducir, a continuación, a la cola (también si ya está en la cola) y editar", actions.join("|") === "Reproducir|Reproducir a continuación|Añadir a la cola|Editar información", actions.join("|"));
 check("áreas táctiles de la hoja ≥ 44 px", await page.evaluate(() => [...document.querySelectorAll("dialog.dialog[open] button")].every((b) => b.getBoundingClientRect().height >= 44 && b.getBoundingClientRect().width >= 44)));
 // 10 pulsaciones largas de 520 a 952 ms: la hoja sigue abierta tras soltar todas las veces (el clic de soltar se descarta).
 await page.keyboard.press("Escape");
