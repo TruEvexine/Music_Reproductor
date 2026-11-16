@@ -130,3 +130,9 @@ Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloque
 - **Hecho:** `INVESTIGACION_LEGAL.md`, `TERMINOS.md` (fuente de `/terminos`), aviso reescrito en `LEGAL_BORRADORES.md`, `COPY_LEGAL.md`, `LICENCIAS_TERCEROS.md` (con `public/licencias-terceros.txt`).
 - **Decidido 2026-11-16:** nombre completo como responsable; correo de privacidad en el dominio propio (valor en `docs/producto/privado/`); domicilio particular; leyes de México sin fijar ciudad.
 - **Pendiente tuyo:** llevar `REVISION_ABOGADO.md` a la consulta (P0 antes de publicar los textos; P1 antes de abrir cuentas; P2 antes del café). Concretar «reincidente» (TERMINOS cláusula 6) y confirmar el compromiso de gratuidad (cláusula 15).
+
+### D29 — Edición en lote y «aplicar a todo el álbum» (2026-11-16)
+- **Qué:** hoy «Editar información» edita una canción a la vez (PLAN §11.1n). Falta elegir varias y cambiar un campo común (álbum, artista del álbum, año, género, carátula) de una vez, y un atajo «aplicar a todo el álbum» desde la cabecera de un álbum.
+- **Bloquea:** nada; queda fuera a propósito en esta tanda.
+- **Cambio mínimo que haría falta:** (1) `library.saveEdits(changes: { id, edit }[], cover?)` en `state/library.ts`, que haga lo mismo que `saveEdit` en una sola escritura de `edits` y un solo `setState`; (2) en `core/edits.ts`, una función que mezcle un parche común sobre la edición de cada pista (los campos sin tocar quedan como estaban); (3) en `ui/EditDialog.tsx`, un modo «varias» que reciba los ids, muestre «Varios valores» como marcador en los campos que difieren y solo guarde los campos tocados; (4) la entrada: «Editar el álbum» en la cabecera de grupo de Álbumes (`LibraryView.tsx`) con los `trackIds` del grupo. La selección múltiple en listas no existe: es otra decisión.
+- **Recomendación:** empezar por «Editar el álbum» desde su cabecera, sin selección múltiple.

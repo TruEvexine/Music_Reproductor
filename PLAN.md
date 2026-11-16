@@ -852,6 +852,18 @@ Inventario a 1024, 1280, 1440, 1920 y 2560 px: Ajustes y Ayuda eran una columna 
 
 Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel-better (revisión rápida).
 
+### 11.1n Editar la información de cada canción (2026-11-16)
+
+- [x] **Datos:** migración v4, que solo añade el almacén `edits` `{ id, campos editados }` con la clave del id de pista (`raíz:ruta`, que sobrevive al reescaneo). Una clave presente significa que el campo está editado; `null`, que se vació a propósito. `tracks` sigue guardando solo lo leído del archivo. Prueba de migración interrumpida como la de v3.
+- [x] **Superposición** (`core/edits.ts`): la pista en memoria muestra lo editado y guarda los originales en `source`. La biblioteca la reaplica al arrancar, en cada parche de metadatos (reescaneo o archivo cambiado) y al insertar pistas. Álbumes (por álbum y artista del álbum editados), artistas, búsqueda, orden (con n.º de disco, que ahora se lee del archivo), carrusel, funda por defecto estable por álbum, Media Session y fondo usan lo editado.
+- [x] **Identidad:** `trackV1Id` lee siempre `source`: playlists y nube usan lo del archivo. Cola, historial y letras van por id; `track:v2` es el contenido. Comprobado en `core/edits.test.ts` y `scripts/prueba-edicion.mjs`.
+- [x] **Carátula elegida:** JPEG/PNG/WebP comprobado por los primeros bytes (`sniffImageType`), ≤ 12 MB y ≤ 40 MP. Se recodifica en el worker de portadas a ≤ 1024 px sin EXIF, con miniaturas de 600 y 96 y paleta con `paletteVersion`. Se guarda en `covers` al pulsar «Guardar» y se borra al restablecerla si ya nadie la usa. Manda sobre la del archivo y sobre la funda (D27).
+- [x] **UI** (`ui/EditDialog.tsx`): se abre desde la hoja de acciones de la fila (biblioteca y cola) y con el lápiz del reproductor grande. «Original» y restablecer por campo, «Restablecer todo», errores junto al campo con foco. Hoja en móvil con «Guardar» fijo abajo; desde 1000 px, carátula a la izquierda y campos en dos columnas (patrón de Ajustes). Usa la entrada y salida de los diálogos y no se anima con movimiento reducido.
+- [x] **Privacidad:** local y sin subir; «Borrar datos de este dispositivo» vacía `edits`. Fila «Información editada» en Privacidad y datos; aviso, almacenamiento, FAQ y `COPY_LEGAL.md` al día.
+- [ ] Edición en lote y «aplicar a todo el álbum»: D29.
+
+Skills aplicadas: ponytail, impeccable (contexto y craft floor), make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max, design-motion-principles (solo los tokens existentes, sin animación nueva).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
