@@ -2,8 +2,8 @@
 // (src/platform/web). La nativa (Capacitor) se escribe en src/platform/native cuando haya Android Studio.
 // Se añaden aquí a medida que una fase las necesita: LocalLibrary (Fase 3), AudioSession (Fase 2).
 
-/** Tablas locales: biblioteca, portadas, letras (aparte de las pistas), playlists y operaciones pendientes con la nube. */
-export type Table = "tracks" | "roots" | "covers" | "playlists" | "outbox" | "lyrics";
+/** Tablas locales: biblioteca, portadas, letras (aparte de las pistas), ediciones de metadatos, playlists y operaciones pendientes con la nube. */
+export type Table = "tracks" | "roots" | "covers" | "playlists" | "outbox" | "lyrics" | "edits";
 
 /** Persistencia local del estado del usuario (sesión, ajustes, biblioteca). Siempre funciona sin red. */
 export interface Storage {
