@@ -1,5 +1,5 @@
 import type { Palette } from "../../core/palette";
-import type { CoverScaleJob, CoverScaleReply } from "./cover.worker";
+import type { CoverScaleJob, CoverScaleReply, MadeCover } from "./cover.worker";
 
 // Cliente del worker de portadas. Se crea la primera vez que hace falta (no cuesta nada al arrancar) y todo el trabajo
 // de píxeles ocurre fuera del hilo principal. Sin Worker u OffscreenCanvas devuelve undefined: se queda la portada guardada o la paleta neutra.
@@ -24,18 +24,21 @@ function spawn(): Worker {
   return created;
 }
 
-function ask(blob: Blob, px?: number): Promise<CoverScaleReply | undefined> {
+function ask(blob: Blob, px?: number, make?: true): Promise<CoverScaleReply | undefined> {
   if (typeof Worker === "undefined" || typeof OffscreenCanvas === "undefined") return Promise.resolve(undefined);
   const active = (worker ??= spawn());
   return new Promise((resolve) => {
     const id = nextId++;
     pending.set(id, resolve);
-    active.postMessage({ id, blob, px } satisfies CoverScaleJob);
+    active.postMessage({ id, blob, px, make } satisfies CoverScaleJob);
   });
 }
 
 /** La portada de `blob` recortada a cuadrado y a `px` de lado, o undefined si no se pudo. */
 export const scaleCover = (blob: Blob, px: number): Promise<Blob | undefined> => ask(blob, px).then((reply) => reply?.blob);
+
+/** Portada completa (miniaturas, original de ≤ 1024 px sin metadatos y paleta) de una imagen elegida, o undefined si no se pudo. */
+export const makeCover = (blob: Blob): Promise<MadeCover | undefined> => ask(blob, undefined, true).then((reply) => reply?.made);
 
 /** Paleta de la portada (core/palette), o undefined si no se pudo. */
 export const coverPalette = (blob: Blob): Promise<Palette | undefined> => ask(blob).then((reply) => reply?.palette);

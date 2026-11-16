@@ -327,8 +327,10 @@ function republishSession() {
 
 function syncSession(state: PlayerState, previous: PlayerState) {
   const track = trackOf(state.queue.current?.id);
-  if (state.queue.current?.key !== previous.queue.current?.key || !lastSessionTitle || lastSessionTitle !== track?.title) {
-    lastSessionTitle = track?.title;
+  // También al editar la pista que suena (título, artista, álbum o carátula): la ficha del sistema muestra lo editado.
+  const card = track && [track.title, track.artist, track.album, track.coverHash].join("\u0000");
+  if (state.queue.current?.key !== previous.queue.current?.key || !lastSessionCard || lastSessionCard !== card) {
+    lastSessionCard = card;
     publishTrack(true);
   }
   // La posición se publica al cambiar de estado o de duración, no en cada tic: el sistema la extrapola solo.
@@ -337,7 +339,7 @@ function syncSession(state: PlayerState, previous: PlayerState) {
     audioSession.setState({ playing: state.isPlaying, position: state.position, duration: state.duration, rate: speed });
   }
 }
-let lastSessionTitle: string | undefined;
+let lastSessionCard: string | undefined;
 
 // --- Persistencia (IndexedDB): cola, modos, posición y ajustes de audio. ---
 

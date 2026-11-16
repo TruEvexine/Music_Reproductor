@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { applyEdit, originalOf } from "../core/edits";
+import type { TrackEdit } from "../core/edits";
 import { newId } from "../core/id";
 import { diffScan, isAudioFile, isFolderCover, isLyricsFile, playedIds, stemOf } from "../core/library";
 import { parseLrc } from "../core/lyrics";
@@ -9,6 +11,7 @@ import { localLibrary, storage } from "../platform";
 import type { FolderAccess, LibraryFile, LibraryRoot } from "../platform/types";
 import { dropPendingMetadata, readMetadata, rememberCovers } from "../platform/web/metadata";
 import type { MetadataReply } from "../platform/web/metadata";
+import type { CoverRecord } from "./covers";
 
 // Biblioteca persistente: pistas, raíces y portadas en IndexedDB; los archivos se leen de la carpeta recordada
 // (File System Access), de la copia privada (OPFS) o, si no se pudo copiar, de memoria durante esta sesión.
@@ -50,6 +53,9 @@ const LOOSE = "Archivos importados";
 const MAX_LRC_BYTES = 512 * 1024;
 
 const trackIdOf = (rootId: string, path: string) => `${rootId}:${path}`;
+// Ediciones de metadatos por id de pista (core/edits.ts). Se aplican a la pista en memoria; en IndexedDB, `tracks` guarda solo lo leído del archivo.
+const edits = new Map<string, TrackEdit>();
+const withEdit = (track: Track) => applyEdit(track, edits.get(track.id));
 const byId = () => new Map(useLibrary.getState().tracks.map((track) => [track.id, track]));
 const say = (notice: string | null) => useLibrary.setState({ notice });
 
@@ -84,7 +90,7 @@ export async function flush() {
     const track = tracks.get(id);
     // Lo que vive solo en memoria no se guarda: tras recargar no habría archivo que leer.
     if (!track?.rootId || roots.get(track.rootId)?.kind === "session") return [];
-    const { unplayable: _runtime, ...stored } = track;
+    const { unplayable: _runtime, ...stored } = originalOf(track);
     return [stored];
   });
   const remove = [...deleted];
@@ -111,7 +117,8 @@ function applyPatches() {
   if (patches.size === 0) return;
   const pending = new Map(patches);
   patches.clear();
-  useLibrary.setState((state) => ({ tracks: state.tracks.map((track) => (pending.has(track.id) ? { ...track, ...pending.get(track.id) } : track)) }));
+  // Lo nuevo del archivo entra bajo la edición, que se vuelve a poner encima: reescanear no pierde ediciones.
+  useLibrary.setState((state) => ({ tracks: state.tracks.map((track) => (pending.has(track.id) ? withEdit({ ...originalOf(track), ...pending.get(track.id) }) : track)) }));
   persist(pending.keys());
 }
 
@@ -244,7 +251,7 @@ function scan(root: LibraryRoot, given?: LibraryFile[]): Promise<void> {
       audio.push(...songs);
       const stamps = songs.map(({ path, file }) => ({ path, size: file.size, lastModified: file.lastModified, entry: { path, file } }));
       const { added } = diffScan(stamps.flatMap(({ path }) => (knownByPath.has(path) ? [knownByPath.get(path)!] : [])), stamps);
-      const tracks = added.map(({ entry }) => newTrack(root, entry, knownByPath.get(entry.path)));
+      const tracks = added.map(({ entry }) => withEdit(newTrack(root, entry, knownByPath.get(entry.path))));
       fresh.push(...tracks);
       progress.found = audio.length;
       if (tracks.length > 0) {
@@ -330,6 +337,13 @@ async function importFiles(files: LibraryFile[]) {
   }
 }
 
+/** Borra las carátulas elegidas que ya no usa ninguna edición ni ningún archivo. */
+async function dropUnusedCovers(hashes: (string | undefined)[]) {
+  const used = new Set([...[...edits.values()].map((edit) => edit.coverHash), ...useLibrary.getState().tracks.map((track) => originalOf(track).coverHash)]);
+  const unused = [...new Set(hashes)].filter((hash): hash is string => hash !== undefined && !used.has(hash));
+  if (unused.length > 0) await storage.write("covers", [], unused);
+}
+
 // --- URLs de audio: se crean al reproducir y se revocan al salir de las últimas usadas. ---
 
 const urls = new Map<string, string>();
@@ -381,10 +395,11 @@ export const library = {
   },
   /** Carga lo guardado. Rápido: una lectura de cada tabla, sin tocar archivos ni permisos de escritura. */
   async init() {
-    const [savedRoots, savedTracks] = await Promise.all([storage.list<LibraryRoot>("roots"), storage.list<Track>("tracks")]);
+    const [savedRoots, savedTracks, savedEdits] = await Promise.all([storage.list<LibraryRoot>("roots"), storage.list<Track>("tracks"), storage.list<TrackEdit>("edits")]);
     for (const root of savedRoots) roots.set(root.id, root);
+    for (const edit of savedEdits) edits.set(edit.id, edit);
     rememberCovers(savedTracks.flatMap((track) => (track.coverHash ? [track.coverHash] : [])));
-    useLibrary.setState((state) => ({ tracks: [...savedTracks, ...state.tracks], ready: true }));
+    useLibrary.setState((state) => ({ tracks: [...savedTracks.map(withEdit), ...state.tracks], ready: true }));
     publishRoots();
     window.addEventListener("pagehide", () => {
       applyPatches();
@@ -469,11 +484,14 @@ export const library = {
     if (!root) return;
     if (scanning && useLibrary.getState().scan?.rootId === rootId) library.cancelScan();
     const gone = useLibrary.getState().tracks.filter((track) => track.rootId === rootId).map((track) => track.id);
+    const goneEdits = gone.flatMap((id) => edits.get(id) ?? []);
+    for (const edit of goneEdits) edits.delete(edit.id);
     roots.delete(rootId);
     access.delete(rootId);
     useLibrary.setState((state) => ({ tracks: state.tracks.filter((track) => track.rootId !== rootId) }));
     persist([], gone);
-    await Promise.all([flush(), storage.write("roots", [], [rootId]), localLibrary.forget(root)]);
+    await Promise.all([flush(), storage.write("roots", [], [rootId]), storage.write("edits", [], goneEdits.map((edit) => edit.id)), localLibrary.forget(root)]);
+    await dropUnusedCovers(goneEdits.map((edit) => edit.coverHash));
     publishRoots();
   },
   /** Ajustes → Privacidad y datos → Borrar datos de este dispositivo: quita todas las carpetas (y las copias privadas) y vacía el almacenamiento local. La UI recarga después. */
@@ -495,6 +513,22 @@ export const library = {
     const rootId = byId().get(id)?.rootId;
     const root = rootId ? roots.get(rootId) : undefined;
     return root ? { access: access.get(root.id) ?? "granted", name: root.name } : undefined;
+  },
+  /**
+   * Guarda (o, sin `edit`, borra) la edición de una pista y la pone encima de lo leído del archivo. `cover`: la carátula elegida, ya preparada
+   * (state/covers.ts `prepareCover`), que se guarda con la edición. Una carátula elegida antes que ya nadie usa se borra.
+   */
+  async saveEdit(id: string, edit: TrackEdit | undefined, cover?: CoverRecord) {
+    const track = byId().get(id);
+    if (!track) return;
+    const previous = edits.get(id);
+    if (edit) edits.set(id, edit);
+    else edits.delete(id);
+    useLibrary.setState((state) => ({ tracks: state.tracks.map((item) => (item.id === id ? withEdit(item) : item)) }));
+    if (cover && edit?.coverHash === cover.hash) await storage.write("covers", [cover]);
+    // Las pistas que no sobreviven a una recarga (archivos de esta sesión) tampoco guardan su edición: quedaría huérfana.
+    if (persisted(track)) await storage.write("edits", edit ? [edit] : [], edit ? [] : [id]);
+    await dropUnusedCovers([previous?.coverHash]);
   },
   markUnplayable(id: string) {
     patch(id, { unplayable: true }, true);
