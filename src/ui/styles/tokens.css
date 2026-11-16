@@ -1,0 +1,142 @@
+/* Tokens de diseño. Ver DESIGN.md. Todo color, tamaño y duración de la interfaz sale de aquí. */
+:root {
+  /* Color: tres tonos de superficie (se separan por tono, no por bordes) y tres de tinta. */
+  --bg: oklch(0.145 0.004 70);
+  --surface-1: oklch(0.19 0.005 70);
+  --surface-2: oklch(0.235 0.006 70);
+  --surface-3: oklch(0.29 0.007 70);
+  --ink: oklch(0.96 0.006 85);
+  --ink-2: oklch(0.78 0.008 85);
+  --ink-3: oklch(0.66 0.008 85);
+  --danger: oklch(0.76 0.14 25);
+  /* El acento y el ambiente los sobrescribe la portada de la pista actual (core/palette.ts). */
+  --accent: oklch(0.84 0.09 85);
+  --on-accent: oklch(0.2 0.03 85);
+  --glow: oklch(0.3 0.03 85);
+  --accent-in: oklch(0.84 0.09 85); /* valores de partida de la portada: .shell los sustituye con los de la pista (App.tsx) */
+  --glow-in: oklch(0.3 0.03 85);
+
+  /* Tipografía: una familia variable; los títulos usan el eje de anchura condensado. */
+  --font: "Instrument Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --text-xs: 0.75rem;
+  --text-s: 0.8125rem;
+  --text-m: clamp(0.9375rem, 0.9rem + 0.2vw, 1rem);
+  --text-l: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  --text-xl: clamp(1.875rem, 1.3rem + 2.6vw, 3rem);
+
+  /* Espacio (base 4), radios y tamaños táctiles. */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --radius-s: 6px;
+  --radius-m: 12px;
+  --tap: 44px;
+  --tap-l: 56px;
+
+  /* Movimiento: un conjunto cerrado (ver DESIGN.md §3). Solo transform y opacity. Nada se anima en lo frecuente ni por teclado. */
+  --fast: 120ms; /* respuesta al tacto: pulsar, popovers */
+  --base: 220ms; /* entrada de hojas, diálogos, paneles y avisos */
+  --slow: 280ms; /* abrir el reproductor */
+  --exit: 140ms; /* toda salida: más rápida que su entrada */
+  --page: 560ms; /* solo landing y primer uso */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1); /* entradas, salidas y pulsación: decelera */
+  --ease-move: cubic-bezier(0.65, 0, 0.35, 1); /* de una posición a otra ya en pantalla: cambio de página, fila que vuelve */
+  --press: 0.96; /* controles compactos al pulsar (nunca por debajo de 0.95) */
+  --press-wide: 0.985; /* filas y superficies anchas */
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Fondo AMOLED: negro puro en toda la app (lo pone state/background.ts en <html data-bg>). */
+:root[data-bg="amoled"] {
+  --bg: oklch(0 0 0);
+}
+
+/*
+ * HDR simulado (lo pone state/background.ts en <html data-hdr>; es un interruptor global, no un modo del fondo). En la web no hay HDR
+ * garantizado: esto es negro profundo con colores más vivos en toda la app (acentos, portadas, brillos y fondo) y reflejos con techo.
+ * Degrada solo por capacidad de la pantalla:
+ *   sRGB           → croma ×1,2 y curva de contraste al 35 %; portadas con saturación 1,08;
+ *   color-gamut p3 → croma ×1,5, curva más suave, luces en Display P3 y portadas con saturación 1,16;
+ *   + dynamic-range high → techo de reflejos al máximo y de acentos un poco más alto;
+ *   prefers-contrast: more → sin realce (SDR plano).
+ * Tope de saturación: el croma de un acento nunca pasa de --hdr-cmax, y su luminosidad de --hdr-peak, así el texto de --on-accent y
+ * el acento sobre negro conservan ≥ 4,5:1 (lo comprueba src/core/hdr.test.ts). Las --hdr-* las leen también el fondo WebGL y la paleta
+ * (ui/hdr.ts): una sola política para CSS y lienzo. Sin movimiento propio: con movimiento reducido el fondo ya se pinta sin animar.
+ */
+:root[data-hdr] {
+  --bg: oklch(0 0 0);
+  --surface-1: oklch(0.17 0.004 70);
+  --surface-2: oklch(0.22 0.005 70);
+  --surface-3: oklch(0.285 0.007 70);
+  --danger: oklch(0.78 0.16 25);
+  --hdr-chroma: 1.2;
+  --hdr-cmax: 0.15;
+  --hdr-contrast: 0.35;
+  --hdr-glint: 0.6;
+  --hdr-peak: 0.86;
+  --hdr-cover: saturate(1.08) contrast(1.04);
+}
+
+@media (color-gamut: p3) {
+  :root[data-hdr] {
+    --danger: color(display-p3 1 0.47 0.4);
+    --hdr-chroma: 1.5;
+    --hdr-cmax: 0.18;
+    --hdr-contrast: 0.25;
+    --hdr-glint: 0.8;
+    --hdr-cover: saturate(1.16) contrast(1.06);
+  }
+}
+
+@media (color-gamut: p3) and (dynamic-range: high) {
+  :root[data-hdr] {
+    --hdr-glint: 1;
+    --hdr-peak: 0.9;
+  }
+}
+
+@media (prefers-contrast: more) {
+  :root[data-hdr] {
+    --hdr-chroma: 1;
+    --hdr-contrast: 0;
+    --hdr-glint: 0;
+    --hdr-cover: none;
+  }
+}
+
+/* La paleta de la portada llega en --accent-in y --glow-in (App.tsx); aquí se convierten en los acentos de la interfaz. */
+.shell {
+  --accent: var(--accent-in);
+  --glow: var(--glow-in);
+}
+
+/* HDR: los mismos acentos y brillos con más croma (con tope) en toda la app, también fuera de .shell (landing). */
+@supports (color: oklch(from red l c h)) {
+  :root[data-hdr],
+  :root[data-hdr] .shell {
+    --accent: oklch(from var(--accent-in) min(l, var(--hdr-peak)) min(calc(c * var(--hdr-chroma)), var(--hdr-cmax)) h);
+    --glow: oklch(from var(--glow-in) l min(calc(c * var(--hdr-chroma)), var(--hdr-cmax)) h);
+  }
+}
+
+/* Las portadas, con su respaldo en degradado, pasan por el mismo realce (sin animación: es un filtro estático). */
+:root[data-hdr] .cover {
+  filter: var(--hdr-cover);
+}
+
+@media (prefers-contrast: more) {
+  :root {
+    --ink-2: oklch(0.9 0.006 85);
+    --ink-3: oklch(0.82 0.008 85);
+    --surface-2: oklch(0.27 0.006 70);
+  }
+}

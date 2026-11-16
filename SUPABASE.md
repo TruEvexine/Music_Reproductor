@@ -401,21 +401,23 @@ El reproductor vivía en el proyecto de otro sitio. Ahora usa un proyecto propio
 
 ## 16.2 Aplicar el esquema
 
-Opción A — CLI (recomendada, registra el historial de migraciones):
+Son cinco migraciones, en el orden de `docs/PLAN_SEGURIDAD.md` §8.1 (qué deja cada una en un proyecto vacío). `db push` las aplica así.
+
+Opción A — CLI (recomendada, registra el historial de migraciones; no hace falta `migration repair`):
 
 ```bash
 npx supabase login
 npx supabase link --project-ref <NUEVO_REF>   # pide la contraseña de la BD
 npx supabase db push                          # aplica supabase/migrations/* en orden
-npx supabase migration list                   # las 3 deben aparecer en Local y Remote
+npx supabase migration list                   # las 5 deben aparecer en Local y Remote, con las mismas fechas
 ```
 
-Opción B — SQL Editor: pegar y ejecutar, en orden, los tres archivos de
-`supabase/migrations/`. Son idempotentes. Si después se usa la CLI, marcar las
+Opción B — SQL Editor: pegar y ejecutar, en orden, los cinco archivos de
+`supabase/migrations/` (§8.1 del plan de seguridad). Son idempotentes. Si después se usa la CLI, marcar las
 migraciones como aplicadas para que no se repitan:
 
 ```bash
-npx supabase migration repair --status applied 20260928180000 20260928181500 20261014120000
+npx supabase migration repair --status applied 20260928180000 20260928181500 20261014120000 20261110120000 20261114120000
 ```
 
 ## 16.3 Configurar Auth
@@ -435,7 +437,7 @@ npx supabase migration repair --status applied 20260928180000 20260928181500 202
 |-------|----------|-------|
 | `.env` local | `VITE_SUPABASE_URL` | `https://<NUEVO_REF>.supabase.co` |
 | `.env` local | `VITE_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_...` (Dashboard → Settings → API Keys) |
-| Vercel → Settings → Environment Variables (Production y Preview) | las mismas dos | mismos valores; requiere redeploy |
+| Vercel → Settings → Environment Variables (Production y Preview) | las mismas dos | mismos valores; requiere un nuevo deploy |
 
 Nada más cambia: no hay otras variables. La `secret key`/`service_role` y la
 contraseña de la BD **nunca** van a `.env` del frontend ni a Vercel.

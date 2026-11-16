@@ -1,0 +1,262 @@
+// Prueba del «HDR simulado» (interruptor global) en Chromium contra `npm run dev`. Uso: node scripts/prueba-hdr.mjs [url-base] [carpeta-capturas]
+// Comprueba: el interruptor existe, persiste y al apagarlo todo vuelve a SDR; negro puro; las portadas y los acentos de toda la app se realzan
+// con tope; «más contraste» del sistema lo desactiva; acento y texto sobre acento conservan ≥ 4.5:1;
+// la política --hdr-* cambia con `color-gamut: p3` y `dynamic-range: high` (emulados por CDP);
+// el acento sube de croma sin pasar el techo de luminosidad; el lienzo pasa a Display P3 solo con pantalla P3; el respaldo CSS usa
+// color(display-p3 …) solo con P3; el brillo máximo del fondo deja el texto legible (≥ 4.5:1); movimiento reducido y sin WebGL degradan sin errores.
+// LO QUE ESTA PRUEBA NO PUEDE VER: cómo luce en una pantalla P3/HDR real. Emular el media query cambia las reglas, no la pantalla.
+import { chromium } from "@playwright/test";
+import { args, carpetaCapturas } from "./salida.mjs";
+import { join } from "node:path";
+
+const base = (args[0] ?? "http://localhost:5173").replace(/\/$/, "");
+const shots = carpetaCapturas(args[1], "hdr");
+const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
+const files = ["01-amanecer.flac", "02-marea.flac"].map((name) => join(fixtures, name));
+
+let failed = 0;
+const check = (name, ok, detail = "") => {
+  if (!ok) failed += 1;
+  console.log(`${ok ? "OK  " : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`);
+};
+const wait = (page, ms) => page.waitForTimeout(ms);
+
+async function open(browser, { reducedMotion = "no-preference", media = [], noWebgl = false } = {}) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion });
+  const page = await context.newPage();
+  const errors = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.route("**/demoCatalog.dev.ts*", (route) => route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }));
+  if (noWebgl) await page.addInitScript(() => (HTMLCanvasElement.prototype.getContext = () => null));
+  const session = await context.newCDPSession(page);
+  if (media.length) await session.send("Emulation.setEmulatedMedia", { features: media.map(([name, value]) => ({ name, value })) });
+  await page.goto(`${base}/app`);
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
+  await wait(page, 2500);
+  await page.locator(".track-row .row-main").first().click();
+  await wait(page, 800);
+  await page.locator(".bar-track").click();
+  await wait(page, 500);
+  return { page, errors, context, session };
+}
+
+const menu = (page) => page.locator("dialog.menu[open]");
+const chooseHdr = async (page) => {
+  await page.locator('.now-header button[aria-label="Menú del reproductor"]').click();
+  await wait(page, 300);
+  await menu(page).getByRole("button", { name: /^Fondo/ }).click();
+  await wait(page, 300);
+  await menu(page).getByRole("switch", { name: "HDR simulado en toda la app" }).click();
+  await wait(page, 500);
+  await page.keyboard.press("Escape");
+  await wait(page, 300);
+};
+const vars = (page) =>
+  page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    // El color resuelto (no el texto de la variable) se lee de un sondeo; oklch() se serializa como oklch(L C H).
+    const probe = document.createElement("i");
+    document.querySelector(".shell").append(probe);
+    const resolve = (name) => {
+      probe.style.color = `var(${name})`;
+      return getComputedStyle(probe).color;
+    };
+    const out = {
+      bg: root.getPropertyValue("--bg").trim(),
+      chroma: parseFloat(root.getPropertyValue("--hdr-chroma")),
+      contrast: parseFloat(root.getPropertyValue("--hdr-contrast")),
+      glint: parseFloat(root.getPropertyValue("--hdr-glint")),
+      peak: parseFloat(root.getPropertyValue("--hdr-peak")),
+      accent: resolve("--accent"),
+      accentIn: resolve("--accent-in"),
+      danger: resolve("--danger"),
+      onAccent: resolve("--on-accent"),
+      p3: matchMedia("(color-gamut: p3)").matches,
+      hdr: matchMedia("(dynamic-range: high)").matches,
+    };
+    probe.remove();
+    return out;
+  });
+// Contraste WCAG entre dos colores CSS (el lienzo 2D los pasa a sRGB, recortando lo que sRGB no alcanza).
+const contrastOf = (page, fg, bg) =>
+  page.evaluate(
+    ([a, b]) => {
+      const context = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+      const luminance = (css) => {
+        context.clearRect(0, 0, 1, 1);
+        context.fillStyle = css;
+        context.fillRect(0, 0, 1, 1);
+        const [r, g, bl] = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map((v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+        return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+      };
+      const [x, y] = [luminance(a), luminance(b)];
+      return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+    },
+    [fg, bg],
+  );
+// Filtro que el realce aplica a las portadas, leído en la primera `.cover` de la página.
+const coverFilter = (page) => page.evaluate(() => getComputedStyle(document.querySelector(".cover")).filter);
+const oklch = (css) => {
+  const m = css.match(/oklch\(([\d.]+) ([\d.]+) ([\d.]+)/);
+  return m ? { l: +m[1], c: +m[2], h: +m[3] } : null;
+};
+// Brillo del fondo solo (sin lo que hay encima), medido en píxeles reales de una captura.
+async function backdropLuminance(page) {
+  await page.evaluate(() => document.querySelectorAll(".now-playing > :not(.backdrop), dialog.menu").forEach((el) => (el.style.visibility = "hidden")));
+  await wait(page, 150);
+  const png = await page.locator(".now-playing .backdrop").first().screenshot();
+  await page.evaluate(() => document.querySelectorAll(".now-playing > :not(.backdrop), dialog.menu").forEach((el) => (el.style.visibility = "")));
+  return page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    context.drawImage(image, 0, 0);
+    const linear = (v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+    let max = 0;
+    let maxBottom = 0;
+    const data = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    for (let i = 0; i < data.length; i += 4) {
+      const y = 0.2126 * linear(data[i]) + 0.7152 * linear(data[i + 1]) + 0.0722 * linear(data[i + 2]);
+      const row = Math.floor(i / 4 / canvas.width);
+      max = Math.max(max, y);
+      if (row > canvas.height * 0.55) maxBottom = Math.max(maxBottom, y);
+    }
+    return { max, maxBottom };
+  }, png.toString("base64"));
+}
+const contrastWithInk = (y) => (0.88 + 0.05) / (y + 0.05); // --ink: oklch(0.96 …) ≈ Y 0.88
+
+const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required", "--enable-unsafe-swiftshader"] });
+
+// ───────────── SDR (pantalla sRGB estándar) ─────────────
+let sdrPeak;
+{
+  const { page, errors, context } = await open(browser, { media: [["color-gamut", "srgb"], ["dynamic-range", "standard"]] });
+  const cover = await backdropLuminance(page);
+  await chooseHdr(page);
+  const v = await vars(page);
+  check("el interruptor HDR se aplica a <html> y deja el negro puro", (await page.evaluate(() => document.documentElement.hasAttribute("data-hdr"))) && /oklch\(0 0 0\)/.test(v.bg), v.bg);
+  const sdrFilter = await coverFilter(page);
+  check("SDR: las portadas se realzan (saturación 1,08, contraste 1,04)", /saturate\(1\.08\)/.test(sdrFilter) && /contrast\(1\.04\)/.test(sdrFilter), sdrFilter);
+  const sdrRatios = [await contrastOf(page, v.accent, v.bg), await contrastOf(page, v.onAccent, v.accent)];
+  check("SDR: el acento sobre negro y el texto sobre acento conservan ≥ 4.5:1", sdrRatios.every((r) => r >= 4.5), sdrRatios.map((r) => `${r.toFixed(1)}:1`).join(" · "));
+  check("SDR: curva de saturación y contraste (croma ×1,2, curva al 35 %), reflejos al 0,6", v.chroma === 1.2 && v.contrast === 0.35 && v.glint === 0.6 && !v.p3 && !v.hdr, JSON.stringify({ ...v, accent: "", accentIn: "", danger: "" }));
+  const accent = oklch(v.accent);
+  const input = oklch(v.accentIn);
+  check("SDR: el acento sube de croma ×1,2 sin cambiar de tono ni pasar el techo de luminosidad", accent && input && Math.abs(accent.c / input.c - 1.2) < 0.03 && Math.abs(accent.h - input.h) < 1 && accent.l <= v.peak + 0.001, `${v.accentIn} → ${v.accent}`);
+  const canvasSpace = await page.evaluate(() => document.querySelector("canvas.backdrop-canvas")?.getContext("webgl")?.drawingBufferColorSpace ?? "sin soporte");
+  check("SDR: el lienzo WebGL sigue en sRGB", canvasSpace === "srgb" || canvasSpace === "sin soporte", canvasSpace);
+  await wait(page, 600);
+  const hdr = await backdropLuminance(page);
+  sdrPeak = hdr;
+  check("el brillo máximo del fondo deja el texto legible (≥ 4.5:1 con la tinta en la zona de controles)", contrastWithInk(hdr.maxBottom) >= 4.5, `HDR ${hdr.maxBottom.toFixed(3)} (${contrastWithInk(hdr.maxBottom).toFixed(1)}:1) · Portada ${cover.maxBottom.toFixed(3)} (${contrastWithInk(cover.maxBottom).toFixed(1)}:1)`);
+  await page.screenshot({ path: join(shots, "hdr-sdr-1440x900.png") });
+  await page.reload();
+  await wait(page, 800);
+  check("el interruptor persiste tras recargar", await page.evaluate(() => document.documentElement.hasAttribute("data-hdr")));
+  check("sin errores de página (SDR)", errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+
+// ───────────── Apagar el interruptor devuelve todo a SDR ─────────────
+{
+  const { page, context } = await open(browser, { media: [["color-gamut", "srgb"]] });
+  await chooseHdr(page);
+  const on = await coverFilter(page);
+  await chooseHdr(page); // segundo clic: apaga el interruptor
+  const off = await vars(page);
+  const offFilter = await coverFilter(page);
+  check("con el interruptor apagado todo vuelve a SDR (sin filtro de portadas, sin --hdr-*, fondo de la app)", on !== "none" && !(await page.evaluate(() => document.documentElement.hasAttribute("data-hdr"))) && offFilter === "none" && Number.isNaN(off.chroma) && !/oklch(0 0 0)/.test(off.bg), `${on} → ${offFilter} · ${off.bg}`);
+  await context.close();
+}
+
+// ───────────── Display P3 ─────────────
+{
+  const { page, errors, context } = await open(browser, { media: [["color-gamut", "p3"], ["dynamic-range", "standard"]] });
+  await chooseHdr(page);
+  const v = await vars(page);
+  check("P3: croma ×1,5, curva más suave y reflejos al 0,8", v.p3 && !v.hdr && v.chroma === 1.5 && v.contrast === 0.25 && v.glint === 0.8, JSON.stringify({ chroma: v.chroma, contrast: v.contrast, glint: v.glint }));
+  check("P3: el rojo de error usa color(display-p3 …)", /display-p3/.test(v.danger), v.danger);
+  const accent = oklch(v.accent);
+  const input = oklch(v.accentIn);
+  check("P3: el acento sube de croma ×1,5 (con tope 0,18)", accent && input && (Math.abs(accent.c / input.c - 1.5) < 0.05 || accent.c <= 0.181), `${v.accentIn} → ${v.accent}`);
+  const p3Filter = await coverFilter(page);
+  check("P3: las portadas se realzan con saturación 1,16", /saturate\(1\.16\)/.test(p3Filter), p3Filter);
+  const p3Ratios = [await contrastOf(page, v.accent, v.bg), await contrastOf(page, v.onAccent, v.accent)];
+  check("P3: el acento sobre negro y el texto sobre acento conservan ≥ 4.5:1", p3Ratios.every((r) => r >= 4.5), p3Ratios.map((r) => `${r.toFixed(1)}:1`).join(" · "));
+  const canvasSpace = await page.evaluate(() => document.querySelector("canvas.backdrop-canvas")?.getContext("webgl")?.drawingBufferColorSpace ?? "sin soporte");
+  check("P3: el lienzo WebGL pasa a Display P3 (si el navegador lo soporta)", canvasSpace === "display-p3" || canvasSpace === "sin soporte", canvasSpace);
+  await wait(page, 600);
+  const hdr = await backdropLuminance(page);
+  check("P3: el fondo sigue legible (≥ 4.5:1)", contrastWithInk(hdr.maxBottom) >= 4.5, `${hdr.maxBottom.toFixed(3)} (${contrastWithInk(hdr.maxBottom).toFixed(1)}:1)`);
+  await page.screenshot({ path: join(shots, "hdr-p3-1440x900.png") });
+  check("sin errores de página (P3)", errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+
+// ───────────── P3 + rango dinámico alto ─────────────
+// CDP no emula `dynamic-range`; `--force-color-profile=hdr10` hace que Chromium declare la pantalla como HDR (y P3) de verdad.
+const hdrBrowser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required", "--enable-unsafe-swiftshader", "--force-color-profile=hdr10"] });
+{
+  const { page, errors, context } = await open(hdrBrowser);
+  await chooseHdr(page);
+  const v = await vars(page);
+  check("P3 + HDR declarado: reflejos al máximo (1) y techo de acentos 0,9", v.p3 && v.hdr && v.glint === 1 && v.peak === 0.9, JSON.stringify({ glint: v.glint, peak: v.peak, hdr: v.hdr }));
+  await wait(page, 600);
+  const hdr = await backdropLuminance(page);
+  check("P3 + HDR: el fondo sigue legible con el techo más alto (≥ 4.5:1)", contrastWithInk(hdr.maxBottom) >= 4.5, `${hdr.maxBottom.toFixed(3)} (${contrastWithInk(hdr.maxBottom).toFixed(1)}:1)`);
+  await page.screenshot({ path: join(shots, "hdr-p3-hdr-1440x900.png") });
+  check("sin errores de página (P3 + HDR)", errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+await hdrBrowser.close();
+
+// ───────────── Degradación: movimiento reducido y sin WebGL ─────────────
+for (const [label, options] of [
+  ["movimiento reducido + P3", { reducedMotion: "reduce", media: [["color-gamut", "p3"]] }],
+  ["movimiento reducido + sRGB", { reducedMotion: "reduce", media: [["color-gamut", "srgb"]] }],
+  ["sin WebGL + P3", { noWebgl: true, media: [["color-gamut", "p3"]] }],
+]) {
+  const { page, errors, context } = await open(browser, options);
+  await chooseHdr(page);
+  const state = await page.evaluate(() => ({
+    canvases: document.querySelectorAll("canvas.backdrop-canvas").length,
+    paint: document.querySelector(".now-playing > .backdrop")?.style.background ?? "",
+  }));
+  const p3 = label.includes("P3");
+  check(`${label}: sin lienzo y con gradiente CSS ${p3 ? "en display-p3" : "en rgb()"} sobre negro`, state.canvases === 0 && state.paint.includes(p3 ? "display-p3" : "rgb(") && (p3 || !state.paint.includes("display-p3")) && state.paint.endsWith("var(--bg)"), state.paint.slice(0, 70));
+  check(`${label}: sin errores de página`, errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+
+// ───────────── «Más contraste» del sistema: sin realce ─────────────
+{
+  const { page, errors, context } = await open(browser, { media: [["color-gamut", "p3"], ["prefers-contrast", "more"]] });
+  await chooseHdr(page);
+  const v = await vars(page);
+  const filter = await coverFilter(page);
+  check("prefers-contrast: more: croma ×1, sin curva ni reflejos y portadas sin filtro", v.chroma === 1 && v.contrast === 0 && v.glint === 0 && filter === "none", JSON.stringify({ chroma: v.chroma, contrast: v.contrast, glint: v.glint, filter }));
+  check("prefers-contrast: more: sin errores de página", errors.length === 0, errors.join(" | "));
+  await context.close();
+}
+
+// ───────────── Navegador sin sintaxis de color relativo ─────────────
+{
+  const { page, context } = await open(browser);
+  await chooseHdr(page);
+  const supported = await page.evaluate(() => CSS.supports("color", "oklch(from red l c h)"));
+  check("este Chromium admite color relativo (si no, el acento queda como el de la portada, sin romperse)", supported);
+  await context.close();
+}
+
+await browser.close();
+if (failed) {
+  console.log(`\n${failed} comprobación(es) del modo HDR fallaron`);
+  process.exit(1);
+}
+console.log("\nTodas las comprobaciones del modo HDR pasaron");
+console.log(`(Brillo máximo HDR en SDR medido: ${sdrPeak?.maxBottom.toFixed(3)}. Lo que no se puede ver aquí: cómo luce en una pantalla P3/HDR real.)`);

@@ -1,0 +1,182 @@
+/* Estructura: móvil = contenido / mini reproductor / pestañas. Escritorio = navegación | contenido | cola, y barra abajo. */
+.shell {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template: "main" minmax(0, 1fr) "tip" auto "bar" auto "nav" auto / minmax(0, 1fr);
+  height: 100dvh;
+}
+
+.main {
+  grid-area: main;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: var(--safe-top);
+}
+
+.nav {
+  grid-area: nav;
+  display: flex;
+  padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
+  background: var(--surface-1);
+}
+
+.brand {
+  display: none;
+}
+
+.nav-link {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--tap-l);
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.nav-link[aria-current="page"] {
+  color: var(--accent);
+}
+
+/* La pestaña activa no depende solo del color: el icono gana trazo. */
+.nav-link[aria-current="page"] svg {
+  stroke-width: 2.4;
+}
+
+.view {
+  display: grid;
+  /* Una columna que nunca crece más que la vista: sin esto, el contenido ancho (pestañas, rejillas) la ensancha. */
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: var(--s4);
+  padding: var(--s5) var(--gutter) var(--s6);
+}
+
+.view-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.view.empty {
+  align-content: center;
+  justify-items: start;
+  gap: var(--s4);
+  min-height: 100%;
+  max-width: 34rem;
+}
+
+.view.empty p:not(.hint) {
+  color: var(--ink-2);
+  font-size: var(--text-l);
+}
+
+@media (min-width: 1000px) {
+  .shell {
+    grid-template:
+      "nav main queue" minmax(0, 1fr)
+      "nav tip queue" auto
+      "bar bar bar" auto / 220px minmax(0, 1fr) auto;
+  }
+
+  .nav {
+    flex-direction: column;
+    gap: var(--s1);
+    padding: var(--s5) var(--s3);
+  }
+
+  .brand {
+    display: block;
+    padding: 0 var(--s3) var(--s5);
+    font-size: var(--text-l);
+    font-stretch: 80%;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .nav-link {
+    flex: none;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--s3);
+    min-height: var(--tap);
+    padding: 0 var(--s3);
+    border-radius: var(--radius-s);
+    font-size: var(--text-m);
+  }
+
+  .nav-link[aria-current="page"] {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+
+  .view {
+    padding-top: var(--s7);
+  }
+}
+
+@media (hover: hover) {
+  .nav-link:hover {
+    color: var(--ink);
+  }
+}
+
+/* El bloque de título cede ancho y su texto se parte: un subtítulo largo no empuja la vista hacia la derecha. */
+.view-header > div:first-child {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+/* Aviso de primera vez (ui/Tutorial.tsx): una franja en el flujo, no una capa. Si no hay aviso, su fila mide 0 y nada se mueve. Se separa por tono. */
+.tip {
+  grid-area: tip;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--s3);
+  padding: var(--s2) calc(var(--gutter) + var(--safe-right)) var(--s2) calc(var(--gutter) + var(--safe-left));
+  background: var(--surface-1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  --o0: 0;
+  --o1: 0;
+}
+
+.tip p {
+  flex: 1 1 16rem;
+  min-width: 0;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+.tip-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.tip-actions {
+  display: flex;
+  margin-left: auto;
+}
+
+/* Dentro del reproductor grande: una tarjeta sobre los controles, en el flujo (la portada cede ese alto). */
+.tip[data-slot="player"] {
+  grid-area: auto;
+  padding: var(--s1) var(--s3);
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+}
+
+/* La foto de perfil sustituye al icono de la cuenta: del mismo tamaño y en círculo, como los botones. */
+.nav-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+}

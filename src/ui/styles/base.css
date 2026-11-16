@@ -1,0 +1,585 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 100%;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  font-size: var(--text-m);
+  overflow: hidden;
+}
+
+h1,
+h2,
+p,
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+h1 {
+  font-size: var(--text-xl);
+  font-stretch: 80%;
+  font-weight: 650;
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: var(--text-l);
+  font-stretch: 88%;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+/* Táctil: sin retardo ni zoom por doble toque, y sin selección de texto, menú de pulsación larga ni arrastre de imágenes
+   al mantener pulsado un control o una fila. Los campos de texto y la letra siguen siendo seleccionables. */
+button,
+a,
+select,
+label,
+.track-row,
+.queue-row,
+.player-bar,
+.now-playing,
+.tabs,
+.nav {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+img {
+  -webkit-user-drag: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Foco solo con teclado (:focus-visible). Aro propio y sutil: tinta translúcida (se lee sobre cualquier portada) con un
+   halo suave del acento. El contorno sigue el radio del elemento, así que los botones redondos siguen redondos. */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ink) 80%, transparent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 30%, transparent);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Texto: dos niveles reutilizados en filas, barra y reproductor. */
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  min-width: 0;
+  font-weight: 550;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title:not(:has(svg)) {
+  display: block;
+}
+
+.subtitle,
+.hint {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.time,
+.quality {
+  color: var(--ink-2);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.quality {
+  letter-spacing: 0.02em;
+}
+
+.warn {
+  flex: none;
+  color: var(--danger);
+}
+
+.error {
+  color: var(--danger);
+}
+
+/* Controles */
+.icon-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  border-radius: 50%;
+  color: var(--ink-2);
+  transition:
+    transform var(--fast) var(--ease),
+    opacity var(--fast) var(--ease);
+}
+
+/* Pulsar: los controles compactos se hunden a --press y las filas anchas a --press-wide. No se anima el transporte (se usa cientos
+   de veces) ni nada que se active con el teclado. */
+html:not([data-input="key"]) :is(.icon-button, .button, .chip):not(:is(.transport, .bar-mini) *):active:not(:disabled) {
+  transform: scale(var(--press));
+}
+
+html:not([data-input="key"]) .menu-row:active:not(:disabled) {
+  transform: scale(var(--press-wide));
+}
+
+.icon-button.is-on {
+  color: var(--accent);
+}
+
+/* El estado activo no depende solo del color: lleva además un punto debajo. */
+.icon-button.is-on::after {
+  content: "";
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  margin-top: 30px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  min-height: var(--tap);
+  padding: 0 var(--s4);
+  border-radius: 999px;
+  background: var(--surface-2);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform var(--fast) var(--ease);
+}
+
+.button.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.link {
+  min-height: var(--tap);
+  padding: 0 var(--s2);
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (hover: hover) {
+  .icon-button:hover:not(:disabled) {
+    color: var(--ink);
+    background: var(--surface-2);
+  }
+  .button:hover:not(:disabled):not(.primary) {
+    background: var(--surface-3);
+  }
+}
+
+.cover {
+  position: relative;
+  display: block;
+  flex: none;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-s);
+}
+
+/* Funda generada para las pistas sin carátula (core/coverArt.ts): tono mate que sale del álbum o de la pista (--h) con luminosidad y croma fijos, y una forma de onda
+   de barras que ocupa el centro con márgenes amplios. Estática: el movimiento vive en el fondo del reproductor. Sin degradados, sin sombras. */
+.cover[data-sleeve] {
+  background: oklch(0.34 0.045 var(--h));
+  color: oklch(0.78 0.07 var(--h));
+}
+
+.cover > .art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Diálogos: hoja inferior en móvil, centrado en pantallas anchas. */
+.dialog {
+  width: 100%;
+  max-width: 100%;
+  max-height: 88dvh;
+  margin: auto 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-m) var(--radius-m) 0 0;
+  background: var(--surface-1);
+  color: var(--ink);
+}
+
+.dialog::backdrop {
+  background: oklch(0 0 0 / 0.6);
+}
+
+/* Entradas y salidas (ver DESIGN.md §3). Son transiciones, no keyframes: se pueden interrumpir y revertir a mitad de camino (cerrar mientras abre,
+   volver a abrir mientras cierra) sin salto, porque el navegador parte del valor que lleva en ese instante. Cada panel declara su pose de entrada
+   (--t0 transform, --o0 opacidad) y de salida (--t1, --o1); la entrada dura --in (--base salvo que el panel diga otra cosa) y la salida siempre --exit.
+   El componente marca [data-closing] (ui/motion.ts) y desmonta al terminar. Sin @starting-style el panel aparece sin entrada y la salida sigue funcionando. */
+:is(.dialog, .menu, .now-playing, .queue-panel, .toast, .tip) {
+  --in: var(--base);
+  transition:
+    transform var(--in) var(--ease),
+    opacity var(--in) var(--ease);
+}
+
+@starting-style {
+  :is(.dialog, .menu, .now-playing, .queue-panel, .toast, .tip) {
+    transform: var(--t0, none);
+    opacity: var(--o0, 1);
+  }
+}
+
+:is(.dialog, .menu, .now-playing, .queue-panel, .toast, .tip)[data-closing] {
+  --in: var(--exit);
+  transform: var(--t1, none);
+  opacity: var(--o1, 1);
+}
+
+/* Telón de los diálogos y hojas: se funde con la misma duración que el panel. */
+.dialog::backdrop,
+.menu::backdrop {
+  transition: opacity var(--base) var(--ease);
+}
+
+@starting-style {
+  .dialog::backdrop,
+  .menu::backdrop {
+    opacity: 0;
+  }
+}
+
+.dialog[data-closing]::backdrop,
+.menu[data-closing]::backdrop {
+  opacity: 0;
+  transition: opacity var(--exit) var(--ease);
+}
+
+/* Salida de una sola vez (sin pose de partida que revertir): la portada anterior al cambiar de pista (player.css). */
+@keyframes exit-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+.dialog {
+  --t0: translateY(100%);
+  --t1: translateY(100%);
+}
+
+.dialog-body {
+  display: grid;
+  gap: var(--s4);
+  padding: var(--s4) var(--gutter) calc(var(--s5) + var(--safe-bottom));
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.dialog .subtitle {
+  white-space: normal;
+}
+
+/* Hoja de atajos: etiqueta a la izquierda, teclas a la derecha. Las teclas se separan por tono, sin bordes. */
+.shortcuts {
+  display: grid;
+  gap: var(--s1);
+  margin: 0;
+}
+
+.shortcuts > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: 40px;
+}
+
+.shortcuts dt {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.shortcuts dd {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--s1);
+  margin: 0;
+  color: var(--ink-3);
+  font-size: var(--text-xs);
+}
+
+.shortcuts kbd {
+  display: inline-grid;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 var(--s2);
+  place-items: center;
+  border-radius: var(--radius-s);
+  background: var(--surface-3);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+@media (min-width: 600px) {
+  .dialog {
+    --t0: translateY(4px) scale(0.98);
+    --t1: translateY(4px) scale(0.98);
+    --o0: 0;
+    --o1: 0;
+    width: min(440px, 100% - 2 * var(--s5));
+    margin: auto;
+    border-radius: var(--radius-m);
+  }
+  .dialog-body {
+    padding: var(--s5);
+  }
+}
+
+.form {
+  display: grid;
+  gap: var(--s4);
+}
+
+.form label {
+  display: grid;
+  gap: var(--s2);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.form input,
+.search {
+  min-height: 48px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+}
+
+/* 16 px mínimo: por debajo, iOS hace zoom al enfocar el campo. */
+.form input {
+  padding: 0 var(--s3);
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: 0 var(--s3);
+  color: var(--ink-2);
+}
+
+.search input {
+  flex: 1;
+  min-width: 0;
+  height: 48px;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+/* El campo de dentro no dibuja aro (outline: 0): lo dibuja el contenedor con el mismo estilo que el resto. */
+.search:has(:focus-visible) {
+  outline: 2px solid color-mix(in oklch, var(--ink) 80%, transparent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px color-mix(in oklch, var(--accent) 30%, transparent);
+}
+
+.search :focus-visible {
+  box-shadow: none; /* el halo es del contenedor */
+}
+
+.add-list {
+  max-height: 46dvh;
+  overflow-y: auto;
+}
+
+.add-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--tap-l);
+}
+
+.account-email {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Lo mismo con el interruptor de Ajustes → Accesibilidad (state/background.ts pone <html data-motion="reduce">). */
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+.dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--s2);
+}
+
+.button.danger {
+  background: var(--danger);
+  color: oklch(0.2 0.03 25);
+}
+
+/* Aviso breve con «Deshacer»: flota sobre la barra y las pestañas (en móvil) o sobre la barra (escritorio). */
+.toaster {
+  position: fixed;
+  right: calc(var(--gutter) + var(--safe-right));
+  bottom: calc(9rem + var(--safe-bottom));
+  left: calc(var(--gutter) + var(--safe-left));
+  z-index: 40;
+  display: grid;
+  justify-items: center;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  max-width: 28rem;
+  padding: var(--s1) var(--s2) var(--s1) var(--s4);
+  border-radius: var(--radius-m);
+  background: var(--surface-3);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
+  font-weight: 550;
+  pointer-events: auto;
+  --t0: translateY(8px);
+  --o0: 0;
+  --o1: 0;
+}
+
+@media (min-width: 1000px) {
+  .toaster {
+    bottom: calc(6.5rem + var(--safe-bottom));
+  }
+}
+
+/* Con el reproductor grande abierto no hay barra ni pestañas debajo: el aviso sube arriba para no tapar los controles. */
+.shell[data-panel="player"] .toaster {
+  top: calc(4.5rem + var(--safe-top));
+  bottom: auto;
+}
+
+/* La cabecera de un diálogo es su asa: arrastrarla hacia abajo lo cierra (táctil). */
+.dialog-header {
+  touch-action: none;
+}
+
+/* Un diálogo enfoca su primer control al abrirse y Chromium dibuja el aro aunque se abriera con el dedo o el ratón:
+   solo se muestra si lo último que hizo el usuario fue pulsar una tecla (main.tsx marca html[data-input="key"]). */
+html:not([data-input="key"]) :is(.dialog, .menu) :focus-visible {
+  outline: none;
+  box-shadow: none;
+}

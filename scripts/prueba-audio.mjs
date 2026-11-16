@@ -1,0 +1,187 @@
+// Prueba de audio real en Chromium contra `npm run dev` (puerto 5173). Uso: node scripts/prueba-audio.mjs
+// Importa tonos sintéticos de tests/fixtures/audio y comprueba reproducción, atajos, fin de pista,
+// repetición, crossfade, ecualizador, volumen, archivo corrupto y restauración de sesión.
+// Sale con 1 si algo falla. Desde la Fase 3 la biblioteca persiste (copia en OPFS): tras recargar no se reimporta.
+import { chromium } from "@playwright/test";
+import { join } from "node:path";
+
+const base = process.argv[2] ?? "http://localhost:5173";
+const dir = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
+const f = (name) => join(dir, name);
+// Orden de la cola = orden de importación. Duraciones: amanecer 8 s, marea 6 s, corto 2 s, sin-metadatos 4 s.
+const all = ["01-amanecer.flac", "02-marea.flac", "tono-corto.wav", "tono-sin-metadatos.wav", "corrupto.mp3"].map(f);
+
+const results = [];
+const check = (name, ok, detail = "") => {
+  results.push(ok);
+  console.log(`${ok ? "OK  " : "FAIL"} ${name}${detail ? ` — ${detail}` : ""}`);
+};
+
+const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gesture-required"] });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await page.route("**/demoCatalog.dev.ts*", (route) => route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }));
+const errors = [];
+page.on("pageerror", (e) => errors.push(e.message));
+
+const title = () => page.locator(".bar-track .title").innerText();
+const playing = async () => (await page.locator(".bar-center").getByRole("button", { name: "Pausar" }).count()) > 0;
+const position = async () => Number(await page.locator(".bar-center .seek input").inputValue());
+const row = (text) => page.locator(".track-row .row-main", { hasText: text });
+// Quita el foco de cualquier control sin pulsar nada (un clic en la lista cambiaría de pista).
+const idle = () => page.evaluate(() => document.activeElement instanceof HTMLElement && document.activeElement.blur());
+const setRange = (locator, value) =>
+  locator.evaluate((el, v) => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(el, v);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, String(value));
+const load = async (files) => {
+  await page.getByLabel("Elegir archivos de música").setInputFiles(files);
+  await page.waitForTimeout(2500);
+};
+
+await page.goto(`${base}/app`);
+await load(all);
+
+// 1. Reproducir y que el tiempo avance con el audio real.
+await row("amanecer").click();
+await page.waitForTimeout(1200);
+check("reproduce y muestra la pista", (await title()) === "Amanecer en La" && (await playing()), await title());
+check("la posición avanza con el audio real", (await position()) > 0.5, `pos=${await position()}`);
+
+// 2. Espacio pausa y reanuda.
+await idle();
+await page.keyboard.press("Space");
+await page.waitForTimeout(300);
+check("Espacio pausa", !(await playing()));
+const paused = await position();
+await page.waitForTimeout(500);
+check("en pausa la posición no avanza", (await position()) === paused);
+await page.keyboard.press("Space");
+await page.waitForTimeout(600);
+check("Espacio reanuda", (await playing()) && (await position()) > paused, `${paused} → ${await position()}`);
+
+// 3. Fin de pista → siguiente automática (tono-corto 2 s → tono-sin-metadatos).
+await row("tono-corto").click();
+await page.waitForTimeout(3000);
+check("al terminar avanza sola a la siguiente", (await title()) === "tono-sin-metadatos" && (await playing()), await title());
+
+// 4. Repetir pista: la pista de 2 s se repite sin cambiar de canción.
+await row("tono-corto").click();
+await idle();
+await page.keyboard.press("p");
+await page.keyboard.press("p"); // off → cola → pista
+await page.waitForTimeout(4500);
+check("repetir pista vuelve a empezar la misma canción", (await title()) === "tono-corto" && (await playing()), await title());
+await page.keyboard.press("p"); // vuelve a off
+
+// 5. Siguiente / anterior con teclado.
+await row("Marea").click();
+await idle();
+await page.waitForTimeout(300);
+const t0 = await title();
+await page.keyboard.press("ArrowRight");
+await page.waitForTimeout(400);
+check("→ salta a la siguiente", (await title()) === "tono-corto", await title());
+await page.keyboard.press("ArrowLeft");
+await page.waitForTimeout(400);
+check("← vuelve a la anterior", (await title()) === t0, await title());
+
+// 6. Seek con la barra.
+await row("amanecer").click();
+await page.waitForTimeout(800);
+await setRange(page.locator(".bar-center .seek input"), 5);
+await page.waitForTimeout(500);
+check("seek mueve la posición", (await position()) >= 4.9, `pos=${await position()}`);
+
+// 7. Volumen y silencio por teclado.
+const volume = () => page.locator(".volume input").inputValue();
+await idle();
+await page.keyboard.press("ArrowDown");
+await page.keyboard.press("ArrowDown");
+check("↓ baja el volumen", Number(await volume()) < 1, `vol=${await volume()}`);
+await page.keyboard.press("m");
+check("M silencia", Number(await volume()) === 0);
+// El analizador de las luces va antes del volumen: en silencio sigue viendo la señal (antes, con el volumen a 0, su pico bajaba de ~190 a ~57 de 255).
+const analyserPeak = () =>
+  page.evaluate(async () => {
+    const analyser = window.__engine.analyser;
+    const bytes = new Uint8Array(analyser.frequencyBinCount);
+    let peak = 0;
+    for (let i = 0; i < 6; i++) {
+      analyser.getByteFrequencyData(bytes);
+      peak = Math.max(peak, ...bytes);
+      await new Promise((resolve) => setTimeout(resolve, 40));
+    }
+    return peak;
+  });
+check("con el volumen en silencio el analizador de luces sigue recibiendo la señal", (await analyserPeak()) > 120, `pico=${await analyserPeak()}`);
+await page.keyboard.press("m");
+
+// 8. Ajustes: EQ y crossfade de 2 s; persisten al recargar.
+// Los ajustes de sonido viven en el menú ≡ (Sonido → Ecualizador). Aquí además se lee el grafo real.
+const menu = page.locator("dialog.menu[open]");
+const openMenu = () => page.locator('.bar-end button[aria-label="Menú del reproductor"]').click();
+const eqNow = () => page.evaluate(() => window.__engine.snapshot().eq);
+await openMenu();
+await menu.getByRole("button", { name: /^Sonido/ }).click();
+await menu.getByRole("button", { name: /^Ecualizador/ }).click();
+await menu.getByRole("switch", { name: "Ecualizador activado" }).click();
+await menu.getByRole("radio", { name: "Graves" }).click();
+check("preajuste aplica ganancias", (await menu.getByLabel("62 Hz").inputValue()) === "5");
+check("el preajuste llega a los filtros del grafo de audio", (await eqNow())[1] === 5, `eq=${await eqNow()}`);
+await menu.getByRole("button", { name: "Volver a Sonido" }).click();
+await setRange(menu.getByLabel(/Fundido entre canciones/), 2);
+await page.waitForTimeout(600);
+await page.keyboard.press("Escape");
+await page.reload();
+await page.waitForTimeout(1500); // la biblioteca y la sesión se restauran solas
+await openMenu();
+await menu.getByRole("button", { name: /^Sonido/ }).click();
+check("el EQ persiste tras recargar", (await menu.getByRole("button", { name: /^Ecualizador/ }).innerText()).includes("Graves"));
+check("el crossfade persiste tras recargar", (await menu.getByLabel(/Fundido entre canciones/).inputValue()) === "2");
+await page.keyboard.press("Escape");
+
+// 9. Crossfade: amanecer dura 8 s; con 2 s de fundido la siguiente ya suena a los 7 s (sin él, seguiría amanecer).
+// La biblioteca persiste y se ordena por título: la búsqueda deja solo Ondas Puras, así la cola es amanecer → marea.
+await page.getByRole("searchbox").fill("osciladores");
+await row("amanecer").click();
+await page.getByRole("searchbox").fill("");
+await page.waitForTimeout(7200);
+check("con crossfade la siguiente ya suena antes del final de la anterior", (await title()) === "Marea de Fase" && (await playing()), await title());
+
+// 10. Archivo corrupto: aviso visible y la app sigue viva.
+await page.getByRole("searchbox").fill("corrupto");
+await row("corrupto").click();
+await page.waitForTimeout(2000);
+check("archivo corrupto muestra aviso y la app sigue viva", (await page.locator(".notice", { hasText: "No se pudo reproducir" }).count()) > 0 && errors.length === 0, errors.join(" | ") || (await page.locator(".notices").innerText().catch(() => "sin aviso")));
+check("el archivo corrupto queda marcado en la lista", (await page.locator(".track-row .warn").count()) === 1);
+await page.getByRole("searchbox").fill("");
+
+// 11. Temporizador: "al terminar la canción" detiene al final de la pista, sin avanzar.
+await row("Marea").click();
+await openMenu();
+await menu.getByRole("button", { name: /^Temporizador/ }).click();
+await menu.getByRole("button", { name: "Al terminar la canción" }).click();
+await page.keyboard.press("Escape");
+await setRange(page.locator(".bar-center .seek input"), 5);
+await page.waitForTimeout(2200);
+check("temporizador al terminar la canción detiene sin avanzar", !(await playing()) && (await title()) === "Marea de Fase", `${await title()} playing=${await playing()}`);
+
+// 12. Sesión: tras recargar, sin reimportar nada, la pista y la posición vuelven y suenan desde la copia guardada.
+await row("Marea").click();
+await page.waitForTimeout(2500);
+await page.reload();
+await page.waitForTimeout(1500);
+check("la sesión restaura la pista sin reimportar", (await title()) === "Marea de Fase" && !(await playing()), `title=${await title().catch(() => "—")}`);
+const restoredAt = await position();
+check("la sesión restaura la posición", restoredAt >= 1.5, `pos=${restoredAt}`);
+await idle();
+await page.keyboard.press("Space");
+await page.waitForTimeout(1000);
+check("Espacio reproduce la pista restaurada leyendo el archivo guardado", (await playing()) && (await position()) > restoredAt, `${restoredAt} → ${await position()}`);
+check("la biblioteca sigue completa tras recargar", (await page.locator(".track-row").count()) >= 5);
+
+await browser.close();
+const failed = results.filter((ok) => !ok).length;
+console.log(failed ? `\n${failed} comprobaciones fallaron` : `\nTodas las comprobaciones pasaron (${results.length})`);
+process.exit(failed ? 1 : 0);

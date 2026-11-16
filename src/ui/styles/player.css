@@ -1,0 +1,400 @@
+/* Transporte y barra de progreso: compartidos por la barra y el reproductor expandido. */
+.transport {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s1);
+}
+
+.transport .icon-button {
+  position: relative;
+}
+
+.play-button {
+  min-width: 48px;
+  min-height: 48px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.transport-large {
+  justify-content: space-between;
+}
+
+.transport-large .icon-button {
+  min-width: var(--tap-l);
+  min-height: var(--tap-l);
+  color: var(--ink);
+}
+
+.transport-large .play-button {
+  min-width: 72px;
+  min-height: 72px;
+  color: var(--on-accent);
+}
+
+@media (hover: hover) {
+  .play-button:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--on-accent);
+    opacity: 0.9;
+  }
+}
+
+.seek {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  row-gap: 0;
+}
+
+.seek .time:last-child {
+  text-align: right;
+}
+
+.seek .range {
+  grid-column: 1 / -1;
+}
+
+/* Barra persistente. Móvil: mini reproductor (portada, título, play, siguiente). */
+.player-bar {
+  grid-area: bar;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) calc(var(--s2) + var(--safe-right)) var(--s2) calc(var(--s3) + var(--safe-left));
+  background: var(--surface-2);
+}
+
+.bar-progress {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(calc(var(--progress, 0%) / 100%));
+  transform-origin: left;
+}
+
+.bar-track {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+  min-height: var(--tap);
+  border-radius: var(--radius-s);
+  text-align: left;
+}
+
+.bar-cover {
+  width: 44px;
+}
+
+.bar-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.bar-mini {
+  display: flex;
+}
+
+.bar-mini .icon-button {
+  color: var(--ink);
+}
+
+.bar-center,
+.bar-end {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .player-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 34rem) minmax(0, 1fr);
+    gap: var(--s5);
+    padding: var(--s2) var(--s5);
+    background: var(--surface-1);
+  }
+  .bar-progress,
+  .bar-mini {
+    display: none;
+  }
+  .bar-cover {
+    width: 56px;
+  }
+  .bar-center {
+    display: grid;
+    margin-bottom: -8px;
+  }
+  .bar-center .seek {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    column-gap: var(--s3);
+  }
+  .bar-center .seek .range {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .bar-center .seek .time:last-child {
+    grid-column: 3;
+  }
+  .bar-end {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--s3);
+  }
+  .bar-end .icon-button {
+    position: relative;
+  }
+}
+
+/* Reproductor expandido: la portada enciende la sala. */
+.now-playing {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding: var(--safe-top) calc(var(--gutter) + var(--safe-right)) calc(var(--s5) + var(--safe-bottom))
+    calc(var(--gutter) + var(--safe-left));
+  background: var(--bg); /* el fondo animado (Backdrop) va detrás del contenido, ver backdrop.css */
+  --in: var(--slow);
+  --t0: translateY(24px);
+  --o0: 0;
+  --o1: 0;
+}
+
+.now-header {
+  display: flex;
+  justify-content: space-between;
+  margin: var(--s2) calc(var(--s2) * -1);
+}
+
+.now-header .icon-button {
+  color: var(--ink);
+}
+
+.now-actions {
+  display: flex;
+}
+
+.now-art {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  /* Carrusel (gestures.tsx: useCoverSwipe): el recorte llega hasta el borde de la pantalla, así la vecina asoma desde ahí y no antes. */
+  margin-inline: calc(var(--gutter) * -1);
+  padding: var(--s3) var(--gutter);
+  overflow-x: clip;
+  container-type: size;
+}
+
+.now-track {
+  position: relative;
+  transform: translateX(var(--dx, 0px));
+}
+
+.now-slot {
+  display: block;
+}
+
+/* En reposo, cada vecina queda justo fuera del recorte (centro + medio contenedor + margen lateral). */
+.now-slot[data-side] {
+  position: absolute;
+  top: 0;
+}
+
+.now-slot[data-side="next"] {
+  left: calc(50% + 50cqw + var(--gutter));
+}
+
+.now-slot[data-side="prev"] {
+  right: calc(50% + 50cqw + var(--gutter));
+}
+
+.now-cover {
+  width: min(100cqw, 100cqh, 34rem);
+  border-radius: var(--radius-m);
+}
+
+.now-controls {
+  display: grid;
+  gap: var(--s3);
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+}
+
+.now-copy {
+  display: grid;
+  gap: var(--s1);
+  min-width: 0;
+  transition: opacity var(--fast) var(--ease);
+}
+
+/* Cambio de pista: el título nuevo se funde (el bloque se remonta con la pista) y la portada anterior se disuelve encima de la nueva. Ni con teclado
+   ni con movimiento reducido: el gesto del carrusel ya movió la portada y los atajos no se animan (principio 5). */
+@starting-style {
+  .now-copy {
+    opacity: 0;
+  }
+}
+
+.now-leaving {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  animation: exit-fade var(--base) var(--ease) forwards;
+}
+
+html[data-input="key"] .now-copy {
+  transition: none;
+}
+
+.now-title {
+  font-size: clamp(1.375rem, 1.1rem + 1.6vw, 2rem);
+}
+
+.now-artist {
+  color: var(--ink-2);
+}
+
+/* Texto de una línea que se desplaza solo si desborda (ver Marquee.tsx). Quieto: recorte con «…». */
+.marquee {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marquee[data-moving] {
+  text-overflow: clip;
+}
+
+.marquee[data-moving] > span {
+  display: inline-block; /* un <span> en línea ignora transform */
+}
+
+/* Horizontal (móvil girado, tablet, escritorio): portada | controles. */
+@media (min-aspect-ratio: 1/1) and (min-width: 600px) {
+  .now-playing {
+    grid-template: auto minmax(0, 1fr) / minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: var(--gutter);
+    padding-bottom: calc(var(--s3) + var(--safe-bottom));
+  }
+  .now-header {
+    grid-column: 1 / -1;
+  }
+  .now-controls {
+    align-self: center;
+  }
+}
+
+/* Cola. Móvil: pantalla completa sobre todo. Escritorio: columna fija a la derecha. */
+.queue-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  padding: var(--safe-top) calc(var(--s3) + var(--safe-right)) var(--safe-bottom) calc(var(--s3) + var(--safe-left));
+  background: var(--surface-1);
+  --t0: translateY(24px);
+  --o0: 0;
+  --o1: 0;
+}
+
+.queue-header {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s2) 0 var(--s2) var(--s2);
+}
+
+.queue-header {
+  touch-action: none; /* en móvil es el asa de la hoja: el navegador no debe desplazar al arrastrarla */
+}
+
+.queue-header .subtitle {
+  flex: 1;
+}
+
+.queue-list {
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.queue-empty {
+  padding: var(--s4) var(--s2);
+  color: var(--ink-2);
+}
+
+@media (min-width: 1000px) {
+  .queue-panel {
+    position: static;
+    grid-area: queue;
+    width: 22rem;
+    min-height: 0;
+    transition: none; /* columna fija: sin entrada ni salida */
+  }
+  /* Con el reproductor grande abierto la cola es un cajón encima de él, no una columna oculta detrás. */
+  .shell[data-panel="player"] .queue-panel {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 20;
+    box-shadow: 0 0 48px oklch(0 0 0 / 0.45);
+    transition:
+      transform var(--in) var(--ease),
+      opacity var(--in) var(--ease);
+  }
+  /* El reproductor cede el ancho del cajón para que sus controles no queden tapados. */
+  .shell[data-panel="player"][data-queue] .now-playing {
+    right: 22rem;
+  }
+}
+
+/* Volumen (solo en la barra de escritorio: en móvil mandan los botones del dispositivo) */
+.volume {
+  display: flex;
+  align-items: center;
+}
+
+.volume .range {
+  width: 96px;
+}
+
+/* Móvil: el reproductor grande sube desde abajo como una hoja y se cierra arrastrando hacia abajo (ver gestures.tsx). */
+.now-playing {
+  touch-action: none;
+}
+
+.now-grabber {
+  position: absolute;
+  top: calc(var(--safe-top) + var(--s2));
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  margin-left: -18px;
+  border-radius: 2px;
+  background: color-mix(in oklch, var(--ink) 35%, transparent);
+  pointer-events: none; /* el toque pasa a la cabecera de debajo, que es la que arrastra (en la cola) */
+}
+
+@media (max-width: 999px) {
+  .now-playing {
+    --t0: translateY(100%);
+    --t1: translateY(100%);
+    --o0: 1;
+    --o1: 1;
+    overscroll-behavior: none;
+  }
+}
+
+@media (min-width: 1000px) {
+  .now-grabber {
+    display: none;
+  }
+}

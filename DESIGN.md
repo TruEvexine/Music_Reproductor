@@ -1,823 +1,188 @@
-# DESIGN.md — Sistema Visual del Reproductor
+# DESIGN.md — Sistema de diseño
 
-## 1. Dirección visual
+> Reescrito el 2026-11-10 (Fase 1) a partir de `docs/AUDITORIA_DISENO.md`. `PLAN.md` manda si hay conflicto.
+> Los valores viven en `src/ui/styles/tokens.css`: este documento explica el porqué; el CSS es la verdad.
 
-El reproductor debe combinar dos referencias principales:
+## 1. Dirección
 
-- **Qobuz** como referencia de estructura, elegancia, jerarquía musical, biblioteca y tratamiento editorial.
-- **Poweramp Mobile** como referencia de reproductor moderno, controles directos, información de reproducción y enfoque en la experiencia de escucha.
+**Una sala oscura donde la portada enciende la luz.** Se maneja como Poweramp y se hojea como Qobuz.
 
-El resultado debe sentirse como un producto propio y moderno. **No se debe copiar literalmente la interfaz de Qobuz ni de Poweramp.**
+| | Poweramp → reproductor y controles | Qobuz → biblioteca y presentación |
+|---|---|---|
+| Tomamos | Controles grandes bajo el pulgar, gestos en la portada, datos técnicos a la vista, ecualizador, personalización | Portada protagonista, cabeceras de álbum con metadatos, rejilla limpia, calidad comunicada con sobriedad |
+| No tomamos | Skins y brillos | Su navegación ni su tienda |
+| Densidad | Alta: todo a un toque | Media: aire alrededor de las portadas |
 
-Las tres imágenes proporcionadas por el usuario son las referencias visuales principales para este documento.
+No es copia de ninguna, ni de Spotify. **Elemento firma:** el reproductor expandido (portada a todo el ancho, su paleta inunda el fondo, controles en la mitad inferior). Es lo único audaz; lo demás calla.
 
----
+## 2. Principios
 
-# 2. Principio visual principal: la canción controla el ambiente
+1. **La portada manda.** El color de la interfaz sale de la pista que suena; no hay color de marca fijo.
+2. **Pulgar primero.** En móvil, todo control frecuente está en la mitad inferior.
+3. **Separar por tono y espacio**, no por bordes, líneas ni sombras.
+4. **Una familia tipográfica.** La escala y el eje de anchura hacen el trabajo editorial.
+5. **El movimiento informa o no existe.** Nada se anima en acciones de teclado ni en el transporte.
+6. **Nada depende solo del color** ni solo de hover.
 
-La característica visual más importante del reproductor será que **el ambiente del reproductor cambia dinámicamente según la portada de la canción que está reproduciéndose**.
+## 3. Tokens
 
-La portada no será únicamente una imagen decorativa.
+### Color (OKLCH)
 
-Su contenido deberá influir en:
+| Token | Valor | Uso |
+|---|---|---|
+| `--bg` | `0.145 0.004 70` | Fondo de la app |
+| `--surface-1/2/3` | L `0.19 / 0.235 / 0.29` | Navegación y barra / campos y controles / hover y selección |
+| `--ink` | `0.96 0.006 85` | Texto principal (≈ 17:1 sobre `--bg`) |
+| `--ink-2` | `0.78 0.008 85` | Texto secundario (≈ 9:1) |
+| `--ink-3` | `0.66 0.008 85` | Texto terciario (≈ 6:1). Nada más tenue lleva texto |
+| `--danger` | `0.76 0.14 25` | Errores y pistas que no se pueden reproducir (siempre con icono) |
+| `--accent`, `--on-accent`, `--glow` | dinámicos | Los calcula `src/core/palette.ts` desde la portada |
 
-- Color de fondo.
-- Gradientes.
-- Tonos de superficies.
-- Acentos.
-- Iluminación visual.
-- Algunas transiciones entre canciones.
+**Color dinámico.** Portada → 32×32 px (en el worker de portadas, una vez por portada; se guarda con ella) → media ponderada por croma → se fuerza a rangos seguros: `--accent` L 0.82 y C 0.07–0.14 (contraste ≥ 4.5:1 sobre `--bg`, comprobado por test), `--glow` L 0.32 (ambiente del reproductor), `--on-accent` L 0.2. Portada gris → paleta neutra cálida; sin portada, el acento es el neutro y el ambiente toma el tono de la funda generada (ver «Funda generada»). El acento aparece solo en: pista actual, botón primario/play, estados activos, progreso.
 
-## Objetivo
+**Fondo del reproductor.** Es el ambiente (`ui/Backdrop.tsx`): hasta 4 manchas de tonos distintos de la portada con L 0.28–0.46 en OKLCH, intensidad 60 % por defecto, banda inferior más oscura donde están los controles. Solo vive con el reproductor expandido; colapsado, un tinte CSS al 18 %. Modos Portada, Ritmo, Estático y AMOLED (negro puro). El **HDR simulado** es un interruptor aparte que afecta a toda la app (negro puro, acentos, portadas, brillos y fondo con más croma y tope, en Display P3 si la pantalla lo tiene; no es HDR real, ver `docs/DISENO_HDR.md`); con movimiento reducido o sin WebGL, el mismo gradiente en CSS sin animar. El modo Ritmo se adapta a cada canción (ajuste «Sensibilidad», Auto por defecto) y no parpadea: máximo 3 destellos por segundo y cambios de brillo acotados (`docs/LUCES_REACTIVAS.md`).
 
-Cada canción debe producir una atmósfera visual ligeramente diferente sin perder la identidad general de la aplicación.
+Prohibido: degradados decorativos (el único degradado es el ambiente del reproductor y el respaldo de portada), vidrio/blur (salvo la difuminación del relleno de los deslizadores, ver Componentes), sombras en reposo, texto sobre color saturado sin pasar por `--on-accent`.
 
-Ejemplo conceptual:
+### Tipografía
 
-```text
-Portada con predominancia azul
-        ↓
-Fondo oscuro con dominante azul
+`Instrument Sans Variable`, autoalojada (sin CDN; la CSP queda cerrada). Tamaños en `rem` para respetar el zoom de texto.
 
-Portada con predominancia roja
-        ↓
-Fondo oscuro con dominante roja
+| Token | Tamaño | Uso |
+|---|---|---|
+| `--text-xl` | `clamp(1.875rem … 3rem)` | Título de vista. Anchura 80 %, peso 650, interlineado 1.02 |
+| `--text-l` | `clamp(1.125rem … 1.375rem)` | Subtítulos de sección, título de diálogo. Anchura 88 % |
+| `--text-m` | `clamp(0.9375rem … 1rem)` | Cuerpo y títulos de pista (peso 550) |
+| `--text-s` | 13 px | Secundario (artista, contadores) |
+| `--text-xs` | 12 px | Tiempos y calidad, con `tabular-nums`. **Mínimo absoluto** |
 
-Portada amarilla/naranja
-        ↓
-Fondo oscuro con dominante ámbar/naranja
+Sin mayúsculas espaciadas, sin etiquetas "eyebrow", sin monoespaciada, sin segunda familia. Campos de texto a 16 px (por debajo, iOS hace zoom).
 
-Portada verde
-        ↓
-Fondo oscuro con dominante verde
-```
+### Espacio, forma y tamaño táctil
 
-El fondo **no debe convertirse literalmente en el color dominante de la portada**. Debe utilizarse una versión adaptada, oscurecida y/o desaturada para conservar contraste y legibilidad.
+- Base 4 px: `--s1`…`--s7` = 4, 8, 12, 16, 24, 32, 48. Margen lateral fluido `--gutter: clamp(16px, 4vw, 40px)`.
+- Radios: `--radius-s` 6 px (portadas, filas, campos), `--radius-m` 12 px (portada grande, hojas). Círculo completo solo en botones.
+- `--tap` 44 px mínimo para todo lo interactivo; `--tap-l` 56 px en transporte ampliado y pestañas; play expandido 72 px. Un control visualmente fino (barra de progreso de 4 px) conserva 44 px de zona de toque.
 
----
+### Movimiento
 
-# 3. Extracción dinámica de color
+Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba `ui/styles/motion.test.ts`; ningún valor suelto: todo sale de un token).
 
-Crear un sistema de extracción de color de portada.
+| Token | Valor | Para qué |
+|---|---|---|
+| `--fast` | 120 ms | Respuesta al tacto: pulsar, popovers |
+| `--base` | 220 ms | Entrada de hojas, diálogos, paneles y avisos |
+| `--slow` | 280 ms | Abrir el reproductor |
+| `--exit` | 140 ms | **Toda salida** (≈ 60 % de su entrada) |
+| `--page` | 560 ms | Solo landing y primer uso |
+| `--ease` | `cubic-bezier(0.2, 0.8, 0.2, 1)` | Entradas, salidas y pulsación (decelera) |
+| `--ease-move` | `cubic-bezier(0.65, 0, 0.35, 1)` | Moverse entre dos posiciones ya en pantalla (cambio de página del menú, fila que vuelve) |
+| `--press` / `--press-wide` | 0.96 / 0.985 | Escala al pulsar controles compactos / filas anchas (nunca por debajo de 0.95) |
 
-## Flujo
+**Estados** (iguales en botones, filas, paneles y diálogos):
 
-```text
-Portada de canción
-       ↓
-Analizador de imagen
-       ↓
-Colores predominantes
-       ↓
-Color dominante / paleta
-       ↓
-Normalización
-       ↓
-Paleta visual de UI
-       ↓
-Aplicar transición
-```
+| Estado | Tratamiento | Se anima |
+|---|---|---|
+| Hover (solo `@media (hover: hover)`) | Un paso de tono (`--surface-2` → `-3`, tinta secundaria → plena) | No: es de lo más frecuente |
+| Activo (pulsar) | `scale(--press)` en botones, iconos y opciones; `--press-wide` en filas del menú | `--fast`. No en transporte, pestañas ni filas de lista, ni por teclado |
+| Foco | Aro de tinta con halo de acento (`:focus-visible`), solo si lo último fue una tecla | No |
+| Entrada | Transición desde `@starting-style` (`base.css`): hoja desde abajo; diálogo ancho y popover con `translateY(4px) scale(0.98)` y fundido; paneles y avisos suben 8–24 px y se funden. Cada panel declara su pose con `--t0`/`--o0` | `--fast` / `--base` / `--slow` según el recorrido (`--in`) |
+| Salida | El componente marca `[data-closing]`, que lleva el panel a su pose de salida (`--t1`/`--o1`), espera `--exit` y se desmonta (`ui/motion.ts`, que lee el token con `cssMs`: el build lo minifica a `.14s`) | `--exit`. Un arrastre que ya animó la salida, o la cola en columna fija, cierran al instante |
+| Interrupción | Son transiciones, no keyframes: cerrar mientras abre o reabrir mientras cierra revierte desde el valor actual, sin salto | — |
+| Deshabilitado | Opacidad 0.38, sin hover ni pulsación | No |
 
-Como mínimo obtener:
+`prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista sin gesto (botón o fin de pista): la portada anterior se disuelve sobre la nueva (`--base`) y el título se funde (`--fast`); ni con teclado, ni tras el gesto del carrusel, ni con movimiento reducido. El color (acento) cambia de golpe: animarlo exigiría `color` en la transición. Inventario, medición y límites: `docs/ANIMACIONES.md`.
 
-```text
-primaryColor
-secondaryColor
-backgroundColor
-accentColor
-```
+**Carga y paso de marca.** El símbolo de `index.html` aparece solo si la carga en frío pasa de 300 ms (`docs/marca/MARCA_DEFINITIVA.md` §3). Al pulsar «Abrir» o «Abrir el reproductor» en la landing, el mismo símbolo cubre el paso a la app durante 600 ms (entra con `--fast`, un brillo deja encendidos los hilos uno a uno con `--base`, sale con `--exit`) mientras la app monta debajo y se descarga el SDK de cuentas; con movimiento reducido es solo un fundido de entrada y salida (`--fast` + `--exit`), la única excepción a la regla global de 0,01 ms. Nunca en la landing ni en /app directo: no retrasa el LCP.
 
-## Reglas
+Puerta de frecuencia: transporte, teclado, pestañas y filas de lista → sin animación. Abrir y cerrar reproductor, cola, menú y diálogos → sí. Primer uso y estados vacíos → se permite algo más expresivo (`--page`).
 
-El sistema deberá:
+### Funda generada
 
-- Evitar colores demasiado brillantes como fondo completo.
-- Mantener suficiente contraste.
-- Oscurecer la paleta para el fondo.
-- Mantener el texto legible.
-- Permitir que el color dominante sea perceptible sin resultar invasivo.
-- Evitar cambios excesivamente bruscos cuando las portadas son muy diferentes.
+Cuando una pista no trae carátula, la app pinta una **funda** (`core/coverArt.ts`, `ui/parts.tsx`). Decidida el 2026-11-14 (D27) a partir de una guía propia, revisada contra este sistema; sustituye a «campos de color» y a las propuestas inicial, nota y tarjeta.
 
-## Transición
+- **Qué es.** Un cuadrado **estático y mate** con un solo motivo: una forma de onda de nueve barras simétricas, centrada, con márgenes de 18 % a cada lado. Tono de fondo `oklch(0.34 0.045 --h)`, barras `oklch(0.78 0.07 --h)` (contraste ≈ 5:1; las barras son gráfico, no texto). Sin degradados, sin sombras, sin movimiento.
+- **Estable por álbum o por pista suelta.** El matiz (`--h`) y las alturas de las barras salen de un hash: de la clave del álbum (la misma que agrupa en Álbumes, así que la cabecera del álbum y sus pistas se parecen) o, sin álbum, de título y artista. El mismo texto da siempre la misma funda.
+- **Sin texto.** La guía pedía el título al pie y el artista en segundo plano «donde no dupliquen el texto de la interfaz»; en esta app el título y el artista están siempre junto a la portada (fila, mini, reproductor grande, cabecera), así que no hay ningún sitio donde no dupliquen y la funda no lleva texto. Miniaturas y grande son la misma funda: solo color y motivo.
+- **El movimiento vive en el fondo.** El tono de la funda tiñe el ambiente del reproductor (`sleevePalette`: `--glow` y las manchas; el acento sigue siendo el neutro porque la funda no es una carátula). Ese ambiente es lo único que se mueve (modo Ritmo y compañía).
+- **Solo para las fundas.** En cuanto hay carátula real se muestra ella y la funda desaparece; las carátulas reales no cambian. En HDR recibe el mismo filtro de `.cover`.
+- **Barata:** un SVG de nueve `<rect>` por fila, sin canvas ni imágenes. **Accesible:** en el reproductor grande y la cabecera de grupo, `role="img"` y «Portada generada para «Título», de Artista»; en listas es decorativa.
+- **Original:** barras de onda genéricas; sin personajes, marcas ni obras reconocibles. (El rechazo a las ondas de audio de `MARCA.md` §3 es para el **logo**, no para esta funda.)
 
-Al cambiar de canción:
+### Iconos
 
-```text
-Paleta anterior
-       ↓
-transición suave
-       ↓
-Paleta nueva
-```
+Lucide, trazo 1.75, 22 px (18 px en acciones de fila). Rellenos solo play, pausa, anterior y siguiente. Todo botón de icono lleva `aria-label` y `title`.
 
-La transición deberá ser breve y elegante.
-
-No hacer que toda la interfaz parpadee.
-
----
-
-# 4. Fondo del reproductor
-
-El fondo deberá ser predominantemente oscuro.
-
-No utilizar un negro plano como única opción.
-
-Preferentemente:
+## 4. Estructura
 
 ```text
-base oscura
-+
-gradiente derivado de portada
-+
-variaciones sutiles de luminosidad
+MÓVIL (<1000)                       ESCRITORIO (≥1000)
+┌────────────────────┐              ┌────────┬─────────────────┬────────┐
+│ Título de vista    │              │ nav    │ contenido       │ cola   │
+│ contenido (scroll) │              │ 220 px │                 │ 22rem  │
+├────────────────────┤              ├────────┴─────────────────┴────────┤
+│ mini reproductor   │              │ barra: pista · transporte · cola   │
+├────────────────────┤              └────────────────────────────────────┘
+│ pestañas (≤5)      │
+└────────────────────┘
 ```
 
-Ejemplo conceptual:
-
-```text
-┌──────────────────────────────────────────────┐
-│                                              │
-│     Fondo oscuro                             │
-│        ╲                                     │
-│         ╲ tono derivado de portada          │
-│          ╲                                  │
-│                                              │
-└──────────────────────────────────────────────┘
-```
-
-El fondo puede utilizar:
-
-- Gradiente radial.
-- Gradiente lineal.
-- Glow muy sutil.
-- Overlay oscuro.
-
-No utilizar un efecto excesivamente saturado.
-
----
-
-# 5. Identidad base
-
-Aunque el color cambie por canción, la aplicación debe conservar una identidad estable.
-
-Elementos que deben permanecer consistentes:
-
-- Tipografía.
-- Tamaños de controles.
-- Iconografía.
-- Espaciado.
-- Estructura.
-- Bordes.
-- Jerarquía.
-- Comportamiento responsive.
-
-La portada cambia el **ambiente**, no la arquitectura.
-
----
-
-# 6. Estética general
-
-Características deseadas:
-
-- Premium.
-- Oscura.
-- Moderna.
-- Limpia.
-- Musical.
-- Editorial.
-- Minimalista sin ser vacía.
-- Información abundante pero jerarquizada.
-
-Evitar:
-
-- UI genérica de reproductor.
-- Exceso de tarjetas flotantes.
-- Neumorphism.
-- Glassmorphism exagerado.
-- Gradientes artificiales demasiado fuertes.
-- Colores arbitrarios que no provengan de la canción.
-- Interfaces excesivamente similares a Spotify.
-
----
-
-# 7. Navegación principal
-
-En escritorio, utilizar una navegación lateral inspirada en la estructura observada en las referencias.
-
-Conceptualmente:
-
-```text
-┌───────────────┬───────────────────────────────────┐
-│ Logo          │                                   │
-│               │        CONTENIDO                  │
-│ Biblioteca    │                                   │
-│ Playlists     │                                   │
-│ Pistas        │                                   │
-│ Álbumes       │                                   │
-│ Artistas      │                                   │
-│ Sellos        │                                   │
-│               │                                   │
-└───────────────┴───────────────────────────────────┘
-```
-
-La navegación deberá ser compacta y no consumir espacio innecesario.
-
-En móvil deberá convertirse en una navegación apropiada para pantalla pequeña.
-
----
-
-# 8. Header
-
-El header deberá contener, dependiendo del contexto:
-
-- Logo.
-- Navegación.
-- Buscador.
-- Acciones de usuario.
-- Acciones contextuales.
-
-La referencia visual muestra un header compacto y oscuro.
-
-Debe evitarse un header excesivamente alto.
-
----
-
-# 9. Biblioteca
-
-La biblioteca será principalmente visual.
-
-La referencia principal es la primera y tercera imagen.
-
-## Grid
-
-Las canciones/álbumes podrán mostrarse como:
-
-```text
-┌──────────┐  ┌──────────┐  ┌──────────┐
-│          │  │          │  │          │
-│ PORTADA  │  │ PORTADA  │  │ PORTADA  │
-│          │  │          │  │          │
-└──────────┘  └──────────┘  └──────────┘
-Título        Título        Título
-Artista       Artista       Artista
-```
-
-El número de columnas deberá adaptarse automáticamente al ancho disponible.
-
-No fijar un número rígido de columnas.
-
----
-
-# 10. Tarjetas musicales
-
-Las tarjetas deberán priorizar:
-
-1. Portada.
-2. Título.
-3. Artista.
-4. Álbum o metadata secundaria.
-
-Opcional:
-
-- Indicador Hi-Res.
-- Formato.
-- Calidad.
-- Estado de reproducción.
-
-## Acción de reproducción
-
-Las referencias muestran un botón circular de play superpuesto a la portada.
-
-Mantener este concepto:
-
-```text
-┌───────────────┐
-│               │
-│    PORTADA    │
-│               │
-│  ●            │
-└───────────────┘
-```
-
-El botón deberá aparecer:
-
-- En hover en escritorio, o
-- Cuando sea necesario para hacerlo evidente.
-
-En touch deberá ser fácilmente accesible.
-
----
-
-# 11. Información musical
-
-La información deberá respetar jerarquía.
-
-Ejemplo:
-
-```text
-Superhero (Heroes & Villains)
-Pista · Metro Boomin · HEROES & VILLAINS
-```
-
-El título tendrá mayor peso visual.
-
-El artista y álbum serán secundarios.
-
-No permitir que textos largos destruyan el layout.
-
-Usar:
-
-- truncamiento,
-- ellipsis,
-- tooltip,
-- segunda línea cuando exista espacio.
-
----
-
-# 12. Player inferior
-
-La referencia de Qobuz utiliza un reproductor persistente en la parte inferior.
-
-Mantener este concepto.
-
-El mini-player deberá permanecer visible mientras el usuario navega por la biblioteca, salvo en contextos móviles donde se adapte.
-
-Conceptualmente:
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ portada │ canción │ tiempo │ controles │ volumen │ calidad  │
-└──────────────────────────────────────────────────────────────┘
-```
-
-Debe mostrar como mínimo:
-
-- Portada.
-- Título.
-- Artista.
-- Tiempo actual.
-- Duración.
-- Play/Pause.
-- Previous.
-- Next.
-- Loop/Repeat.
-- Acceso a la cola.
-
----
-
-# 13. Player expandido
-
-La segunda imagen es la referencia principal para el reproductor expandido.
-
-Debe existir una vista de reproducción más grande.
-
-Conceptualmente:
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                        PLAYER                                │
-│                                                              │
-│      ┌─────────────────┐        ┌────────────────────────┐  │
-│      │                 │        │ Cola                   │  │
-│      │     PORTADA     │        │                        │  │
-│      │                 │        │ Canción 1              │  │
-│      │                 │        │ Canción 2              │  │
-│      └─────────────────┘        │ Canción 3              │  │
-│                                 └────────────────────────┘  │
-│      Título                                                   │
-│      Artista                                                  │
-│      ────────────────●────────────                            │
-│      00:24                         03:02                     │
-│                                                              │
-│           shuffle   prev   play   next   repeat              │
-└──────────────────────────────────────────────────────────────┘
-```
-
-La distribución exacta puede cambiar según viewport.
-
----
-
-# 14. Cola
-
-La cola debe estar disponible desde el reproductor.
-
-Cada elemento deberá mostrar:
-
-- Miniatura.
-- Título.
-- Artista.
-- Estado actual.
-- Acción secundaria.
-
-La canción actual deberá distinguirse claramente.
-
-Ejemplo:
-
-```text
-[cover]  Canción actual
-         Artista
-
-[cover]  Siguiente canción
-         Artista
-
-[cover]  Canción siguiente
-         Artista
-```
-
-La cola debe poder abrirse sin abandonar completamente el contexto del reproductor.
-
----
-
-# 15. Lectura automática
-
-Cuando se implemente la función de reproducción automática:
-
-```text
-Lectura automática
-Se reproducirán pistas similares cuando termine la cola.
-```
-
-Debe utilizarse una superficie visual coherente con la referencia proporcionada.
-
-No es obligatorio implementar recomendación inteligente en el MVP; el diseño debe dejar espacio para la funcionalidad futura.
-
----
-
-# 16. Controles
-
-Los controles principales deben ser fáciles de localizar.
-
-Orden recomendado:
-
-```text
-Shuffle
-Previous
-Play/Pause
-Next
-Repeat
-```
-
-El botón Play/Pause deberá tener mayor peso visual.
-
-Estados:
-
-```text
-normal
-hover
-pressed
-active
-disabled
-```
-
-Los estados activos deberán ser visibles.
-
----
-
-# 17. Progreso
-
-La barra de progreso deberá ser fina y elegante.
-
-Mostrar:
-
-```text
-00:24                       03:02
-──────────────●──────────────
-```
-
-Debe permitir seek.
-
-El progreso deberá actualizarse en tiempo real.
-
----
-
-# 18. Volumen
-
-El control de volumen debe aparecer principalmente en desktop.
-
-En móvil puede integrarse en una zona secundaria o depender del control del dispositivo, pero la aplicación deberá conservar una forma de modificar el volumen cuando la plataforma lo permita.
-
----
-
-# 19. Calidad de audio
-
-La interfaz puede mostrar información técnica cuando esté disponible:
-
-```text
-Hi-Res
-24-Bit
-96 kHz
-Estéreo
-```
-
-Esta información debe ser secundaria.
-
-No debe competir visualmente con:
-
-- título,
-- artista,
-- controles.
-
----
-
-# 20. Responsive
-
-## Desktop
-
-Prioridad:
-
-- Biblioteca visible.
-- Sidebar.
-- Player persistente.
-- Grid amplio.
-- Información técnica.
-
-## Tablet
-
-Reducir:
-
-- Sidebar.
-- Columnas.
-- Metadata secundaria.
-
-## Mobile
-
-Prioridad:
-
-1. Portada.
-2. Título/artista.
-3. Progreso.
-4. Controles.
-5. Cola.
-
-La navegación deberá transformarse a un patrón apropiado para móvil.
-
----
-
-# 21. Mobile player
-
-En móvil la experiencia deberá sentirse más cercana a un reproductor dedicado.
-
-La portada tendrá mayor protagonismo.
-
-Ejemplo:
-
-```text
-┌──────────────────────┐
-│                      │
-│       PORTADA        │
-│                      │
-│                      │
-├──────────────────────┤
-│ Título               │
-│ Artista              │
-│                      │
-│ 00:24        03:02   │
-│ ───────●──────────   │
-│                      │
-│  ↶    ◀   ▶   ▶   ↷  │
-│                      │
-│      Cola / Queue    │
-└──────────────────────┘
-```
-
-Los controles deben tener áreas táctiles grandes.
-
----
-
-# 22. Tipografía
-
-La tipografía debe ser:
-
-- Sans-serif.
-- Moderna.
-- Legible.
-- Con buena diferenciación de pesos.
-
-Jerarquía:
-
-```text
-Título de página
-↓
-Título musical
-↓
-Artista / álbum
-↓
-Metadata
-↓
-Metadata técnica
-```
-
-No utilizar demasiadas familias tipográficas.
-
----
-
-# 23. Iconografía
-
-Usar una única familia de iconos coherente.
-
-Iconos necesarios:
-
-- Search.
-- Home/Library.
-- Playlist.
-- Track.
-- Album.
-- Artist.
-- Label.
-- Play.
-- Pause.
-- Previous.
-- Next.
-- Shuffle.
-- Repeat.
-- Volume.
-- Queue.
-- Favorite.
-- Settings.
-- User.
-- More.
-
-Evitar mezclar estilos de iconos incompatibles.
-
----
-
-# 24. Botones
-
-Los botones deben tener:
-
-- Área táctil suficiente.
-- Estados visibles.
-- Icono claro.
-- Tooltip cuando corresponda.
-
-Los botones circulares funcionan especialmente bien para:
-
-- Play.
-- Pause.
-- Previous.
-- Next.
-
----
-
-# 25. Menús contextuales
-
-La tercera imagen muestra un menú de usuario contextual.
-
-Los menús deberán:
-
-- Mantener el tema oscuro.
-- Tener separación clara entre grupos.
-- Utilizar iconos discretos.
-- Mostrar acciones destructivas de forma diferenciada.
-- No ocupar más espacio del necesario.
-
----
-
-# 26. Animaciones visuales
-
-La interfaz deberá utilizar movimiento de forma funcional.
-
-### Cambio de canción
-
-```text
-Canción A
-   ↓
-Portada nueva
-   ↓
-Extracción de color
-   ↓
-Transición de fondo
-```
-
-### Cambio de player
-
-El mini-player puede expandirse hacia el player completo mediante una transición suave.
-
-### Cola
-
-La cola puede entrar/salir con una transición corta.
-
-Evitar animaciones largas.
-
----
-
-# 27. Accesibilidad visual
-
-Siempre mantener:
-
-- Contraste suficiente.
-- Texto legible sobre fondos dinámicos.
-- No usar exclusivamente color para indicar estado.
-- Iconos reconocibles.
-- Focus states.
-- Áreas táctiles adecuadas.
-
-El algoritmo de colores deberá tener una capa de corrección de contraste.
-
----
-
-# 28. Reglas de color dinámico
-
-La portada puede generar una paleta, pero la interfaz debe tener límites.
-
-### Permitido
-
-```text
-Oscurecer
-Desaturar
-Mezclar
-Aumentar contraste
-Reducir luminosidad
-```
-
-### No permitido
-
-```text
-Texto ilegible
-Fondo completamente saturado
-Controles sin contraste
-Cambiar colores estructurales arbitrariamente
-```
-
-La identidad de marca permanece estable.
-
----
-
-# 29. Estados de reproducción
-
-Debe ser posible distinguir:
-
-```text
-No reproducida
-Reproduciendo
-Pausada
-Error
-```
-
-La canción actual puede utilizar:
-
-- icono de reproducción,
-- acento dinámico,
-- cambio sutil de fondo,
-- highlight.
-
-No utilizar animaciones agresivas.
-
----
-
-# 30. Reglas de responsive
-
-Nunca:
-
-- Fijar tamaños que rompan el layout.
-- Depender únicamente de coordenadas absolutas.
-- Hacer que la UI desktop simplemente se reduzca.
-- Permitir que controles queden fuera de pantalla.
-
-Sí:
-
-- Usar layouts fluidos.
-- Usar grids adaptativos.
-- Reorganizar componentes.
-- Reducir metadata secundaria.
-- Cambiar navegación según viewport.
-
----
-
-# 31. Prioridades visuales
-
-En cualquier viewport:
-
-### Prioridad 1
-Canción actual.
-
-### Prioridad 2
-Controles de reproducción.
-
-### Prioridad 3
-Portada.
-
-### Prioridad 4
-Cola/biblioteca.
-
-### Prioridad 5
-Metadata secundaria.
-
-### Prioridad 6
-Metadata técnica.
-
-Si el espacio es insuficiente, ocultar/reducir elementos en ese orden inverso.
-
----
-
-# 32. Regla final de diseño
-
-El reproductor debe sentirse como:
-
-> **Una biblioteca musical premium que se transforma visualmente alrededor de la canción que estás escuchando.**
-
-Qobuz aporta la estructura editorial y de biblioteca.
-
-Poweramp aporta la sensación de reproductor dedicado.
-
-El color dinámico de la portada conecta ambos conceptos y se convierte en una característica propia del producto.
+- **Navegación:** pestañas inferiores con icono y etiqueta en móvil; columna lateral en escritorio. La cola no es navegación: es una acción del reproductor.
+- **Mini reproductor (móvil):** portada, título, artista, play/pausa, siguiente, y una línea de progreso. Tocarlo abre el expandido.
+- **Barra (escritorio):** pista (abre el expandido) · transporte y progreso · calidad y cola.
+- **Reproductor expandido:** pantalla completa en todas las resoluciones. Vertical: portada arriba, controles en la mitad inferior. Horizontal o ancho: portada | controles.
+- **Cola:** pantalla completa en móvil, columna fija en escritorio.
+- **Diálogos:** `<dialog>` nativo; hoja inferior en móvil, centrado desde 600 px.
+- El reproductor y la cola se abren con `?panel=` en la URL: el botón o gesto **atrás** del sistema los cierra.
+
+Unidades: `dvh` (nunca `100vh`), `env(safe-area-inset-*)` en barra, pestañas, reproductor y hojas, `viewport-fit=cover`.
+
+## 5. Componentes
+
+| Componente | Regla |
+|---|---|
+| Fila de pista | Tocar la fila reproduce (la cola pasa a ser la lista visible). 64 px de alto, portada 48 px. Desde 700 px añade álbum, calidad y duración en columnas. Pista actual: título en acento, estado escrito junto al artista («Sonando» o «En pausa», con icono) y una pastilla de `--surface-3` que cubre la fila entera, sin barra de color; las ya sonadas de la cola, `--ink-3`. Mismo lenguaje que la fila de cola |
+| Portada | Siempre 1:1. Sin imagen: la **funda generada** (abajo), estable por álbum o por pista, nunca gris plano ni un glifo. Las portadas grandes se sirven al tamaño real de pantalla (`ui/parts.tsx`, `platform/web/coverScale.ts`) |
+| Botón | Uno primario por pantalla (relleno de acento). El resto, tono `--surface-2` o enlace |
+| Carrusel de portadas | Reproductor grande, solo dedo: deslizar la portada a la izquierda pasa a la siguiente y a la derecha vuelve a la anterior (la entrada anterior de la cola, sin la regla de «pasados 3 s reinicia»). La portada sigue al dedo y la vecina asoma desde el borde de la pantalla; se completa pasado un tercio del recorrido o con un gesto rápido (> 0,45 px/ms), si no vuelve (`--base`, `--ease`); al completarse, la vecina llega al centro con `--ease-move`. Sin vecina hacia ese lado, resiste al 20 % y vuelve. Eje bloqueado tras 10 px: vertical es cerrar la hoja. El fondo interpola hacia la paleta de la vecina según el avance (solo el lienzo; Estático y movimiento reducido cambian de golpe al completar; AMOLED sigue negro; HDR con su gama). Sin carátula o portada sin color: el fondo por defecto. Alternativa: anterior y siguiente del transporte |
+| Menú del reproductor (≡) | Una sola entrada para lo avanzado (repetir, sonido, temporizador, fondo). Móvil: hoja inferior con grabber y arrastre (<600 px); ancho: popover anclado al icono, de 22 rem y de 31 rem desde 1000 px (las 10 bandas del ecualizador en una fila, cada una ≥ 44 px). Los submenús se abren dentro del mismo panel con flecha de volver, nunca menús flotantes anidados. **Alto fijo** (36 rem, con tope del 88 dvh o del espacio libre junto al icono): cada página tenía su altura y el panel saltaba al cambiar; lo que sobra se desplaza dentro y, con el menú abierto, la página de detrás no se desplaza. Filas de 52 px, opciones con marca ✓ además del color, interruptores cuya posición comunica el estado. Los controles de uso constante (aleatorio, repetir) siguen a un toque en el reproductor |
+| Insignia de calidad | Texto, sin caja: `FLAC 24/96`, `MP3 320` (`core/format.ts`). Hi-Res (sin pérdida y > 16 bit o > 48 kHz) añade «Hi-Res» en acento y peso 650 |
+| Pestañas de biblioteca | Canciones, Álbumes, Artistas, Carpetas, Géneros, Recientes. Píldoras de 44 px; la activa en `--surface-3` con tinta plena (no solo color). En pantallas estrechas se deslizan dentro de su fila; la página nunca hace scroll horizontal |
+| Rejilla de álbumes | Portada 1:1 a todo el ancho de la celda, título y «artista · N canciones» en una línea cada uno. 2 columnas mínimo; celdas de ~140 px en móvil y ~180 px desde 600 px. Virtualizada por filas |
+| Cabecera de grupo | Portada grande (112–240 px; encima del texto por debajo de 420 px), título en `--text-xl` condensado, datos (artista · año · canciones · duración), mejor calidad del grupo y un único botón primario «Reproducir». Álbum: filas numeradas por nº de pista, sin portada por fila |
+| Deslizador | Uno solo para todo (`ui/Range.tsx`, `range.css`): progreso, volumen, velocidad, fundido, ecualizador (vertical) y fondo. Debajo, un `<input type="range">` nativo invisible da teclado, foco, aria y lector de pantalla; el aro de foco se dibuja en la barra. En reposo, barra de 4 px en tinta translúcida, relleno en `--accent` con una difuminación suave del mismo color y, en los controles con signo, una marca en el origen. Al pulsar, la barra se engrosa a 8 px (escala) y aparece el tirador (`--fast`, `--ease`; también con foco de teclado). Arrastrando, alejarse de la barra en perpendicular baja la velocidad del ajuste (½ a 40 px, ¼ a 96, ⅒ a 160; vibra al cambiar) y se muestra el valor con «fino ¼». Táctil: empezar en el otro eje desplaza la página (el valor no se toca hasta que el arrastre es suyo). **Progreso: confirmar al soltar** (`commit`): arrastrando, la canción sigue donde iba y solo se mueven el tirador y el tiempo de destino (siempre visible, con «fino» si toca); al soltar, al tocar y con cada flecha se busca una sola vez, con bajada y subida de volumen de 40 ms alrededor del salto (sin chasquido). Volumen, velocidad y los demás siguen en vivo |
+| Progreso de escaneo | Una línea de estado (`role=status`) con texto en cifras tabulares, barra de 4 px en acento y «Cancelar» como enlace. Sin spinners |
+| Reconectar carpeta | Aviso en línea con la acción primaria «Reconectar» (un toque pide el permiso). La biblioteca sigue visible debajo |
+| Soltar archivos | Contorno discontinuo en acento sobre el contenido con «Suelta para añadir a tu biblioteca»; sin animación |
+| Letra | `<dialog>` (hoja en móvil). Verso activo en `--ink` y peso 700, el resto en `--ink-3`; se centra solo (sin suavizado con movimiento reducido) |
+| Estado activo (shuffle, repetir) | Color de acento **y** punto bajo el icono; `aria-pressed` |
+| Fila de cola | Como la fila de pista, con el estado escrito junto al artista («Sonando», «A continuación», «se repite») y no en una barra de color. La que suena lleva una pastilla de `--surface-3`; las ya sonadas, `--ink-3`. Acciones: con puntero aparecen al pasar o enfocar; en táctil, un «⋯» que abre la hoja de acciones |
+| Ajustes | Página `/app/ajustes` con sección por tema (apariencia y luces, reproducción, biblioteca, accesibilidad, privacidad y datos) y, al final, «Acerca de» («Sobre Satin», el café si existe y los enlaces legales). Solo reúne controles que existen en otro sitio (menú ≡, hoja de biblioteca) más «Reducir movimiento», «Ver tutoriales otra vez» y la sección «Privacidad y datos» (qué se guarda con cifras reales, exportar y borrar, con la casilla «Cerrar también la sesión»); sin ajustes sin efecto. **Escritorio (≥1000 px):** índice de apartados de 12 rem a la izquierda, fijo al desplazar (enlaces que llevan a la sección sin desplazamiento suave y enfocan su título; sin tocar la URL), y contenido de hasta 44 rem a la derecha; el conjunto, centrado. Ahí el ecualizador va en una fila de 10. Si la vista no llega a 43 rem (cola abierta en pantalla justa), la columna de siempre. Móvil sin cambios |
+| Perfil (Ajustes) | Primera sección de Ajustes: foto cuadrada de 88 px (`--radius-m`, `--surface-2`, icono si no hay) junto a un campo de nombre de 16 px y «Elegir/Cambiar foto» y «Quitar foto». Solo local: la foto se recorta y se reduce a 256 px en un canvas (sin metadatos). Con foto, sustituye al icono de la cuenta en la navegación (24 px, en círculo como los botones) |
+| Apoyo («Comprar un café») | Un botón `--surface-2` con icono de taza, en Ajustes → Acerca de (bajo «Sobre Satin», con «si Satin te sirve, puedes invitarme un café», voluntario y sin presión) y en el pie de la landing. **Solo existe si el build trae `VITE_CAFE_URL`**; sin ella no hay ni botón ni sección. Enlace en otra pestaña, nunca un diálogo ni un aviso |
+| Páginas legales | `/privacidad`, `/terminos` y `/almacenamiento`: una columna de 44 rem para leer, tinta plena a 16 px, listas con viñeta y tablas que se desplazan dentro de su caja (filas por tono, sin líneas). Llevan «Borrador pendiente de revisión legal» y solo se enlazan aviso y términos, desde Ajustes → Acerca de |
+| Ayuda | Página `/app/ayuda` (quinta pestaña): **cómo se usa**. «Empezar» (3 pasos), atajos, gestos y preguntas frecuentes; nada sobre quién la hace (eso es Ajustes → Acerca de). Atajos y gestos se leen de `core/shortcuts.ts` y `core/gestures.ts` (los mismos datos que el código) y las preguntas de `docs/producto/FAQ.md` (`virtual:docs`, sin la línea «Comprobado en»); cada gesto dice su alternativa sin gesto. Preguntas en `<details>` nativo sobre `--surface-1`, sin animar. **Escritorio (≥1000 px):** dos columnas fijas (empezar y atajos | gestos y preguntas, de altura parecida), hasta 88 rem y centradas, en orden de lectura; abrir una pregunta no mueve secciones de columna. Si la vista no llega a 47 rem, una columna. Móvil sin cambios |
+| Aviso de primera vez | Una franja **en el flujo** (`.tip`), nunca una capa: sobre el reproductor (`grid-area: tip`; sin aviso mide 0) o, dentro del reproductor grande, encima del título. Lo dispara encontrar la cosa (fila deslizable, reproductor grande, primera canción con puntero), uno a la vez, con «Entendido» y «Omitir todos» (44 px). Hacer el gesto lo da por visto. Se guarda en local; Ajustes → «Ver tutoriales otra vez» lo devuelve. Entra y sale por `opacity` (`--base`/`--exit`) y con movimiento reducido no tiene transición |
+| Estado vacío | Un título, una frase y una acción. Sin ilustraciones ni cajas punteadas |
+| Errores | Junto a lo que falló, en lenguaje del usuario, sin jerga técnica (ni "Supabase", ni mensajes crudos del servidor) |
+
+## 6. Regla de reutilización por pantalla (web → app)
+
+Una pantalla de la web **se reutiliza tal cual** en Android/iPhone si cumple todo:
+
+1. Áreas táctiles ≥ 44 px.
+2. Safe areas y borde a borde correctos.
+3. Respeta el botón/gesto atrás del sistema.
+4. No depende de hover.
+5. Mantiene 60 fps en gama media.
+6. Se ve nativa a 360×800.
+
+Si falla algo y no se arregla con ajustes menores, se diseña una **variante para Android** basada en la web (no desde cero) en `docs/DISENO_ANDROID.md`; lo que difiera en iPhone, en `docs/DISENO_IOS.md`. Las variantes se aplican con `[data-platform="android|ios"]` en CSS, no bifurcando componentes. La regla se aplica pantalla por pantalla en la Fase 4.
+
+## 7. Verificación
+
+Ninguna tarea de UI está terminada sin `node scripts/capturas.mjs` (carpeta temporal; `--actualizar` solo para regenerar `docs/capturas`): recorre 320×568, 360×800, 390×844, 412×915, 844×390, 768×1024, 1024×768, 1440×900 y 1920×1080, falla con scroll horizontal, áreas táctiles < 44 px o texto < 12 px, y deja capturas de 390×844 y 1440×900 que hay que **mirar** con criterio de diseño.
+
+## 8. Pendiente de diseñar (Fase 4)
+
+Arrastrar para reordenar, skeletons, toasts con deshacer, curva del ecualizador, letra a pantalla completa en el reproductor, cabecera de álbum con fondo derivado de la portada. (Hecho: carrusel de portadas, menú ≡, ecualizador con sliders, fondo dinámico con selector y, en la Fase 3, pestañas de biblioteca, rejilla de álbumes, cabeceras de grupo y letra en diálogo.)

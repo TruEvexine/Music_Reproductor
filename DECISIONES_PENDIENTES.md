@@ -1,0 +1,127 @@
+# Decisiones y acciones pendientes del usuario
+
+Lo que el desarrollo no puede resolver solo. Cada entrada: qué, por qué bloquea, opciones y recomendación.
+
+## Abiertas
+
+### D1 — Skills de diseño no instaladas
+- **Qué:** no existen en este equipo `frontend-design` ni una referencia `awesome-claude-design`.
+- **Bloquea:** nada. Se aplican sus principios con las instaladas (impeccable, apple-design, design-taste-frontend, ui-ux-pro-max, design-motion-principles, anti-slop, ponytail).
+- **Recomendación:** instalarlas solo si se quiere esa lente adicional.
+
+### D2 — Cambio local sin commitear en `src/assets/music/README.md`
+- **Qué:** el archivo de trabajo tiene un texto antiguo ("Vite los incorpora automáticamente al compilar") distinto del versionado. No lo hizo el desarrollo y no se ha tocado.
+- **Recomendación:** descartarlo con `git restore src/assets/music/README.md`.
+
+### D3 — Prototipo de audio en segundo plano (Android)
+- **Qué:** elegir cómo suena la app con la pantalla apagada: (a) audio del WebView + servicio en primer plano que mantiene vivo el proceso, o (b) reproducción nativa con Media3 mediante plugin.
+- **Bloquea:** la implementación nativa de `AudioSession` (Fase 11). No bloquea la web.
+- **Opciones:** (a) conserva ecualizador y analizador de Web Audio, fiabilidad por comprobar; (b) fiable, pero el EQ habría que rehacerlo en nativo.
+- **Recomendación:** probar (a) primero en un dispositivo real. Requiere Android Studio instalado.
+
+### D13 — Modo «Visualizador» (butterchurn) no incluido
+- **Qué:** butterchurn (MIT) compila las ecuaciones de cada preset con `new Function`, lo que exige `'unsafe-eval'` en `script-src`. La CSP actual es `script-src 'self'` y relajarla para toda la app debilita la defensa contra XSS. Además `butterchurn-presets` pesa ≈ 11,9 MB y la atribución de cada preset (obras de la comunidad Milkdrop) no está verificada preset a preset.
+- **Bloquea:** nada. El selector de fondo ofrece Portada, Ritmo, Estático y AMOLED.
+- **Opciones:** (a) permitir `'unsafe-eval'` (no recomendado); (b) página aislada en un `<iframe sandbox>` con su propia CSP (el `AnalyserNode` no cruza iframes: habría que enviar el espectro por `postMessage`); (c) un visualizador propio (barras o forma de onda) en WebGL leyendo el mismo analizador, sin dependencias ni eval.
+- **Recomendación:** (c) si se quiere un modo «Visualizador»; y revisar la licencia de cada preset antes de curar ~30 para (b).
+
+### D14 — Cosas que solo se comprueban en un dispositivo real
+- Escuchar el ecualizador, el balance, la velocidad y el fundido al pausar (se midieron en el grafo de audio, no a oído).
+- Arrastrar la hoja del menú con un dedo y ver el fondo animado en un móvil de gama media (las pruebas usaron ratón y Chromium sin GPU real).
+- Con batería baja y con ahorro de datos (solo Chromium expone esas APIs).
+
+### D15 — Menú sin pista cargada
+- **Qué:** el menú ≡ vive en el mini reproductor y en el expandido, que no existen sin pista. Sin música cargada no se pueden tocar los ajustes de sonido ni de fondo.
+- **Opción:** añadir una entrada desde la navegación o los ajustes de la app cuando la biblioteca persista (Fase 3). No se hizo porque lo pedido era sacar esas opciones del flujo principal.
+- **Actualización 2026-11-11:** la biblioteca ya persiste y, tras recargar, la última pista vuelve sola, así que el menú está disponible casi siempre. Los ajustes también se pueden mover con la copia de seguridad (Biblioteca → Carpetas y copia de seguridad). La entrada propia queda para «Ajustes completos» de la Fase 5.
+
+### D16 — Safari real: copia en OPFS y reproducción sin verificar (Fase 3)
+- **Qué:** en Firefox la ruta `webkitdirectory` → OPFS → recarga → reproducir pasó entera. En WebKit solo se pudo probar la degradación: el WebKit de Playwright para Windows no trae OPFS (ni en contexto persistente) ni reproduce medios (ni un `new Audio()` suelto avanza). Ahí la app avisa «sonará hasta que recargues» y carga la pista desde memoria, pero no se oyó.
+- **Bloquea:** nada en Chromium/Firefox. En Safari, la biblioteca podría no persistir si su OPFS falla igual (la app lo trata como «solo esta sesión», no se rompe).
+- **Cómo cerrarlo:** en un Mac/iPhone con Safari 17+: añadir una carpeta, recargar, reproducir. Si `createWritable` no existiera, el código usa un worker con `createSyncAccessHandle` (`platform/web/opfsCopy.worker.ts`), que tampoco se ha podido ejecutar aquí.
+
+### D17 — Sincronización de playlists contra Supabase sin probar de extremo a extremo
+- **Qué:** las playlists ya son locales primero con outbox (`state/playlists.ts`, `sync/playlistSync.ts`); la lógica pura (compactar, fusionar, fallos permanentes) tiene tests y la parte local se probó en navegador sin cuenta y sin red. **No** se ejecutó contra el proyecto de Supabase: hacerlo exige una cuenta de prueba en un proyecto compartido con otra app.
+- **No requiere migración:** usa `playlists` (upsert por `id` generado en el dispositivo, permitido por las políticas `insert`/`update` existentes), el RPC `replace_playlist_tracks` y `delete`.
+- **Riesgo:** al iniciar sesión, las playlists creadas sin cuenta pasan a esa cuenta (se suben). Si se prefiere preguntar antes, es un cambio pequeño en `adoptOwnerless`.
+- **Cómo cerrarlo:** con una cuenta de prueba: crear/renombrar/borrar sin red, volver a conectar y comprobar en el panel de Supabase; repetir en dos dispositivos.
+
+### D18 — Recargar la página sin red
+- **Qué:** sin red todo lo local funciona mientras la página está abierta (probado: reproducir y crear playlists con la red cortada). **Recargar** sin red necesita el service worker de la Fase 6 (app shell offline); hoy el navegador no tiene de dónde sacar el HTML/JS.
+
+## Manual del usuario (paneles y cuentas)
+
+### D4 — Borrar los dos deployments antiguos de Vercel que llevaban música
+- **Qué:** `music-reproductor-hx3945vym-evexine.vercel.app` y `music-reproductor-5xt592y0s-evexine.vercel.app` siguen sirviendo las pistas con copyright.
+- **Por qué:** es lo único que queda abierto del hallazgo S1.
+- **Cómo:** Vercel → proyecto `music-reproductor` → Deployments → menú `⋯` de cada uno → Delete. Después comprobar que una URL antigua de `/assets/*.flac` devuelve 404.
+
+### D5 — Activar Vercel Authentication en deployments no productivos
+- **Cómo:** Settings → Deployment Protection → Vercel Authentication → "Standard Protection". Así los previews de `desarrollo` no son públicos.
+
+### D6 — Conectar Git en Vercel
+- **Cómo:** Settings → Git → conectar `TruEvexine/Music_Reproductor`. `main` = producción, el resto previews. Evita desplegar desde una carpeta local (origen de S11).
+
+### D7 — Copiar las variables a Preview
+- **Cómo:** Settings → Environment Variables → `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY` también en *Preview*. Sin esto los previews funcionan en local-only (sin cuenta).
+
+### D8 — Renombrar el proyecto de Supabase
+- **Qué:** se llama `Undefeated_Star_Web_Page` y aloja varias apps. Dashboard → Settings → General. Solo cosmético.
+
+### D9 — Endurecer Auth en Supabase (S7)
+- Protección de contraseñas filtradas (**requiere plan Pro**), longitud mínima ≥ 10, CAPTCHA (Turnstile), SMTP propio antes de abrir registros, *Redirect URLs* solo con dominios propios y `http://localhost:5173/**`.
+
+### D10 — Revisar `math_record_attempt` y `rls_auto_enable`
+- **Qué:** objetos de la otra app que comparte el proyecto; los advisors de Supabase los señalan. **El reproductor no los toca.** Revisarlos desde ese otro proyecto.
+
+### D11 — Correo de autor en commits (opcional, S10)
+- Los commits usan el correo institucional. Si se prefiere ocultarlo: GitHub → Settings → Emails → "Keep my email addresses private" y `git config user.email <id>+<usuario>@users.noreply.github.com`.
+
+### D12 — Activar los hooks en cada clon nuevo
+- En esta copia ya están activos. En cualquier otro clon: `npm run setup`.
+
+### D20 — Completar marcadores de datos personales al publicar (tanda de documentos, 2026-11-12)
+- **Qué:** los documentos públicos usan `{{RESPONSABLE}}`, `{{DOMICILIO}}` y `{{CORREO_PRIVACIDAD}}`. Los valores reales están en `docs/producto/privado/DATOS_PUBLICACION.md` (ignorado por git).
+- **Hecho 2026-11-13:** la sustitución es automática al compilar con `LEGAL_RESPONSABLE`, `LEGAL_DOMICILIO`, `LEGAL_CORREO_PRIVACIDAD`, `LEGAL_NOMBRE_APP`, `LEGAL_FECHA_ACTUALIZACION` y `LEGAL_URL_APP` (`LEGAL_NOMBRE_APP` es «Satin»; `LEGAL_URL_APP` queda vacía hasta comprar el dominio, así que el build sigue fallando a propósito mientras no exista) (variables de entorno del build o `.env`, ver `.env.example`); si falta alguna, `npm run build` falla. Para compilar en local sin los valores reales hay que pasar valores de prueba.
+- **Pendiente:** definir esas tres variables en Vercel en el momento de publicar (nunca commitear los valores); cambiar el correo temporal de Gmail por uno del dominio propio cuando exista; que un abogado confirme que publicar el domicilio particular basta (art. 15, fr. I).
+
+### D21 — Consulta con contador antes de recibir aportaciones (M3)
+- **Qué:** no se ha consultado a un contador sobre régimen fiscal, RFC y retenciones de plataformas para recibir aportaciones por Stripe.
+- **Contexto (2026-11-12):** se decidió usar Stripe Payment Links y abrir el café ya. Eso choca con este pendiente: recibir dinero sin régimen dado de alta es el riesgo más concreto de `MONETIZACION.md`.
+- **Recomendación:** construir el enlace, pero no publicar el Payment Link real hasta resolver esto. Preguntas para el contador: `MONETIZACION.md` §2.3.
+- **Hecho 2026-11-13:** el botón existe y se activa con `VITE_CAFE_URL` (Ajustes y landing); sin la variable no aparece. No hay enlace real en el repositorio: al crear el Payment Link, ponerlo solo en las variables de entorno de Vercel, **después** de resolver esto.
+- **También pendientes (sin decidir):** montos sugeridos (M2), política de reembolso (M4), precio de premium (M5).
+
+### D22 — Nombre y logo sin decidir (2026-11-12)
+- **Qué:** el nombre se elegirá más adelante. Criterio del usuario: simple y en inglés; nada común ni «tonto» como Surco o Aguja (descartadas). El ambiente del logo se elegirá después con una skill de diseño; colores a evitar y referencias, sin pensar aún.
+- **Bloquea:** Fase 2 del ROADMAP (nombre, dominio, landing, logo), el correo de privacidad en dominio propio (D20) y las cuentas en redes. **Actualizado 2026-11-14:** el nombre visible de la app, el título y la ayuda ya son «Satin» (`src/core/brand.ts`); falta el registro en el IMPI y el dominio (`satinplayer.com` previsto, sin comprar).
+- **Siguiente paso:** una lista nueva de nombres con el criterio en inglés (la de `MARCA.md` §2 quedó desfasada), y la verificación en IMPI, dominios y redes del elegido.
+- **Avance 2026-11-13:** nombre **Satin**, logo «Trama al bies» y animación de carga decididos (`docs/marca/MARCA_DEFINITIVA.md`). **Sigue pendiente (usuario):** IMPI, abogado, redes sin verificar, dominio (`MARCA_DEFINITIVA.md` §6).
+
+### D23 — Licencia del código: completar y revisar (L6, 2026-11-12)
+- **Decidido:** repositorio público bajo **PolyForm Noncommercial 1.0.0** (texto oficial 1.0.0, descargado de `polyformproject/polyform-licenses`). Archivo `LICENSE` añadido con la línea `Required Notice: Copyright {{RESPONSABLE}}`.
+- **Pendiente:** sustituir `{{RESPONSABLE}}` por el titular al publicar (D20); que un abogado revise el alcance de «no comercial» y la cláusula 4 de los términos. Falta decidir si se añade el campo `license` de `package.json` (hoy solo `"private": true`; no se tocó porque esta tanda no cambia código) y una línea en el README (tiene cambios sin commitear del usuario; no se tocó).
+- **Implicación:** no es «código abierto» según la OSI. Las dependencias conservan sus propias licencias; no se comprobó la compatibilidad de ninguna.
+
+### D24 — Cuentas: orden antes de abrir registros (2026-11-12)
+- **Decidido:** antes de abrir registros, los cuatro: eliminar cuenta, exportar datos de la cuenta, recuperar contraseña y SMTP propio. No se abre a la UE por ahora; el inglés queda para después.
+- **Dependencia que bloquea:** el SMTP propio y el correo de privacidad en dominio propio necesitan **dominio**, y este necesita **nombre** (D22). Hasta entonces los registros no se deben abrir al público.
+- **Sin decidir todavía:** edad mínima (L5), plazo de borrado tras eliminar la cuenta (L4), tribunales (L7) y si las playlists locales se conservan al eliminar la cuenta (`AJUSTES_PRIVACIDAD.md` §2.3).
+
+### D25 — Perfil y recaps: decisiones y un punto por reconciliar (2026-11-12)
+- **Decidido:** nombre visible vacío por defecto; foto local y, con cuenta, en bucket privado; solo nombre y foto como datos de perfil; recaps compartidos como imagen generada en el dispositivo (sin enlace público).
+- **Hecho 2026-11-13:** Ajustes → Perfil guarda nombre (vacío por defecto) y foto solo en el dispositivo. El nombre local **no** se sincroniza con `profiles.display_name` mientras esto siga por reconciliar.
+- **Decidido 2026-11-14:** el registro pide el nombre como campo **opcional** (vacío por defecto); si se escribe, se guarda como `profiles.display_name`. El nombre local de Ajustes → Perfil sigue siendo solo local y nunca se sube por sí solo (la FAQ ya dice que son dos nombres aparte).
+- **Límite conocido:** si el campo queda vacío, el disparador `create_profile_for_new_user` (migración `20261014120000_hardening_limits.sql`) rellena `display_name` con la parte del correo antes de la «@». Hacerlo `null` exige una migración nueva en el proyecto Supabase compartido (probada en un Postgres local, sin aplicar al remoto sin documentarlo); no se tocó.
+- **Sin decidir todavía:** retención del historial (24 meses propuestos), si `hours` se sube a la nube, D19 de `docs/DISENO_ESTADISTICAS.md`.
+
+### D26 — «Nosotros» y FAQ (2026-11-12)
+- **Decidido:** presentación anónima («una persona en México»), sin universidad, sin historia personal, tono cercano.
+- **Pendiente:** seudónimo (si lo quiere), redes o contacto públicos, y la historia en sus palabras si más adelante quiere añadirla (no se redacta por el usuario).
+- **Efecto en la FAQ:** el texto ya está en tono cercano; solo falta el nombre (D22) y completar `{{CORREO_PRIVACIDAD}}` (D20) para publicarla.
+- **2026-11-16:** no hay un «nosotros». «Nosotros» pasa a **«Sobre Satin»** en Ajustes → Acerca de, en primera persona del singular (versión «cercana» elegida por el usuario, 69 palabras, sin datos personales). La FAQ queda en 10 preguntas de usuario y sin contacto; las dos que remitían a `{{CORREO_PRIVACIDAD}}` se quitaron hasta decidir el medio.
+
+### D27 — Portada por defecto (2026-11-13, decidida 2026-11-14)
+- **Decidido:** ninguna de las tres propuestas. El usuario aportó una guía propia (funda cuadrada, estática y mate; un solo motivo de forma de onda; márgenes amplios; solo color y motivo en miniaturas; el tono tiñe el fondo reactivo, que concentra el movimiento; solo para fundas generadas). Implementada y revisada contra `DESIGN.md`: `core/coverArt.ts`, `ui/parts.tsx`, `sleevePalette` en `core/palette.ts`.
+- **Revisión de la guía:** estable «por álbum o por pista suelta» (misma clave que Álbumes); **sin título ni artista en la funda** porque la interfaz ya los muestra junto a ella en todos los sitios (no hay dónde no duplicarlos); el acento sigue siendo el neutro y solo el ambiente toma el tono. Borrados «campos», inicial, nota, tarjeta, `COVER_STYLE` y `--drift`.
+- **Pendiente:** que la mires en un dispositivo real; las capturas de `docs/capturas/` se regeneran al final de la tanda.

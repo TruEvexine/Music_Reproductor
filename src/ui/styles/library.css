@@ -1,0 +1,1005 @@
+/* Filas de pista (biblioteca, playlists y cola comparten la misma anatomía). */
+.track-list,
+.queue-list {
+  margin: 0 calc(var(--s2) * -1);
+}
+
+.track-row,
+.queue-row {
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-s);
+}
+
+.row-main {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+  min-height: 64px;
+  padding: var(--s2);
+  border-radius: var(--radius-s);
+  text-align: left;
+}
+
+.row-cover {
+  width: 48px;
+}
+
+.row-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.row-album,
+.row-quality {
+  display: none;
+}
+
+/* Pista actual: título en acento, estado escrito junto al artista y una pastilla de tono (más abajo, tras el hover). Sin líneas de color. */
+[aria-current="true"] > .row-main .title {
+  color: var(--accent);
+}
+
+.notices {
+  display: grid;
+  gap: var(--s2);
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+}
+
+.no-results {
+  color: var(--ink-2);
+}
+
+/* Playlists */
+.playlists {
+  display: grid;
+  gap: var(--s5);
+}
+
+.playlist-list {
+  display: flex;
+  gap: var(--s2);
+  overflow-x: auto;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 2px var(--gutter);
+  scrollbar-width: none;
+}
+
+.playlist-item {
+  display: grid;
+  min-width: 9rem;
+  max-width: 14rem;
+  min-height: var(--tap-l);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+  text-align: left;
+}
+
+.playlist-item[aria-current="true"] {
+  background: var(--surface-3);
+}
+
+.playlist-detail {
+  display: grid;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.playlist-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.playlist-header .row-copy {
+  flex: 1 1 12rem;
+}
+
+@media (min-width: 700px) {
+  .row-main {
+    grid-template-columns: 48px minmax(0, 5fr) minmax(0, 3fr) 7.5rem 3.5rem;
+  }
+  .row-album,
+  .row-quality {
+    display: block;
+  }
+  .row-time {
+    text-align: right;
+  }
+  /* En playlists y cola la fila no lleva álbum ni calidad. */
+  .playlist-detail .row-main,
+  .queue-row .row-main {
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+  }
+}
+
+@media (min-width: 1000px) {
+  .playlists {
+    grid-template-columns: 16rem minmax(0, 1fr);
+    align-items: start;
+  }
+  .playlist-list {
+    flex-direction: column;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+  }
+  .playlist-item {
+    max-width: none;
+  }
+}
+
+@media (hover: hover) {
+  .row-main:hover:not(:disabled),
+  .playlist-item:hover {
+    background: var(--surface-2);
+  }
+}
+
+/* Listas virtualizadas: la lista mide lo que medirían todas las filas; solo existen las visibles. */
+.virtual-list {
+  position: relative;
+  contain: strict;
+  min-width: 0;
+}
+
+.virtual-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.virtual-row > .track-row,
+.virtual-row > .queue-row,
+.virtual-row > .group-row {
+  height: 100%;
+}
+
+.queue-rows {
+  margin: 0;
+}
+
+/* Biblioteca */
+.library,
+.view.empty {
+  position: relative;
+  min-height: 100%;
+}
+
+.header-actions,
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+}
+
+/* «Añadir»: botón con menú de dos entradas, anclado debajo. */
+.split {
+  position: relative;
+}
+
+.split-menu {
+  position: absolute;
+  top: calc(100% + var(--s1));
+  left: 0;
+  z-index: 6;
+  display: grid;
+  width: min(19rem, calc(100vw - 2 * var(--gutter)));
+  padding: var(--s1);
+  border-radius: var(--radius-m);
+  background: var(--surface-3);
+  box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
+}
+
+.split-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--tap-l);
+  padding: var(--s2) var(--s3);
+  border-radius: var(--radius-s);
+  text-align: left;
+}
+
+.split-menu .subtitle {
+  white-space: normal;
+}
+
+@media (hover: hover) {
+  .split-menu button:hover {
+    background: var(--surface-2);
+  }
+}
+
+/* Pestañas de vista: se deslizan dentro de su fila en pantallas estrechas; la página nunca. */
+.tabs {
+  display: flex;
+  gap: var(--s1);
+  overflow-x: auto;
+  margin: 0 calc(var(--gutter) * -1);
+  padding: 0 var(--gutter);
+  scrollbar-width: none;
+}
+
+.tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--s3);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* La vista activa: tono de superficie y tinta plena, no solo color. */
+.tab[aria-current="page"] {
+  background: var(--surface-3);
+  color: var(--ink);
+}
+
+/* En pantallas estrechas el orden baja a su propia línea: el campo de búsqueda nunca se queda sin sitio. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.toolbar .search {
+  flex: 1 1 15rem;
+  min-width: 0;
+}
+
+.sort select {
+  height: 48px;
+  max-width: 11rem;
+  padding: 0 var(--s3);
+  border: 0;
+  border-radius: var(--radius-s);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  justify-self: start;
+  min-height: var(--tap);
+  color: var(--ink-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.scan-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2) var(--s3);
+  padding: var(--s1) var(--s1) var(--s1) var(--s3);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+  font-size: var(--text-s);
+}
+
+.scan-text {
+  flex: 1 1 14rem;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.scan-bar progress {
+  flex: 1 1 8rem;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--surface-3);
+  accent-color: var(--accent);
+  appearance: none;
+}
+
+.scan-bar progress::-webkit-progress-bar {
+  border-radius: 2px;
+  background: var(--surface-3);
+}
+
+.scan-bar progress::-webkit-progress-value {
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.scan-bar progress::-moz-progress-bar {
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.drop-hint {
+  position: absolute;
+  inset: var(--s2);
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-m);
+  background: color-mix(in oklch, var(--bg) 82%, transparent);
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+  font-size: var(--text-l);
+  font-weight: 650;
+  pointer-events: none;
+}
+
+.row-number {
+  justify-self: center;
+  color: var(--ink-3);
+}
+
+.hires {
+  color: var(--accent);
+  font-weight: 650;
+}
+
+.group-row {
+  text-decoration: none;
+}
+
+/* Rejilla de álbumes: la portada manda; el texto, dos líneas debajo. */
+.album-row {
+  display: grid;
+  gap: 16px;
+}
+
+.album-tile {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+
+.album-tile .cover {
+  width: 100%;
+  margin-bottom: var(--s2);
+  border-radius: var(--radius-s);
+}
+
+.album-tile .title,
+.album-tile .subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Cabecera de álbum, artista, carpeta o género: portada grande y los datos que importan. */
+.group-header {
+  display: grid;
+  grid-template-columns: clamp(112px, 34vw, 240px) minmax(0, 1fr);
+  align-items: end;
+  gap: var(--s4);
+}
+
+.group-cover {
+  width: 100%;
+  border-radius: var(--radius-m);
+}
+
+.group-copy {
+  display: grid;
+  justify-items: start;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.group-copy h2 {
+  font-size: var(--text-xl);
+  font-stretch: 80%;
+  line-height: 1.02;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+@media (max-width: 420px) {
+  .group-header {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .group-cover {
+    width: min(64vw, 240px);
+  }
+}
+
+@media (min-width: 700px) {
+  .group-row {
+    grid-template-columns: 48px minmax(0, 1fr);
+  }
+}
+
+/* Hoja "Tu biblioteca" */
+.sheet-section {
+  display: grid;
+  gap: var(--s2);
+}
+
+.sheet-section + .sheet-section {
+  margin-top: var(--s4);
+}
+
+.sheet-section h3 {
+  margin: 0;
+  font-size: var(--text-m);
+  font-weight: 650;
+}
+
+.root-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+  min-height: 56px;
+}
+
+.root-row .row-copy {
+  flex: 1;
+}
+
+/* Letra sincronizada: el verso que suena en tinta plena y más peso; el resto, atenuado. */
+.lyrics {
+  display: grid;
+  gap: var(--s2);
+  max-height: 60dvh;
+  overflow-y: auto;
+  padding: var(--s4) 0 30dvh;
+}
+
+.lyric-line {
+  color: var(--ink-3);
+  font-size: var(--text-l);
+  font-weight: 550;
+  line-height: 1.3;
+}
+
+.lyric-line[aria-current="true"] {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.lyrics-plain {
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+@media (hover: hover) {
+  .tab:hover:not([aria-current="page"]),
+  .back-link:hover {
+    color: var(--ink);
+  }
+  .album-tile:hover .title {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}
+
+/* Dentro de un álbum el nombre del álbum sobra en cada fila; se conserva el hueco para que las columnas cuadren. */
+ol.track-list .row-album {
+  visibility: hidden;
+}
+
+/* Filas deslizables (ver gestures.tsx): la fila se desplaza con --dx y deja a la vista la acción en el hueco que abre. */
+.swipe {
+  position: relative;
+  touch-action: pan-y; /* el scroll vertical es del navegador; el horizontal, nuestro */
+  transform: translateX(var(--dx, 0px));
+  transition: transform var(--base) var(--ease-move);
+}
+
+.swipe[data-dragging] {
+  transition: none;
+}
+
+.swipe-hint {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  overflow: hidden;
+  padding: 0 var(--s3);
+  color: var(--ink-3);
+  font-size: var(--text-s);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.swipe-hint svg {
+  flex: none; /* el texto largo no debe encoger el icono a nada */
+}
+
+.swipe-hint[data-side="right"] {
+  right: 100%;
+  width: max(var(--dx, 0px), 0px);
+}
+
+.swipe-hint[data-side="left"] {
+  left: 100%;
+  width: max(calc(var(--dx, 0px) * -1), 0px);
+  justify-content: flex-end;
+}
+
+/* Al cruzar el umbral la acción se arma: tinta y acento, no solo color (el texto sigue ahí). */
+.swipe[data-armed] .swipe-hint {
+  color: var(--accent);
+}
+
+/* Hoja de acciones de una pista */
+.sheet-actions {
+  display: grid;
+}
+
+.sheet-action {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  width: 100%;
+  min-height: var(--tap-l);
+  padding: 0 var(--s2);
+  border-radius: var(--radius-s);
+  font-weight: 600;
+  text-align: left;
+}
+
+@media (hover: hover) {
+  .sheet-action:hover {
+    background: var(--surface-2);
+  }
+}
+
+/* Cola y biblioteca: la jerarquía sale del tono y del texto, no de líneas de color. Sonando = una pastilla de tono (--surface-3) con el estado escrito;
+   ya sonaron = tinta terciaria; las acciones aparecen con el puntero o el foco, y en táctil son un solo «⋯» (la hoja de acciones). */
+.row-coverbox {
+  position: relative;
+  width: 48px;
+}
+
+.row-sub {
+  display: flex;
+  align-items: center;
+  gap: var(--s1);
+}
+
+.row-sub .marquee {
+  flex: 1;
+  min-width: 0;
+}
+
+.row-status {
+  display: inline-grid;
+  flex: none;
+  color: var(--ink-2);
+}
+
+.row-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La pastilla cubre la fila entera (también su botón de acción); el hover de .row-main, de igual especificidad y más arriba, no la pisa. */
+.swipe[aria-current="true"] {
+  background: var(--surface-3);
+}
+
+.swipe[aria-current="true"] > .row-main {
+  background: none;
+}
+
+.row-main[data-state="current"] .row-status {
+  color: var(--accent);
+}
+
+.row-main[data-state="played"] .title,
+.row-main[data-state="played"] .subtitle {
+  color: var(--ink-3);
+}
+
+.row-tools,
+.row-more {
+  display: none;
+}
+
+@media (hover: hover) {
+  .row-tools {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    padding-left: var(--s2);
+    border-radius: var(--radius-s);
+    background: var(--surface-3);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .queue-row:hover .row-tools,
+  .queue-row:focus-within .row-tools {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+@media (hover: none) {
+  .row-more {
+    display: inline-grid;
+  }
+}
+
+/* Ajustes: los controles son los del menú del reproductor (menu.css); aquí solo el marco de la página. Se separa por espacio, no por líneas. */
+.settings {
+  max-width: 42rem;
+}
+
+.settings-section {
+  display: grid;
+  gap: var(--s3);
+  margin-top: var(--s4);
+}
+
+.settings-stack {
+  display: grid;
+  gap: var(--s4);
+}
+
+.settings-sub {
+  margin: var(--s2) 0 calc(var(--s2) * -1);
+  padding: 0 var(--s1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.settings .hint {
+  padding: 0 var(--s1);
+}
+
+/* Escritorio: índice de apartados a la izquierda (fijo al desplazar) y contenido de hasta 44 rem a la derecha, el conjunto centrado.
+   La consulta es sobre la propia vista: con la cola abierta en una pantalla justa queda la columna de siempre. En móvil el índice no existe
+   y los envoltorios no cuentan (display: contents), así que la página es la misma. */
+.settings-columns,
+.settings-body {
+  display: contents;
+}
+
+.settings-nav {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .settings:not(.help) {
+    container-type: inline-size;
+    max-width: calc(12rem + var(--s7) + 44rem + 2 * var(--gutter));
+    margin-inline: auto;
+  }
+}
+
+@container (min-width: 43rem) {
+  .settings-columns {
+    display: grid;
+    grid-template-columns: 12rem minmax(0, 1fr);
+    column-gap: var(--s7);
+    align-items: start;
+  }
+
+  .settings-body {
+    display: grid;
+    gap: var(--s4);
+  }
+
+  /* Con 44 rem de ancho, las 10 bandas del ecualizador caben en una fila (≥ 44 px cada una), como en el menú de escritorio. */
+  .settings-body .eq {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+  }
+
+  .settings-nav {
+    position: sticky;
+    top: var(--s5);
+    display: grid;
+    gap: var(--s1);
+    margin-top: var(--s4);
+  }
+}
+
+.settings-nav a {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 var(--s3);
+  border-radius: var(--radius-s);
+  color: var(--ink-2);
+  font-weight: 550;
+}
+
+@media (hover: hover) {
+  .settings-nav a:hover {
+    background: var(--surface-1);
+    color: var(--ink);
+  }
+}
+
+/* Ayuda en escritorio: empezar y atajos en una columna, gestos y preguntas en la otra (alturas parecidas), hasta 88 rem y centrado.
+   Dos columnas fijas (no `columns`): abrir una pregunta no hace saltar secciones de una columna a otra. */
+.help-columns,
+.help-col {
+  display: contents;
+}
+
+@media (min-width: 1000px) {
+  .help {
+    container-type: inline-size;
+    max-width: calc(88rem + 2 * var(--gutter));
+    margin-inline: auto;
+  }
+}
+
+@container (min-width: 47rem) {
+  .help-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s7);
+    align-items: start;
+  }
+
+  .help-col {
+    display: grid;
+    gap: var(--s4);
+  }
+}
+
+/* Ayuda: pasos, gestos y preguntas desplegables (<details> nativo, sin animar: se abren de vez en cuando); `.help-about` es «Sobre Satin» en Ajustes. */
+.help-group {
+  display: grid;
+  gap: var(--s1);
+}
+
+.help-group h3,
+.help-list h3 {
+  margin: var(--s3) 0 var(--s1);
+  padding: 0 var(--s1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  font-weight: 600;
+}
+
+.help-list {
+  display: grid;
+  gap: var(--s2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.help-list li {
+  padding: var(--s1) var(--s1) var(--s2);
+}
+
+.help-list h3 {
+  margin: 0 0 var(--s1);
+  padding: 0;
+  color: var(--ink);
+  font-size: var(--text-m);
+  font-weight: 650;
+}
+
+.help-list p,
+.faq-item p {
+  margin: 0 0 var(--s2);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.help-list .hint {
+  color: var(--ink-3);
+}
+
+/* «Sobre Satin» se lee de corrido: tinta plena y tamaño de cuerpo, no de nota. */
+.help-about {
+  padding: 0 var(--s1);
+}
+
+.help-about p {
+  max-width: 62ch;
+  margin: 0 0 var(--s2);
+  color: var(--ink);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.faq-item {
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+  min-height: var(--tap);
+  padding: var(--s2) var(--s3);
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary svg {
+  flex: none;
+  color: var(--ink-2);
+}
+
+.faq-item[open] summary svg {
+  transform: rotate(180deg);
+}
+
+.faq-item[open] {
+  padding-bottom: var(--s2);
+}
+
+.faq-item > p {
+  padding: 0 var(--s3);
+}
+
+@media (hover: hover) {
+  .faq-item summary:hover {
+    background: var(--surface-2);
+    border-radius: var(--radius-s);
+  }
+}
+
+.settings .help-list .hint {
+  padding: 0;
+}
+
+/* Privacidad y datos: «Qué se guarda» (etiqueta a la izquierda, cifra a la derecha, como la hoja de atajos) y la casilla de borrar. */
+.stored {
+  display: grid;
+  gap: var(--s1);
+  margin: 0;
+}
+
+.stored > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  min-height: 36px;
+}
+
+.stored dt {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.stored dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-s);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  min-height: var(--tap);
+  font-weight: 550;
+}
+
+.check-row input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent);
+}
+
+/* En Ajustes las explicaciones se parten en varias líneas en vez de cortarse con «…». */
+.settings .sheet-section .subtitle,
+.settings .settings-section > .subtitle {
+  white-space: normal;
+  text-wrap: pretty;
+}
+
+/* Perfil: foto cuadrada a la izquierda y los campos a la derecha; en pantallas estrechas, uno encima del otro. */
+.profile {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--s4);
+  align-items: start;
+}
+
+.profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 88px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-m);
+  background: var(--surface-2);
+  color: var(--ink-3);
+}
+
+.profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-fields {
+  display: grid;
+  gap: var(--s2);
+}
+
+.profile-fields .dialog-actions {
+  justify-content: flex-start;
+}
+
+@media (max-width: 420px) {
+  .profile {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cafe-actions {
+  justify-content: flex-start;
+}
+
+.about-cafe {
+  display: grid;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  padding: 0 var(--s1);
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--s4);
+  margin-top: var(--s2);
+}
+
+.about-links .link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--s1);
+}
+
+.about-cafe p:not(.hint) {
+  max-width: 62ch;
+  margin: 0;
+  line-height: 1.5;
+  text-wrap: pretty;
+}

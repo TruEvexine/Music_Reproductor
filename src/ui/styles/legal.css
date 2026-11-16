@@ -1,0 +1,76 @@
+/* Páginas legales (ui/LegalPage.tsx): texto largo para leer, una columna. Como la landing, es una página normal que se desplaza. */
+body:has(.legal) {
+  overflow: auto;
+}
+
+.legal {
+  padding: calc(var(--s5) + var(--safe-top)) calc(var(--gutter) + var(--safe-right)) calc(var(--s7) + var(--safe-bottom)) calc(var(--gutter) + var(--safe-left));
+}
+
+.legal-text {
+  display: grid;
+  gap: var(--s4);
+  max-width: 44rem;
+  margin: 0 auto;
+}
+
+.legal-text .link {
+  justify-self: start;
+  padding-left: 0;
+}
+
+.legal-text h1 {
+  margin-top: var(--s4);
+}
+
+.legal-text p,
+.legal-text li {
+  color: var(--ink);
+  font-size: var(--text-m);
+  line-height: 1.6;
+  text-wrap: pretty;
+}
+
+.legal-text ul {
+  display: grid;
+  gap: var(--s2);
+  padding-left: var(--s5);
+  list-style: disc;
+}
+
+.legal-text .legal-draft {
+  padding: var(--s3) var(--s4);
+  border-radius: var(--radius-s);
+  background: var(--surface-1);
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+/* Tablas: se desplazan dentro de su caja en pantallas estrechas; las filas se separan por tono, no por líneas. */
+.table-scroll {
+  overflow-x: auto;
+  border-radius: var(--radius-s);
+}
+
+.table-scroll table {
+  width: 100%;
+  min-width: 34rem;
+  border-collapse: collapse;
+}
+
+.table-scroll th,
+.table-scroll td {
+  padding: var(--s2) var(--s3);
+  text-align: left;
+  vertical-align: top;
+  font-size: var(--text-s);
+}
+
+.table-scroll th {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+
+.table-scroll tbody tr:nth-child(odd) {
+  background: var(--surface-1);
+}
