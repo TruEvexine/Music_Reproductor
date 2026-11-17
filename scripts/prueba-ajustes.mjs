@@ -41,7 +41,7 @@ check("el índice de escritorio tiene las mismas secciones, «Acerca de» inclui
 const about = page.getByRole("region", { name: "Acerca de" });
 const aboutText = await about.locator(".help-about").innerText();
 const words = aboutText.split(/\s+/).filter(Boolean).length;
-check("«Sobre Satin»: título, una sola persona en México, de 60 a 100 palabras y sin «nosotros»", (await about.getByRole("heading", { level: 3, name: "Sobre Satin" }).count()) === 1 && /una sola persona en México, y soy yo/.test(aboutText) && words >= 60 && words <= 100 && !/nosotros/i.test(aboutText), `${words} palabras`);
+check("«Sobre Satin»: título, una sola persona en México, de 60 a 100 palabras y sin «nosotros»", (await about.getByRole("heading", { level: 3, name: "Sobre Satin" }).count()) === 1 && /una sola persona en México que no quiso conformarse/.test(aboutText) && /se quedan en tu dispositivo, y usarlo así es gratis\./.test(aboutText) && words >= 60 && words <= 100 && !/nosotros/i.test(aboutText), `${words} palabras`);
 check("sin VITE_CAFE_URL no hay café en Acerca de", (await about.getByText(/café/).count()) === 0);
 await page.getByRole("navigation", { name: "Apartados de Ajustes" }).getByRole("link", { name: "Acerca de" }).click();
 await wait(page, 200);

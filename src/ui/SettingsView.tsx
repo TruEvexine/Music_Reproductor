@@ -119,9 +119,11 @@ export function SettingsView({ auth }: { auth: AuthController }) {
             <h2 id="set-about">Acerca de</h2>
             <h3 className="settings-sub">Sobre {APP_NAME}</h3>
             <div className="help-about">
-              <p>Hola. Detrás de {APP_NAME} no hay una empresa ni un equipo: hay una sola persona en México, y soy yo.</p>
               <p>
-                {APP_NAME} es un reproductor para la música que ya tienes guardada, sin anuncios y sin pedirte nada a cambio. Tus canciones son tuyas: se quedan en tu dispositivo y {APP_NAME} solo las lee ahí. Todo lo que hace con tu música local es gratis. Gracias por darle una oportunidad.
+                Hola. Detrás de {APP_NAME} no hay una empresa ni un equipo: hay una sola persona en México que no quiso conformarse con las opciones que había y empezó a construir el reproductor que le gustaría usar, con la idea de compartirlo con los demás.
+              </p>
+              <p>
+                Por eso existe {APP_NAME}: un reproductor para tu propia música. Tus canciones son tuyas y se quedan en tu dispositivo, y usarlo así es gratis.
               </p>
             </div>
             <CafeNote />
