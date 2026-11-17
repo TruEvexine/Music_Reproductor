@@ -1,4 +1,4 @@
-// Chasquido al pausar, reanudar con fundido y buscar: mide la mayor diferencia entre muestras consecutivas alrededor de cada transición.
+// Chasquido al pausar y reanudar (con y sin fundido) y al buscar: mide la mayor diferencia entre muestras consecutivas alrededor de cada transición.
 // Uso: node scripts/prueba-chasquido.mjs [url-base] (contra `npm run dev`). Sale con 1 si algo falla.
 //
 // Conduce el PlayerEngine real sobre un OfflineAudioContext que se renderiza a trozos al ritmo del reloj de pared (así sus
@@ -21,7 +21,7 @@ const result = await page.evaluate(async () => {
   const TAIL_S = 0.02;
   const FADE = 0.35; // FADE_PAUSE_SECONDS
   const SEEK_S = 0.03;
-  const LENGTH = 7;
+  const LENGTH = 9;
   const CHUNK = 512 / SR; // render a trozos de ~10,7 ms
   const ctx = new OfflineAudioContext(1, SR * LENGTH, SR);
   const osc = ctx.createOscillator();
@@ -103,6 +103,13 @@ const result = await page.evaluate(async () => {
   at(5.6, () => engine.seek(90)); // interrumpir: otra búsqueda a mitad de la bajada y otra durante el salto
   at(5.62, () => engine.seek(100));
   at(5.68, () => engine.seek(110));
+  // Sin fundido de usuario (el ajuste por defecto): la micro-rampa (CUT_RAMP) evita el corte en seco.
+  at(6.9, () => engine.pause());
+  at(7.4, () => void engine.play());
+  at(7.9, () => engine.pause()); // toques muy seguidos: cada uno interrumpe la rampa del anterior desde donde iba
+  at(7.93, () => void engine.play());
+  at(7.96, () => engine.pause());
+  at(8.0, () => void engine.play());
 
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   // El motor llama a ctx.resume() (anulada arriba); el bucle usa la real del OfflineAudioContext.
@@ -139,6 +146,10 @@ const result = await page.evaluate(async () => {
     seekInterrupted: maxStep(5.55, 6.4),
     levelBefore: silentAfter(0.5, 0.9),
     levelAfterSeeks: silentAfter(6.4, 6.9),
+    pauseNoFade: maxStep(6.85, 7.3),
+    resumeNoFade: maxStep(7.35, 7.8),
+    rapidNoFade: maxStep(7.85, 8.6),
+    silentNoFade: silentAfter(7.1, 7.38),
   };
 });
 await browser.close();
@@ -153,13 +164,17 @@ const check = (name, value) => {
 check("pausa con fundido", result.pause);
 check("reanudar con fundido", result.resume);
 check("alternar rápido (pausa → reanuda a mitad → pausa)", result.rapid);
+check("pausa sin fundido (micro-rampa)", result.pauseNoFade);
+check("reanudar sin fundido (micro-rampa)", result.resumeNoFade);
+check("alternar sin fundido cuatro veces en 100 ms", result.rapidNoFade);
 check("buscar (bajada, salto y subida)", result.seek);
 check("buscar interrumpido por otras dos búsquedas", result.seekInterrupted);
 console.log(`     antes, buscar sin transición: mayor salto ${result.seekRaw.toFixed(4)} (referencia, no se exige)`);
 const restored = result.levelAfterSeeks > result.levelBefore * 0.98;
 if (!restored) failed += 1;
 console.log(`${restored ? "OK  " : "FAIL"} tras las búsquedas el volumen vuelve entero (pico ${result.levelAfterSeeks.toFixed(3)}; sonando antes: ${result.levelBefore.toFixed(3)})`);
-const quiet = result.silentWhilePaused < 1e-4;
+const silent = Math.max(result.silentWhilePaused, result.silentNoFade);
+const quiet = silent < 1e-4;
 if (!quiet) failed += 1;
-console.log(`${quiet ? "OK  " : "FAIL"} en pausa no sale nada (pico ${result.silentWhilePaused.toFixed(5)})`);
+console.log(`${quiet ? "OK  " : "FAIL"} en pausa no sale nada, con y sin fundido (pico ${silent.toFixed(5)})`);
 process.exit(failed ? 1 : 0);

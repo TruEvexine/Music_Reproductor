@@ -132,7 +132,8 @@ function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolea
   const { id, key } = queue.current;
   const track = trackOf(id);
   // Cola y posición en el mismo cambio: si no, la sesión se guardaría con la posición de la pista anterior.
-  usePlayer.setState({ queue, position: options.startAt ?? 0, duration: track?.duration ?? 0 });
+  // Con autoplay, «sonando» desde el toque: mientras se lee el archivo, otro toque ya es una pausa.
+  usePlayer.setState({ queue, position: options.startAt ?? 0, duration: track?.duration ?? 0, ...(options.autoplay && { isPlaying: true }) });
   if (track?.unsupported) {
     fail(`Este navegador no puede reproducir archivos ${track.fileName.split(".").pop()?.toUpperCase() ?? "de este tipo"}.`);
     return;
@@ -235,10 +236,11 @@ export const player = {
   clear() {
     apply(clearQueue(q()), { autoplay: false });
   },
+  /** Decide con lo que se ve (`isPlaying` cambia en el mismo toque): toques muy seguidos alternan sin perder ninguno. */
   toggle() {
     if (q().current === null) return;
-    if (engine.paused || loadedId !== q().current?.key) player.play();
-    else player.pause();
+    if (usePlayer.getState().isPlaying) player.pause();
+    else player.play();
   },
   play() {
     const { current } = q();
@@ -248,6 +250,7 @@ export const player = {
     else if (engine.paused) void engine.play(pauseFade()).catch(() => fail());
   },
   pause() {
+    loadToken += 1; // un arranque que aún lee su archivo ya no debe sonar
     engine.pause(pauseFade());
   },
   next() {

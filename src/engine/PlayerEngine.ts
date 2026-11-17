@@ -13,6 +13,7 @@ import { ANALYSER_DB } from "../core/rhythm";
 
 const VOLUME_RAMP = 0.015; // s: cambiar el volumen sin escalón audible
 const PAUSE_MARGIN = 0.02; // s tras la rampa antes de pausar el <audio>
+export const CUT_RAMP = 0.02; // s: rampa mínima al pausar y reanudar aunque el fundido del usuario esté apagado (sin ella, chasquido)
 const SEEK_DIP = 0.04; // s de bajada (y de subida) alrededor de una búsqueda: sin chasquido al saltar
 const SEEK_GIVE_UP = 1000; // ms: si `seeked` no llega, el volumen vuelve igual
 const LATENCY_HINT: AudioContextLatencyCategory = "interactive";
@@ -51,8 +52,12 @@ export class PlayerEngine {
   private speed = 1;
   private fadeTimer?: ReturnType<typeof setTimeout>;
   private pauseTimer?: ReturnType<typeof setTimeout>;
-  /** Cambia en cada play/pause: una reanudación que espera a `audio.play()` no pisa una pausa pedida mientras tanto. */
+  /** Cambia en cada play/pause: una reanudación que espera a `resume()` o a `audio.play()` no pisa una pausa pedida mientras tanto. */
   private turn = 0;
+  /** Lo último que se pidió (sonar o no). Manda sobre el estado del `<audio>`, que cambia con retraso: el último toque gana. */
+  private wanted = false;
+  /** Un play() espera a `resume()`/`audio.play()`: los eventos `pause` que lleguen mientras tanto son viejos. */
+  private starting = false;
   private ramp = { from: 1, to: 1, start: 0, end: 0 };
   /** Cambia con cada búsqueda suave: la que interrumpe a otra deja sin efecto la anterior. */
   private seekTurn = 0;
@@ -75,8 +80,17 @@ export class PlayerEngine {
     const whenActive = (handler: () => void) => () => {
       if (this.decks[this.active] === deck) handler();
     };
-    audio.addEventListener("play", whenActive(() => this.events.onPlaying(true)));
-    audio.addEventListener("pause", whenActive(() => this.events.onPlaying(false)));
+    // play()/pause() ya avisaron en el mismo toque; los eventos del <audio> solo cuentan si no contradicen lo último pedido.
+    // Un `pause` que no pedimos (fin de pista, otra app se queda el audio) sí cambia la intención.
+    audio.addEventListener("play", whenActive(() => this.wanted && this.events.onPlaying(true)));
+    audio.addEventListener(
+      "pause",
+      whenActive(() => {
+        if (this.starting || this.pauseTimer !== undefined) return;
+        this.wanted = false;
+        this.events.onPlaying(false);
+      }),
+    );
     audio.addEventListener("playing", whenActive(() => this.events.onStarted()));
     audio.addEventListener("timeupdate", whenActive(() => this.seekTarget === null && this.events.onTime(audio.currentTime)));
     audio.addEventListener("ended", whenActive(() => this.events.onEnded()));
@@ -281,30 +295,38 @@ export class PlayerEngine {
   /** Rechaza con el error del navegador (salvo AbortError: otra carga interrumpió esta). `fade`: segundos de entrada. */
   async play(fade = 0): Promise<void> {
     const turn = ++this.turn;
+    this.wanted = true;
+    this.starting = true;
+    this.events.onPlaying(true); // el estado visual cambia en el mismo toque, no cuando el <audio> arranca
+    const ramp = Math.max(fade, CUT_RAMP);
     try {
       clearTimeout(this.pauseTimer);
       this.pauseTimer = undefined;
       const context = this.graph();
       await context?.resume();
+      if (turn !== this.turn) return; // una pausa llegó mientras el contexto se reanudaba: gana ella
       const master = this.master;
-      if (!context || !master || fade <= 0) {
-        this.applyVolume();
-        await this.current.audio.play();
-      } else if (this.current.audio.paused) {
+      if (!context || !master) await this.current.audio.play();
+      else if (this.current.audio.paused) {
         // Desde silencio, la subida empieza cuando el <audio> ya entrega muestras: antes arrancaba a media rampa (escalón).
         this.rampMaster(0, 0);
         await this.current.audio.play();
-        if (turn === this.turn) this.rampMaster(this.volume, fade);
-      } else this.rampMaster(this.volume, fade); // a mitad de un fundido de pausa: sube desde donde iba
+        if (turn === this.turn) this.rampMaster(this.volume, ramp);
+      } else this.rampMaster(this.volume, ramp); // a mitad de una rampa de pausa: sube desde donde iba
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       throw error;
+    } finally {
+      if (turn === this.turn) this.starting = false;
     }
   }
 
-  /** `fade` > 0: baja el volumen y pausa al terminar (pausa suave y temporizador de apagado). Sin Web Audio, pausa al instante. */
+  /** Baja el volumen (al menos CUT_RAMP; `fade` para la pausa suave y el temporizador) y pausa al terminar. Sin Web Audio, pausa al instante. */
   pause(fade = 0) {
     this.turn += 1;
+    this.wanted = false;
+    this.starting = false;
+    this.events.onPlaying(false);
     clearTimeout(this.pauseTimer);
     this.pauseTimer = undefined;
     const context = this.context;
@@ -316,7 +338,8 @@ export class PlayerEngine {
       this.idle.audio.pause();
       this.current.audio.pause();
     };
-    if (fade > 0 && context && master && !this.current.audio.paused) {
+    if (context && master && context.state === "running" && !this.current.audio.paused) {
+      fade = Math.max(fade, CUT_RAMP);
       const end = this.rampMaster(0, fade) + PAUSE_MARGIN;
       // Reloj de audio, no el de JS: el <audio> se para solo cuando la rampa ya se calculó entera.
       const wait = () => {
@@ -327,6 +350,9 @@ export class PlayerEngine {
   }
 
   stop() {
+    this.turn += 1;
+    this.wanted = false;
+    this.starting = false;
     this.cancelSeek();
     this.cancelFade();
     for (const deck of this.decks) this.silence(deck);
@@ -383,9 +409,9 @@ export class PlayerEngine {
     return this.seekTarget ?? this.current.audio.currentTime;
   }
 
-  /** Pausada o a punto de estarlo (en pleno fundido de pausa). */
+  /** Lo último que se pidió: pausada, o a punto de estarlo (en plena rampa de pausa), aunque el `<audio>` aún no se haya enterado. */
   get paused(): boolean {
-    return this.current.audio.paused || this.pauseTimer !== undefined;
+    return !this.wanted;
   }
 
   /** Para el panel `?diag=1`: el contexto y los `<audio>` tal cual (el panel escucha sus eventos) y la cadena activa en texto. */
