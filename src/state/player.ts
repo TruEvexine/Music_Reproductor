@@ -398,7 +398,9 @@ export async function initSession() {
     storage.get<{ id: string | null; position: number }>("position"),
     library.init(),
   ]);
-  setAudio(sanitizeAudioSettings(audio));
+  // D30: en la disposición móvil no hay control de volumen (mandan los botones del teléfono): arranca siempre al 100 % y sin silencio.
+  const mobileLayout = !matchMedia("(min-width: 1000px)").matches;
+  setAudio({ ...sanitizeAudioSettings(audio), ...(mobileLayout && { volume: 1, muted: false }) });
   const session = stored && { ...stored, queue: upgradeQueue(stored.queue) };
   saved = session && last && last.id === session.queue.current?.key ? { ...session, position: last.position } : session;
   restore();

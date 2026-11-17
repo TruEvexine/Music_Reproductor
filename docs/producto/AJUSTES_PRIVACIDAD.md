@@ -7,7 +7,7 @@ Las decisiones tuyas están marcadas **[Decides tú]**.
 
 `Ajustes → Datos locales` (`src/ui/SettingsView.tsx`) ya ofrece:
 
-- **Copia de seguridad** (exportar e importar JSON): playlists (nombre e identidades de pista) y ajustes de audio y fondo
+- **Copia de seguridad** (exportar e importar JSON): playlists (nombre e identidades de pista) y ajustes de audio (salvo volumen y silencio, que son del dispositivo: D30) y fondo
   (`src/core/backup.ts`). No incluye la biblioteca, la cola ni la sesión.
 - **Borrar datos locales**: quita todas las carpetas, las copias en OPFS y vacía IndexedDB (`library.wipeAll()`), y recarga.
 
