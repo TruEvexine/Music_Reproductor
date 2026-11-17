@@ -73,6 +73,9 @@ const engine = new PlayerEngine({
   onError: () => fail(),
 });
 
+const MARK_PLAYED_AFTER_MS = 5000;
+/** Recientes se actualiza unos segundos después de arrancar: rehace las vistas de la biblioteca (cientos de ms en un móvil) y no compite con el arranque del audio. */
+const markPlayedSoon = (id: string) => setTimeout(() => library.markPlayed(id), MARK_PLAYED_AFTER_MS);
 const q = () => usePlayer.getState().queue;
 const trackOf = (id: string | null | undefined) => useLibrary.getState().tracks.find((track) => track.id === id);
 const pauseFade = () => (usePlayer.getState().audio.fadePause ? FADE_PAUSE_SECONDS : 0);
@@ -108,7 +111,7 @@ function nearEnd(position: number) {
       fading = true;
       setTimeout(() => (fading = false), 1000);
       loadedId = next.current.key;
-      library.markPlayed(nextId);
+      markPlayedSoon(nextId);
       usePlayer.setState({ queue: next, position: 0, duration: trackOf(nextId)?.duration ?? 0 });
       return;
     }
@@ -158,7 +161,7 @@ function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolea
     loadedId = key;
     engine.load(url, options.startAt, gainOf(id));
     if (options.autoplay) {
-      library.markPlayed(id);
+      markPlayedSoon(id);
       void engine.play().catch(() => fail());
     }
   });

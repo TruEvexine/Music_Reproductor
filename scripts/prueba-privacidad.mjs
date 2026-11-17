@@ -84,7 +84,7 @@ const stored = async (page) => Object.fromEntries(await page.locator(".stored > 
   await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
   await wait(page, 500);
   await page.locator(".track-row .row-main").nth(1).click();
-  await wait(page, 700);
+  await wait(page, 5700); // Recientes se actualiza 5 s después de arrancar (state/player.ts, MARK_PLAYED_AFTER_MS)
   await page.getByRole("link", { name: "Recientes", exact: true }).click();
   await wait(page, 400);
   const first = () => page.locator(".track-row .title").first().innerText();
