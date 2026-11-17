@@ -16,7 +16,9 @@ const PAUSE_MARGIN = 0.02; // s tras la rampa antes de pausar el <audio>
 export const CUT_RAMP = 0.02; // s: rampa mínima al pausar y reanudar aunque el fundido del usuario esté apagado (sin ella, chasquido)
 const SEEK_DIP = 0.04; // s de bajada (y de subida) alrededor de una búsqueda: sin chasquido al saltar
 const SEEK_GIVE_UP = 1000; // ms: si `seeked` no llega, el volumen vuelve igual
-const LATENCY_HINT: AudioContextLatencyCategory = "interactive";
+// "playback": búfer de salida más grande, que aguanta con la página en segundo plano (con "interactive" Android lo vacía y raspa).
+// El motor no necesita baja latencia: rampas y pausas van programadas en el reloj de audio; solo se oyen y se ven (luces) unos ms después.
+const LATENCY_HINT: AudioContextLatencyCategory = "playback";
 
 export interface EngineEvents {
   onPlaying(playing: boolean): void;

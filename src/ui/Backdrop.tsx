@@ -38,6 +38,9 @@ interface Stats {
   /** Multiplicador de velocidad y brillo por la música en el último cuadro (solo para las pruebas). */
   rate: number;
   swell: number;
+  /** Mayor salto (ms) del reloj que ven el análisis y las luces entre dos cuadros: no debe incluir el tiempo con la página oculta. */
+  analysisGapMs: number;
+  lastAnalysis: number;
 }
 
 /** Bucle de dibujo. Devuelve la función que lo detiene y libera todo. */
@@ -54,7 +57,7 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   const analysis = createAnalysis();
   const light = createLight();
   const shown = live.current.colors.map((color) => [...color] as Rgb); // colores en pantalla: se acercan a los objetivos al cambiar de pista
-  const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0, rate: 1, swell: 0 };
+  const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0, rate: 1, swell: 0, analysisGapMs: 0, lastAnalysis: 0 };
   if (import.meta.env.DEV) ((window as unknown as { __backdrop?: Stats[] }).__backdrop ??= []).push(stats); // solo desarrollo: lo leen las pruebas
 
   let previewFor: Palette | null = null;
@@ -62,14 +65,17 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   let shownIntensity = live.current.settings.intensity;
   let time = 0;
   let last = performance.now();
+  let hiddenAt = 0;
+  let hiddenFor = 0; // ms con la página oculta: el análisis y las luces ven un reloj continuo, sin el hueco (si no, saltan al volver)
   let raf = 0;
   let sizedFor = -1;
   let dirty = true;
   const observer = new ResizeObserver(() => (dirty = true));
   observer.observe(host);
 
-  function tick(now: number) {
+  function tick(frameTime: number) {
     raf = requestAnimationFrame(tick);
+    const now = frameTime - hiddenFor;
     const { settings, colors, hdr } = live.current;
     const interval = 1000 / fpsCap(settings.fps, governor.level);
     const dt = now - last;
@@ -77,6 +83,8 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     last = now;
     const level = governor.frame(dt, interval);
     const started = performance.now();
+    stats.analysisGapMs = Math.max(stats.analysisGapMs, now - (stats.lastAnalysis || now));
+    stats.lastAnalysis = now;
 
     const analyser = player.analyser();
     let bands: Bands | null = null;
@@ -137,8 +145,11 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   const onVisibility = () => {
     cancelAnimationFrame(raf);
     raf = 0;
-    if (!document.hidden) {
-      last = performance.now();
+    if (document.hidden) hiddenAt ||= performance.now();
+    else {
+      if (hiddenAt) hiddenFor += performance.now() - hiddenAt;
+      hiddenAt = 0;
+      last = performance.now() - hiddenFor;
       raf = requestAnimationFrame(tick);
     }
   };
