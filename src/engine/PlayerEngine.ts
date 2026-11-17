@@ -15,6 +15,7 @@ const VOLUME_RAMP = 0.015; // s: cambiar el volumen sin escalón audible
 const PAUSE_MARGIN = 0.02; // s tras la rampa antes de pausar el <audio>
 const SEEK_DIP = 0.04; // s de bajada (y de subida) alrededor de una búsqueda: sin chasquido al saltar
 const SEEK_GIVE_UP = 1000; // ms: si `seeked` no llega, el volumen vuelve igual
+const LATENCY_HINT: AudioContextLatencyCategory = "interactive";
 
 export interface EngineEvents {
   onPlaying(playing: boolean): void;
@@ -103,7 +104,7 @@ export class PlayerEngine {
     if (this.context) return this.context;
     const Context = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Context) return undefined; // sin Web Audio: el <audio> suena directo, sin EQ ni crossfade
-    const context = (this.context = new Context());
+    const context = (this.context = new Context({ latencyHint: LATENCY_HINT }));
     this.preamp = context.createGain();
     this.filters = EQ_BANDS.map((frequency) => {
       const filter = context.createBiquadFilter();
@@ -385,6 +386,26 @@ export class PlayerEngine {
   /** Pausada o a punto de estarlo (en pleno fundido de pausa). */
   get paused(): boolean {
     return this.current.audio.paused || this.pauseTimer !== undefined;
+  }
+
+  /** Para el panel `?diag=1`: el contexto y los `<audio>` tal cual (el panel escucha sus eventos) y la cadena activa en texto. */
+  diagnostics() {
+    const deck = this.current;
+    const n = (value: number | undefined) => (value === undefined ? "?" : String(Math.round(value * 1000) / 1000));
+    const chain = !this.context
+      ? "sin Web Audio todavía: se monta en la primera reproducción"
+      : [
+          `<audio> ${"AB"[this.active]}`,
+          `ReplayGain ×${n(deck.gain?.gain.value)}`,
+          `fundido ×${n(deck.fade?.gain.value)}`,
+          this.eq ? `preamp ${n(this.eq.preampDb)} dB → EQ ×10 → graves ${this.eq.bass} → agudos ${this.eq.treble}` : "EQ apagado",
+          `balance ${n(this.panner?.pan.value)}`,
+          "analizador",
+          `volumen ×${n(this.master?.gain.value)}`,
+          "limitador",
+          "salida",
+        ].join(" → ");
+    return { context: this.context, audios: this.decks.map((item) => item.audio), active: this.active, latencyHint: LATENCY_HINT, chain };
   }
 
   /** Valores reales del grafo, para verificar que un ajuste llega al motor (pruebas en navegador). */

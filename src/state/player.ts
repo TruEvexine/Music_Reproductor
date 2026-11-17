@@ -295,6 +295,8 @@ export const player = {
   },
   /** Analizador del grafo de audio (fondo "Ritmo"). Existe tras la primera reproducción. */
   analyser: () => engine.analyser,
+  /** Solo para el panel `?diag=1` (ui/diag.ts). */
+  diagnostics: () => engine.diagnostics(),
 };
 
 // --- Sistema: pantalla de bloqueo, notificación y auriculares. ---
