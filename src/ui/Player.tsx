@@ -53,15 +53,16 @@ export function useCurrentTrack(): Track | undefined {
   return useLibrary((state) => state.tracks.find((track) => track.id === current?.id));
 }
 
+/** Volumen de escritorio (barra y reproductor grande): el mismo estado `audio.volume`/`muted` del store. La rueda sube y baja; un clic de rueda ≈ 5 %. */
 function VolumeControl() {
   const volume = usePlayer((state) => state.audio.volume);
   const muted = usePlayer((state) => state.audio.muted);
   return (
-    <div className="volume">
+    <div className="volume" onWheel={(event) => player.setVolume(Math.min(1, Math.max(0, volume - event.deltaY / 2000)))}>
       <IconButton label={muted ? "Activar sonido" : "Silenciar"} onClick={player.toggleMute}>
         {muted || volume === 0 ? <VolumeX {...icon} /> : <Volume2 {...icon} />}
       </IconButton>
-      <Range format={(value) => `${Math.round(value * 100)} %`} label="Volumen" max={1} min={0} onChange={player.setVolume} step={0.01} value={muted ? 0 : volume} />
+      <Range format={(value) => `${Math.round(value * 100)} %`} label="Volumen" max={1} min={0} onChange={player.setVolume} step={0.01} value={muted ? 0 : volume} valueText={muted ? "Silenciado" : undefined} />
     </div>
   );
 }
@@ -350,6 +351,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
         </div>
         <Seek />
         <Transport large />
+        {wide && <VolumeControl />}
       </div>
       {lyrics && track.hasLyrics && <LyricsLoader id={track.id} onClose={() => setLyrics(false)} title={track.title} />}
       {editing && <EditDialog onClose={() => setEditingId(null)} track={editing} />}

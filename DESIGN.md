@@ -130,7 +130,7 @@ MÓVIL (<1000)                       ESCRITORIO (≥1000)
 - **Navegación:** pestañas inferiores con icono y etiqueta en móvil; columna lateral en escritorio. La cola no es navegación: es una acción del reproductor.
 - **Mini reproductor (móvil):** portada, título, artista, play/pausa, siguiente, y una línea de progreso. Tocarlo abre el expandido.
 - **Barra (escritorio):** pista (abre el expandido) · transporte y progreso · calidad y cola.
-- **Reproductor expandido:** pantalla completa en todas las resoluciones. Vertical: portada arriba, controles en la mitad inferior. Horizontal o ancho: portada | controles.
+- **Reproductor expandido:** pantalla completa en todas las resoluciones. Vertical: portada arriba, controles en la mitad inferior. Horizontal o ancho: portada | controles. En escritorio (≥1000 px), bajo el transporte, el mismo volumen de la barra (icono que silencia, deslizador de 12 rem, flechas y rueda; «Silenciado» se anuncia); en móvil no hay volumen: mandan los botones del teléfono.
 - **Cola:** pantalla completa en móvil, columna fija en escritorio.
 - **Diálogos:** `<dialog>` nativo; hoja inferior en móvil, centrado desde 600 px.
 - El reproductor y la cola se abren con `?panel=` en la URL: el botón o gesto **atrás** del sistema los cierra.

@@ -127,6 +127,31 @@ const live = await master();
 await page.mouse.up();
 check("el volumen sigue en vivo mientras se arrastra", live < 0.6, `ganancia ${live?.toFixed(3)} sin soltar`);
 
+// 5b. Volumen en el reproductor grande (escritorio): el mismo estado que el de la barra.
+await page.evaluate(() => (history.pushState(null, "", "/app?panel=player"), dispatchEvent(new PopStateEvent("popstate"))));
+await page.waitForTimeout(800);
+const bigVolume = page.locator(".now-playing .volume").getByRole("slider", { name: "Volumen" });
+const barVolume = page.locator(".bar-end .volume input");
+check("reproductor grande: hay un deslizador «Volumen» con su valor", (await bigVolume.count()) === 1 && /^\d+ %$/.test((await bigVolume.getAttribute("aria-valuetext")) ?? ""), await bigVolume.getAttribute("aria-valuetext"));
+await bigVolume.focus();
+const v0 = Number(await bigVolume.inputValue());
+for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+await page.waitForTimeout(150);
+const v1 = Number(await bigVolume.inputValue());
+check("flechas en el grande: suben el volumen y la barra lo refleja (un solo estado)", Math.abs(v1 - v0 - 0.05) < 0.001 && (await barVolume.inputValue()) === String(v1) && Math.abs((await master()) - v1) < 0.02, `${v0} → ${v1}, barra ${await barVolume.inputValue()}, ganancia ${(await master()).toFixed(3)}`);
+check("el foco de teclado se ve en el deslizador", await page.locator(".now-playing .volume .range").evaluate((el) => getComputedStyle(el.querySelector(".range-rail")).outlineStyle === "solid"));
+await page.locator(".now-playing .volume").getByRole("button", { name: "Silenciar" }).click();
+await page.waitForTimeout(150);
+check("el icono silencia: valor 0 anunciado como «Silenciado», también en la barra", (await bigVolume.inputValue()) === "0" && (await bigVolume.getAttribute("aria-valuetext")) === "Silenciado" && (await barVolume.inputValue()) === "0" && (await page.locator(".now-playing .volume").getByRole("button", { name: "Activar sonido" }).count()) === 1);
+await page.locator(".now-playing .volume").getByRole("button", { name: "Activar sonido" }).click();
+const vbig = await page.locator(".now-playing .volume .range").boundingBox();
+await page.mouse.move(vbig.x + vbig.width / 2, vbig.y + vbig.height / 2);
+await page.mouse.wheel(0, 100);
+await page.waitForTimeout(150);
+check("la rueda del ratón baja el volumen (≈ 5 % por clic)", Math.abs(Number(await bigVolume.inputValue()) - (v1 - 0.05)) < 0.011, `${v1} → ${await bigVolume.inputValue()}`);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(400);
+
 // 6. Táctil (gesto simulado por CDP, móvil, reproductor grande): la burbuja junto al tiempo dice la velocidad y cómo cambiarla mientras dura el gesto.
 for (const reducedMotion of ["no-preference", "reduce"]) {
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion });
@@ -138,6 +163,7 @@ for (const reducedMotion of ["no-preference", "reduce"]) {
   await phone.locator(".track-row .row-main", { hasText: "amanecer" }).tap();
   await phone.evaluate(() => (history.pushState(null, "", "/app?panel=player"), dispatchEvent(new PopStateEvent("popstate"))));
   await phone.waitForTimeout(900);
+  if (reducedMotion === "reduce") check("móvil: el reproductor grande no tiene volumen (mandan los botones del teléfono)", (await phone.locator(".now-playing .volume").count()) === 0);
   const seekBox = await phone.locator(".now-playing .seek .range").boundingBox();
   const cdp = await phone.context().newCDPSession(phone);
   const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
