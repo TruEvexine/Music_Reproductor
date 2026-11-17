@@ -21,6 +21,13 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+        env: # Relleno público solo para que pase el guardián de marcadores; los datos reales van en el entorno del despliegue.
+          LEGAL_RESPONSABLE: CI
+          LEGAL_DOMICILIO: CI
+          LEGAL_CORREO_PRIVACIDAD: ci@example.com
+          LEGAL_NOMBRE_APP: Satin
+          LEGAL_FECHA_ACTUALIZACION: "2026-01-01"
+          LEGAL_URL_APP: https://example.com
       - run: npm audit --omit=dev --audit-level=high
 
   gitleaks:
