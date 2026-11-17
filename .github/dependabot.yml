@@ -1,11 +1,21 @@
 version: 2
 updates:
+  # Todo va contra `desarrollo`; a `main` solo llega lo que el usuario fusione.
+  # Menores y parches: una sola PR por semana. Los saltos mayores quedan fuera del grupo: una PR cada uno.
   - package-ecosystem: npm
     directory: /
+    target-branch: desarrollo
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      npm-menores-y-parches:
+        update-types: [minor, patch]
   - package-ecosystem: github-actions
     directory: /
+    target-branch: desarrollo
     schedule:
       interval: weekly
+    groups:
+      actions-menores-y-parches:
+        update-types: [minor, patch]
