@@ -96,7 +96,7 @@ if (withoutAccounts) {
   }
   const { context, page } = await open("/app/ayuda");
   await page.getByText("¿Necesito una cuenta?").click();
-  check("sin cuentas: la Ayuda dice que no hay cuentas", (await page.getByText(/no hay cuentas: no recogemos datos personales/).count()) === 1);
+  check("sin cuentas: la FAQ dice que la app no tiene cuentas", (await page.getByText(/La app no tiene cuentas/).count()) === 1);
   check("sin cuentas: la FAQ no pregunta por la contraseña", (await page.getByText("Olvidé mi contraseña.").count()) === 0);
   check("sin cuentas: la FAQ responde sin cuenta", (await page.getByText(/sin dar ningún dato personal/).count()) === 1);
   await page.goto(`${base}/app/ajustes`);
