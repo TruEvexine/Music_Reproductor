@@ -3,6 +3,7 @@
 // con pointerType "touch", y touch-action aplicado por el navegador). Sale con 1 si algo falla.
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");

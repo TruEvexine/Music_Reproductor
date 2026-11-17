@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadEnv } from "vite";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const shots = process.argv[3];

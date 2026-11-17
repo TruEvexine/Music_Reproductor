@@ -4,6 +4,7 @@
 // Sale con 1 si algo falla. Desde la Fase 3 la biblioteca persiste (copia en OPFS): tras recargar no se reimporta.
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = process.argv[2] ?? "http://localhost:5173";
 const dir = join(import.meta.dirname, "..", "tests", "fixtures", "audio");

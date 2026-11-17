@@ -3,6 +3,7 @@
 // la carátula incrustada se ve como imagen decodificada y la pista sin carátula lleva la funda generada; nunca imagen rota. Sale con 1 si algo falla.
 import { chromium, devices } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = process.argv[2]?.replace(/\/$/, "");
 if (!base || /localhost|127\.0\.0\.1/.test(base)) {

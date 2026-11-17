@@ -1,7 +1,4 @@
 import { createHash, webcrypto } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { parseBuffer, selectCover } from "music-metadata";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sha256 } from "./sha256";
 import { computeTrackV2, sha256Hex } from "./track";
@@ -37,13 +34,13 @@ describe("sha256 en JS puro", () => {
     expect(await sha256Hex(bytes)).toBe(secure);
   });
 
-  it("sin crypto.subtle, track:v2 y el hash de portada de una pista real son los que ya se guardaban", async () => {
-    // Valores generados con crypto.subtle en Chromium (localhost) antes de existir esta alternativa: si cambian, se rompen datos guardados.
-    const file = new Uint8Array(await readFile(join(import.meta.dirname, "..", "..", "tests", "fixtures", "audio", "01-amanecer.flac")));
-    const picture = selectCover((await parseBuffer(file, { mimeType: "audio/flac" })).common.picture);
+  it("sin crypto.subtle, track:v2 y el hash de portada son los que da crypto.subtle", async () => {
+    // Entrada construida en memoria (sin audio en el repo). Valores calculados con crypto.subtle y el código original: si cambian, se rompen datos guardados.
+    const file = sample(3 * 1024 * 1024 + 123);
+    const picture = sample(70_000);
     vi.stubGlobal("crypto", {});
     const read = async (start: number, end: number) => file.slice(start, end).buffer;
-    expect(await computeTrackV2(file.length, read)).toBe("track:v2:075dff100684baa6f91238f823e545254f07b0ba489ed3a57a75dfa9d59c941c");
-    expect((await sha256Hex(new Uint8Array(picture!.data))).slice(0, 32)).toBe("081e6a8b032e69a61316169ddb63d536");
+    expect(await computeTrackV2(file.length, read)).toBe("track:v2:81de464a219297843642e19051b25a81ee19c3edddbf753c59312205b72aa3e9");
+    expect((await sha256Hex(picture)).slice(0, 32)).toBe("3500f58cfd1bd88e231edf56dca99554");
   });
 });

@@ -9,6 +9,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { preview } from "vite";
+import "./requiere-audio.mjs";
 
 const args = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
 const quick = process.argv.includes("--rapida");

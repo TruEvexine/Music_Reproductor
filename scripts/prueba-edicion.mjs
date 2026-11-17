@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { args, carpetaCapturas } from "./salida.mjs";
+import "./requiere-audio.mjs";
 
 const base = (args[0] ?? "http://localhost:5173").replace(/\/$/, "");
 const shots = carpetaCapturas(args[1], "edicion");

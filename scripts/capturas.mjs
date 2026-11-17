@@ -8,6 +8,7 @@ import { chromium } from "@playwright/test";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { carpetaCapturas } from "./salida.mjs";
+import "./requiere-audio.mjs";
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const all = process.argv.includes("--todas");

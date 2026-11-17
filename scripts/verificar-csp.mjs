@@ -5,6 +5,7 @@ import { chromium } from "@playwright/test";
 import { spawn } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const port = 4179;
 const server = spawn("npx", ["vite", "preview", "--port", String(port), "--strictPort"], { shell: true, stdio: "ignore" });

@@ -3,6 +3,7 @@
 // que la tecla hace lo suyo O lo que le toca al elemento, nunca las dos. También Ctrl/Alt/Meta, apagar los atajos en Ajustes y la hoja «?».
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
