@@ -6,10 +6,9 @@ import equalizerPhone from "../assets/landing/ecualizador-movil.jpg";
 import playerDesktop from "../assets/landing/reproductor-escritorio.jpg";
 import playerPhone from "../assets/landing/reproductor-movil.jpg";
 import { APP_NAME } from "../core/brand";
-import { cssMs } from "../core/format";
 import { emailLink, getSupabase, supabaseConfigured } from "../sync/supabaseClient";
 import { CafeButton } from "./CafeLink";
-import { motionReduced } from "./motion";
+import { motionReduced, tokenMs } from "./motion";
 import { navigate } from "./router";
 
 // Versiones AVIF a los anchos reales (scripts/avif-landing.mjs); el JPG de arriba es el respaldo de los navegadores sin AVIF.
@@ -40,13 +39,12 @@ const brandMark = document.querySelector(".satin-carga")?.cloneNode(true) as HTM
 function openApp() {
   if (supabaseConfigured) void getSupabase().catch(() => {}); // la app lo pide al montar; así empieza ya
   if (!brandMark || document.querySelector(".satin-paso")) return navigate("/app");
-  const token = (name: string) => cssMs(getComputedStyle(document.documentElement).getPropertyValue(name));
   const overlay = brandMark.cloneNode(true) as HTMLElement;
   overlay.classList.add("satin-paso");
   document.body.append(overlay);
-  const total = motionReduced() ? token("--fast") + token("--exit") : BRAND_MS;
-  setTimeout(() => navigate("/app"), token("--fast")); // cuando ya tapa la landing
-  setTimeout(() => overlay.setAttribute("data-closing", ""), total - token("--exit"));
+  const total = motionReduced() ? tokenMs("--fast") + tokenMs("--exit") : BRAND_MS;
+  setTimeout(() => navigate("/app"), tokenMs("--fast")); // cuando ya tapa la landing
+  setTimeout(() => overlay.setAttribute("data-closing", ""), total - tokenMs("--exit"));
   setTimeout(() => overlay.remove(), total);
 }
 

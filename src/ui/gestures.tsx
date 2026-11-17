@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef } from "react";
 import type { PointerEvent, ReactNode, RefObject } from "react";
 import { DISMISS_PX, LONG_PRESS_MS } from "../core/gestures";
 import { tutorials } from "../state/tutorials";
+import { tokenMs } from "./motion";
 import { buzz } from "./toast";
 import { useEncounter } from "./Tutorial";
 
@@ -26,7 +27,7 @@ export function useDragDismiss(target: RefObject<HTMLElement | null>, onDismiss:
     element.style.transition = "transform var(--fast) var(--ease)";
     if (gesture.dy > DISMISS_PX || (gesture.dy > 24 && speed > 0.5)) {
       element.style.transform = "translateY(100%)";
-      window.setTimeout(onDismiss, 120);
+      window.setTimeout(onDismiss, tokenMs("--fast")); // lo que dura la transición de arriba
     } else element.style.transform = "";
   };
   return {
