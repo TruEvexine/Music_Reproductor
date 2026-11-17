@@ -886,6 +886,14 @@ Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio br
 - [x] Pruebas: `engine/PlayerEngine.test.ts` (máquina de pausa con `resume()` lento y rampa), `scripts/prueba-pausa.mjs` (20 y 21 toques en < 2 s con `resume()` retrasado 150 ms como en un móvil; página oculta y vuelta). Con el código anterior, 21 toques acababan sonando. `prueba-biblioteca` y `prueba-privacidad` esperan los 5 s de Recientes y pausan para que el avance automático no anote otra pista. Suite completa en verde (246 unitarias, 25 pruebas de navegador, `capturas.mjs` en los 9 viewports, build y CSP); sin `prueba-lan*`.
 - **Sin confirmar en el teléfono:** que «playback» quite el raspado y el silencio inicial (hipótesis; ver el informe de `?diag=1`). Con «playback» las luces del modo Ritmo van unos ms por detrás del sonido (la latencia de salida).
 
+### 11.1p Auditoría de animaciones (2026-11-17)
+
+- [x] `docs/AUDITORIA_ANIMACIONES.md`: las 20 leyes y el resto de la lista, punto por punto (estado, evidencia, propuesta y prioridad), medición con trazas de Chromium con la CPU 4× más lenta, propuestas que cambian lo visible (N8 aparte) y flujos para grabar en el teléfono a 0,25×.
+- [x] Aplicado sin cambiar lo que se ve: un solo lector de duraciones en JS (`tokenMs`) y movimiento reducido en el cierre por arrastre.
+- [ ] Propuestas B1 (lotes de metadatos tras importar) y B2 (montaje del reproductor en el toque): las más caras medidas; B2 condiciona N8.
+
+Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
