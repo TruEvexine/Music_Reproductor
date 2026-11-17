@@ -874,6 +874,18 @@ Skills aplicadas: ponytail, impeccable (contexto y craft floor), make-interfaces
 
 Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel-better. design-taste-frontend, ui-ux-pro-max y design-motion-principles no se cargaron en esta tanda; se siguió `DESIGN.md` (sin animación nueva: la pista del progreso es transporte).
 
+### 11.1o Audio en Android: arranque, chasquido, segundo plano y D30 (2026-11-17)
+
+Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio breve en la primera reproducción, chasquido y toques perdidos al pausar rápido, audio que raspa en segundo plano, volumen sin control en móvil.
+
+- [x] **Panel de diagnóstico** `?diag=1` (`ui/diag.ts`, carga aparte): estado, sampleRate, baseLatency/outputLatency y latencyHint del AudioContext, cadena de nodos activa, eventos del `<audio>` y de la página con marca de tiempo, deriva del reloj de audio y del `<audio>` frente a `performance.now()` y, si el navegador las expone, sus estadísticas de subdesbordamiento (`playbackStats`). No hace peticiones; «Copiar» lleva el informe al portapapeles.
+- [x] **Pausa y reanudación** (`engine/PlayerEngine.ts`, `state/player.ts`): el motor guarda la intención (`wanted`) y avisa en el mismo toque; un toque durante `resume()` o `audio.play()` ya no se pierde (antes `paused` leía el `<audio>`, que cambia tarde, y `play()` no comprobaba el turno tras `resume()`); una pausa cancela un arranque que aún lee el archivo; rampa mínima de 20 ms (`CUT_RAMP`) al pausar y reanudar aunque el fundido esté apagado. `prueba-chasquido.mjs`, sin fundido: mayor salto entre muestras 0,58 → 0,035 (tono sonando: 0,035).
+- [x] **Arranque**: la ruta de audio ya se montaba antes de sonar; Recientes (`markPlayed`) se actualiza 5 s después de empezar (rehacía las vistas de la biblioteca en el primer segundo). Medido en Chromium con CPU ×4 y 5 000 pistas, 4 s tras tocar: tareas largas ≈ 800 → 620 ms.
+- [x] **Segundo plano**: `latencyHint: "playback"` (el motor programa rampas y pausas en el reloj de audio; no necesita baja latencia); el bucle del fondo ya se paraba con la página oculta, y ahora el análisis y las luces no ven el hueco al volver (sin salto).
+- [x] **D30** (decidido por el usuario): volumen y silencio fuera de la copia de seguridad; en la disposición móvil se arranca al 100 % y sin silencio.
+- [x] Pruebas: `engine/PlayerEngine.test.ts` (máquina de pausa con `resume()` lento y rampa), `scripts/prueba-pausa.mjs` (20 y 21 toques en < 2 s con `resume()` retrasado 150 ms como en un móvil; página oculta y vuelta). Con el código anterior, 21 toques acababan sonando. `prueba-biblioteca` y `prueba-privacidad` esperan los 5 s de Recientes y pausan para que el avance automático no anote otra pista. Suite completa en verde (246 unitarias, 25 pruebas de navegador, `capturas.mjs` en los 9 viewports, build y CSP); sin `prueba-lan*`.
+- **Sin confirmar en el teléfono:** que «playback» quite el raspado y el silencio inicial (hipótesis; ver el informe de `?diag=1`). Con «playback» las luces del modo Ritmo van unos ms por detrás del sonido (la latencia de salida).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

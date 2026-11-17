@@ -163,6 +163,9 @@ const stored = (page) =>
   await row(page, "Amanecer").click();
   await page.waitForTimeout(1000);
   check("tras reconectar vuelve a sonar", (await position(page)) > 0.3);
+  // Recientes la anota 5 s después de arrancar (MARK_PLAYED_AFTER_MS); luego se pausa para que el avance automático no anote otra.
+  await page.waitForTimeout(4300);
+  await page.getByRole("button", { name: "Pausar" }).first().click();
 
   // Arrastrar archivos sueltos (en Chromium también se aceptan carpetas como handles).
   await page.evaluate(async (url) => {
