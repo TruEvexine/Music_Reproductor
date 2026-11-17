@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
 import { APP_NAME } from "../core/brand";
 import { useBackground, background } from "../state/background";
@@ -36,6 +36,10 @@ const legalLinks: [to: string, label: string][] = [
 // Sin desplazamiento suave (nada que reducir con movimiento reducido) y sin tocar la URL: en la app nativa el hash es la ruta.
 function jump(event: MouseEvent<HTMLAnchorElement>, id: string) {
   event.preventDefault();
+  showSection(id);
+}
+
+function showSection(id: string) {
   const heading = document.getElementById(id);
   const main = heading?.closest(".main");
   if (!heading || !main) return;
@@ -51,6 +55,13 @@ export function SettingsView({ auth }: { auth: AuthController }) {
   const shortcuts = useBackground((state) => state.shortcuts);
   const reduced = useReducedMotion();
   const [rewatched, setRewatched] = useState(false);
+  // De vuelta de una página legal (su «Volver» o el atrás del sistema): a «Acerca de», que es de donde se salió.
+  useEffect(() => {
+    const section = (history.state as { section?: string } | null)?.section;
+    if (!section) return;
+    history.replaceState(null, "");
+    showSection(section);
+  }, []);
   return (
     <section className="view settings">
       <header className="view-header">
@@ -129,7 +140,11 @@ export function SettingsView({ auth }: { auth: AuthController }) {
             <CafeNote />
             <div className="about-links">
               {legalLinks.map(([to, label]) => (
-                <a className="link" href={to} key={to} onClick={(event) => (event.preventDefault(), navigate(to))}>
+                <a className="link" href={to} key={to} onClick={(event) => {
+                    event.preventDefault();
+                    history.replaceState({ section: "set-about" }, "");
+                    navigate(to, false, { fromApp: true });
+                  }}>
                   {label}
                 </a>
               ))}

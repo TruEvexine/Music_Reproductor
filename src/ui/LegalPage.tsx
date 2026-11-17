@@ -36,7 +36,9 @@ export function LegalPage({ doc }: { doc: LegalDoc }) {
           href="/app"
           onClick={(event) => {
             event.preventDefault();
-            navigate("/app");
+            // Desde Ajustes → Acerca de (SettingsView marca la entrada): atrás, que vuelve a esa sección. Por URL directa, a /app.
+            if ((history.state as { fromApp?: boolean } | null)?.fromApp) history.back();
+            else navigate("/app");
           }}
         >
           Volver a la app

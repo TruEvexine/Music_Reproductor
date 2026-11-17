@@ -21,10 +21,10 @@ function subscribe(listener: () => void) {
   };
 }
 
-export function navigate(to: string, replace = false) {
+export function navigate(to: string, replace = false, state: unknown = null) {
   const url = isNative ? `#${to}` : to;
-  if (replace) history.replaceState(null, "", url);
-  else history.pushState(null, "", url);
+  if (replace) history.replaceState(state, "", url);
+  else history.pushState(state, "", url);
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 

@@ -3,7 +3,8 @@
 // .env.local), así que da igual lo que haya en .env.local o en las LEGAL_* de quien la lanza.
 //   "marcadores": LEGAL_* vacías: los {{MARCADORES}} se ven tal cual (el build de producción los rechaza).
 //   "completo": valores ficticios (abajo): se ven los valores y no queda ningún marcador.
-// En ambos casos: las tres páginas rinden sin las notas internas, solo Ajustes → Acerca de enlaza aviso y términos, piden no indexarse y caben en móvil.
+// En ambos casos: las tres páginas rinden sin las notas internas, solo Ajustes → Acerca de enlaza aviso y términos, piden no indexarse y caben en móvil;
+// «Volver a la app» (y el atrás) devuelve a Ajustes → Acerca de si se llegó desde ahí, y a /app si se entró por URL.
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -44,6 +45,15 @@ const pages = [
   { path: "/terminos", title: /^Términos de uso de /, has: ["18. Contacto.", "14. Apoyo voluntario", "6. Derechos de autor: cómo avisarme."] },
   { path: "/almacenamiento", title: /^Cookies y almacenamiento local$/, has: ["no usa cookies ni herramientas de rastreo"] },
 ];
+
+/** «Acerca de» con el foco en su título y dentro de la vista desplazable. */
+const atAbout = (page) =>
+  page.evaluate(() => {
+    const heading = document.getElementById("set-about");
+    const main = heading?.closest(".main")?.getBoundingClientRect();
+    const box = heading?.getBoundingClientRect();
+    return document.activeElement === heading && !!main && box.top >= main.top && box.bottom <= main.bottom;
+  });
 
 const browser = await chromium.launch();
 const errors = [];
@@ -96,8 +106,19 @@ for (const [label, title] of [["Aviso de privacidad", /^Aviso de privacidad de /
   check(`Acerca de → «${label}» abre su página`, title.test(await page.locator(".legal h1").innerText().catch(() => "")), page.url());
   await page.goBack();
   await page.waitForTimeout(600);
-  check(`desde «${label}», atrás vuelve a Ajustes`, new URL(page.url()).pathname === "/app/ajustes" && (await page.getByRole("heading", { level: 1, name: "Ajustes" }).count()) === 1);
+  check(`desde «${label}», atrás vuelve a Ajustes → Acerca de`, new URL(page.url()).pathname === "/app/ajustes" && (await atAbout(page)));
+  await page.getByRole("region", { name: "Acerca de" }).getByRole("link", { name: label }).click();
+  await page.waitForSelector(".legal h1", { timeout: 8000 }).catch(() => {});
+  await page.getByRole("link", { name: "Volver a la app" }).click();
+  await page.waitForTimeout(600);
+  check(`desde «${label}», «Volver a la app» lleva a Ajustes → Acerca de (visible y con el foco)`, new URL(page.url()).pathname === "/app/ajustes" && (await atAbout(page)), page.url());
 }
+// Entrada directa por URL: «Volver a la app» lleva a /app, no atrás (fuera de la app).
+await page.goto(`${base}/terminos`);
+await page.waitForSelector(".legal h1", { timeout: 8000 }).catch(() => {});
+await page.getByRole("link", { name: "Volver a la app" }).click();
+await page.waitForTimeout(600);
+check("entrando por URL, «Volver a la app» lleva a /app", new URL(page.url()).pathname === "/app", page.url());
 await page.close();
 }
 
