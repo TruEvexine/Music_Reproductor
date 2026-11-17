@@ -148,6 +148,13 @@
   pointer-events: none;
 }
 
+/* Pista del ajuste fino (progreso): segunda línea, más tenue que el tiempo. Sin animación: es transporte. */
+.range-hint {
+  display: block;
+  padding-bottom: 2px;
+  color: var(--ink-2);
+}
+
 .range[data-vertical] .range-value {
   right: calc(50% + 18px);
   bottom: var(--at);

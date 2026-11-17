@@ -9,7 +9,7 @@ export const LONG_PRESS_MS = 500;
 export const DISMISS_PX = 96;
 
 export interface GestureHelp {
-  id: "swipe-row" | "long-press" | "swipe-cover" | "drag-close";
+  id: "swipe-row" | "long-press" | "swipe-cover" | "drag-close" | "fine-seek";
   title: string;
   how: string;
   /** Qué hacer sin el gesto: todo gesto tiene alternativa por botón o teclado. */
@@ -40,5 +40,11 @@ export const GESTURES: readonly GestureHelp[] = [
     title: "Arrastrar para cerrar",
     how: "Arrastra hacia abajo la cabecera de una hoja, del reproductor grande o de la cola para cerrarlos.",
     alternative: "El botón de cerrar, la tecla Escape o el gesto atrás del sistema.",
+  },
+  {
+    id: "fine-seek",
+    title: "Ajuste fino de la barra",
+    how: "Mientras arrastras la barra de progreso, aleja el dedo de ella hacia arriba o hacia abajo: cuanto más lejos, más despacio avanza (½, ¼ y ⅒) y más preciso es el salto. Junto al tiempo ves la velocidad.",
+    alternative: "Con teclado, las flechas ← y → sobre la barra la mueven de segundo en segundo.",
   },
 ];
