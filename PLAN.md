@@ -864,6 +864,16 @@ Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel
 
 Skills aplicadas: ponytail, impeccable (contexto y craft floor), make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max, design-motion-principles (solo los tokens existentes, sin animación nueva).
 
+### 11.1ñ Cinco retoques (2026-11-16)
+
+- [x] «Sobre Satin» con el texto definitivo del usuario; comprobado con y sin cuentas (D26).
+- [x] Ajustes en escritorio: elegida la opción C de tres maquetadas (anclado; tarjetas en dos columnas desde 66 rem; sin índice ahí). Por debajo de 1000 px, posiciones y tamaños iguales en 320, 360, 390, 412, 844×390, 768×1024 y 999 (solo cambia el texto de «Sobre Satin»).
+- [x] Progreso: la burbuja del tiempo dice la velocidad y cómo cambiarla mientras se arrastra; «Ajuste fino de la barra» en Ayuda → Gestos.
+- [x] Volumen en el reproductor grande de escritorio (mismo estado que la barra). **Riesgo en móvil anotado:** `audio.volume`/`muted` se guardan y viajan en la copia de seguridad, y en móvil no hay control para recuperarlos (ver DECISIONES_PENDIENTES).
+- [x] Páginas legales: «Volver a la app» devuelve a Ajustes → Acerca de si se llegó desde ahí; por URL, a /app.
+
+Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel-better. design-taste-frontend, ui-ux-pro-max y design-motion-principles no se cargaron en esta tanda; se siguió `DESIGN.md` (sin animación nueva: la pista del progreso es transporte).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

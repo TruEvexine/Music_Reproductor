@@ -680,11 +680,14 @@ ol.track-list .row-album {
   padding: 0 var(--s1);
 }
 
-/* Escritorio: índice de apartados a la izquierda (fijo al desplazar) y contenido de hasta 44 rem a la derecha, el conjunto centrado.
-   La consulta es sobre la propia vista: con la cola abierta en una pantalla justa queda la columna de siempre. En móvil el índice no existe
-   y los envoltorios no cuentan (display: contents), así que la página es la misma. */
+/* Escritorio, pegado a la navegación (no centrado). Desde 43 rem de vista: índice de apartados a la izquierda (fijo al desplazar) y contenido
+   de hasta 44 rem. Desde 66 rem (1440 px sin cola): las secciones pasan a tarjetas de tono en dos columnas fijas, sin índice (la página
+   queda a la mitad de largo); fijas y no `columns`, para que una sección que crece no salte de columna. La consulta es sobre la propia
+   vista: con la cola abierta en una pantalla justa queda la columna de siempre. En móvil el índice no existe y los envoltorios no cuentan
+   (display: contents), así que la página es la misma. */
 .settings-columns,
-.settings-body {
+.settings-body,
+.settings-col {
   display: contents;
 }
 
@@ -695,15 +698,14 @@ ol.track-list .row-album {
 @media (min-width: 1000px) {
   .settings:not(.help) {
     container-type: inline-size;
-    max-width: calc(12rem + var(--s7) + 44rem + 2 * var(--gutter));
-    margin-inline: auto;
+    max-width: calc(96rem + 2 * var(--gutter));
   }
 }
 
 @container (min-width: 43rem) {
   .settings-columns {
     display: grid;
-    grid-template-columns: 12rem minmax(0, 1fr);
+    grid-template-columns: 12rem minmax(0, 44rem);
     column-gap: var(--s7);
     align-items: start;
   }
@@ -724,6 +726,34 @@ ol.track-list .row-album {
     display: grid;
     gap: var(--s1);
     margin-top: var(--s4);
+  }
+}
+
+/* Cada columna mide ≥ 32 rem: dentro de la tarjeta (24 px de relleno) las 10 bandas del ecualizador siguen cabiendo a ≥ 44 px. */
+@container (min-width: 66rem) {
+  .settings-columns {
+    display: block;
+  }
+
+  .settings-nav {
+    display: none;
+  }
+
+  .settings-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .settings-col {
+    display: grid;
+    gap: var(--s4);
+  }
+
+  .settings-section {
+    margin-top: 0;
+    padding: var(--s5);
+    border-radius: var(--radius-m);
+    background: var(--surface-1);
   }
 }
 
