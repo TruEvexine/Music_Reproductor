@@ -292,6 +292,7 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   border-radius: var(--radius-m) var(--radius-m) 0 0;
   background: var(--surface-1);
   color: var(--ink);
+  overscroll-behavior: contain;
 }
 
 .dialog::backdrop {
@@ -489,6 +490,7 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 .add-list {
   max-height: 46dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
 

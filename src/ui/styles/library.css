@@ -73,6 +73,7 @@
   display: flex;
   gap: var(--s2);
   overflow-x: auto;
+  overscroll-behavior-x: contain; /* el borde del carrusel no dispara el atrás por gesto del navegador */
   margin: 0 calc(var(--gutter) * -1);
   padding: 2px var(--gutter);
   scrollbar-width: none;
@@ -233,6 +234,7 @@
   display: flex;
   gap: var(--s1);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   margin: 0 calc(var(--gutter) * -1);
   padding: 0 var(--gutter);
   scrollbar-width: none;
@@ -466,6 +468,7 @@
   gap: var(--s2);
   max-height: 60dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--s4) 0 30dvh;
 }
 
