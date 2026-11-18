@@ -890,9 +890,9 @@ Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio br
 
 - [x] `docs/AUDITORIA_ANIMACIONES.md`: las 20 leyes y el resto de la lista, punto por punto (estado, evidencia, propuesta y prioridad), medición con trazas de Chromium con la CPU 4× más lenta, propuestas que cambian lo visible (N8 aparte) y flujos para grabar en el teléfono a 0,25×.
 - [x] Aplicado sin cambiar lo que se ve: un solo lector de duraciones en JS (`tokenMs`) y movimiento reducido en el cierre por arrastre.
-- [ ] Propuestas B1 (lotes de metadatos tras importar) y B2 (montaje del reproductor en el toque): las más caras medidas; B2 condiciona N8.
+- [x] B1 (lotes de metadatos tras importar), B2 (reproductor y cola montados y ocultos, precarga en reposo, foco de ida y vuelta con prueba), B3 (el título no se funde al abrir) y la salida de la cola que no pasaba al compositor (2026-11-18): cero tareas largas en esos flujos con la CPU 4×; tabla antes y después en `docs/AUDITORIA_ANIMACIONES.md` §5. Queda la ingesta (≈ 1,8 s al elegir la carpeta y ≈ 0,3 s al escribir las pistas en IndexedDB). N8 ya puede partir de un reproductor montado.
 
-Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max.
+Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max. En B1–B3 (2026-11-18): ponytail, design-motion-principles (modo crear), make-interfaces-feel-better, impeccable.
 
 ### 11.1q Auditoría de CSS (2026-11-17)
 
