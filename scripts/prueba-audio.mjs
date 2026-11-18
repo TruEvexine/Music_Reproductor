@@ -58,7 +58,10 @@ const paused = await position();
 await page.waitForTimeout(500);
 check("en pausa la posición no avanza", (await position()) === paused);
 await page.keyboard.press("Space");
-await page.waitForTimeout(600);
+// La posición sale de timeupdate (~250 ms) y el arranque puede ser en frío: se espera a que avance, hasta 3 s, en vez de un tiempo fijo.
+await page
+  .waitForFunction((from) => Number(document.querySelector(".bar-center .seek input").value) > from, paused, { timeout: 3000 })
+  .catch(() => {}); // si no avanza, la comprobación de abajo falla con el detalle
 check("Espacio reanuda", (await playing()) && (await position()) > paused, `${paused} → ${await position()}`);
 
 // 3. Fin de pista → siguiente automática (tono-corto 2 s → tono-sin-metadatos).
