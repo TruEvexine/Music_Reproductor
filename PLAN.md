@@ -511,7 +511,7 @@ Skills aplicadas: ponytail (WebGL directo en vez de `ogl`, sin librería de visu
 - [ ] Migración de límites (S6) + endurecimiento de Auth (S7)
 - [ ] Perfiles: username, avatar (bucket de Supabase pequeño, imágenes ≤ 2 MB, recortadas), ajustes sincronizados
 - [ ] Tablas `tracks`, `favorites`, `play_history` con RLS
-- [ ] Hosting con Caddy y cabeceras de seguridad (S4); dominio propio
+- [ ] Dominio propio en Vercel (las cabeceras de seguridad, S4, ya están en `vercel.json`)
 - [ ] Actualizar `SUPABASE.md`
 
 ### Fase 9 — Monetización
