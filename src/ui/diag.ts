@@ -5,6 +5,8 @@ import "./styles/diag.css";
 // informe a mano. DOM plano (sin React) y un temporizador de 250 ms: lo mínimo para no ser él mismo la causa de un corte.
 
 const MAX_LINES = 300;
+// shortcut: tope por si una sesión oculta muy larga no para de anotar; subirlo si un informe real lo alcanza.
+const MAX_HIDDEN_LINES = 5000;
 const TICK_MS = 250;
 const JUMP_MS = 30; // un reloj que se atrasa más que esto en un tic es un corte
 const DISCONTINUITY_MS = 2000; // más que esto es una búsqueda o un cambio de pista, no un corte
@@ -15,10 +17,14 @@ type ContextExtras = AudioContext & { playbackStats?: Stats; playoutStats?: Stat
 
 export function startDiagnostics() {
   const log: string[] = [];
+  // Lo que pasa con la página oculta (controles del sistema, pantalla bloqueada) se guarda aparte: el búfer visible no lo desplaza.
+  const hiddenLog: string[] = [];
   const stamp = () => (performance.now() / 1000).toFixed(3).padStart(9);
   const note = (text: string) => {
-    log.push(`${stamp()}  ${text}`);
+    const line = `${stamp()}  ${text}`;
+    log.push(line);
     if (log.length > MAX_LINES) log.shift();
+    if (document.visibilityState === "hidden" && hiddenLog.length < MAX_HIDDEN_LINES) hiddenLog.push(line);
     logView.textContent = log.slice().reverse().join("\n");
   };
 
@@ -51,7 +57,7 @@ export function startDiagnostics() {
     fold.setAttribute("aria-expanded", String(!open));
   });
   copy.addEventListener("click", async () => {
-    const report = `Diagnóstico de audio\n${navigator.userAgent}\n${location.pathname}\n\n${stateView.textContent}\n\nEventos (más antiguo primero):\n${log.join("\n")}\n`;
+    const report = `Diagnóstico de audio\n${navigator.userAgent}\n${location.pathname}\n\n${stateView.textContent}\n\nEventos (más antiguo primero):\n${log.join("\n")}\n\nCon la página oculta (todos, aparte; más antiguo primero):\n${hiddenLog.join("\n") || "ninguno"}\n`;
     try {
       await navigator.clipboard.writeText(report);
     } catch {
@@ -69,6 +75,23 @@ export function startDiagnostics() {
   for (const type of ["visibilitychange", "freeze", "resume"]) document.addEventListener(type, () => note(`página: ${type} (${document.visibilityState})`));
   for (const type of ["pagehide", "pageshow"]) window.addEventListener(type, () => note(`página: ${type}`));
 
+  // Origen de cada orden: lo marca el puente de MediaSession justo antes; si no, el evento de entrada en curso (botón, tecla, barra).
+  let origin: string | undefined;
+  const inputOrigin = () => {
+    const event = window.event;
+    if (event instanceof KeyboardEvent) return `teclado «${event.key === " " ? "Espacio" : event.key}»`;
+    const control = event?.target instanceof Element ? event.target.closest("button, input, [role]") : null;
+    if (!event || !control) return undefined;
+    return `${control.tagName === "INPUT" ? "barra" : "botón"} «${control.getAttribute("aria-label") ?? control.textContent?.trim() ?? "?"}» (${event.type})`;
+  };
+  player.trace((text) => {
+    if (text.startsWith("origen: ")) {
+      origin = text.slice("origen: ".length);
+      queueMicrotask(() => (origin = undefined)); // vale solo para la orden que se ejecuta ahora mismo
+    }
+    note(text.startsWith("orden: ") ? `${text} ← ${origin ?? inputOrigin() ?? "la app (fin de pista, temporizador, carga…)"}` : text);
+  });
+
   let watched: AudioContext | undefined;
   const audiosWatched = new WeakSet<HTMLAudioElement>();
   let ctxOffset: number | undefined; // ms: reloj de pared − reloj de audio
@@ -85,7 +108,8 @@ export function startDiagnostics() {
       if (audiosWatched.has(audio)) return;
       audiosWatched.add(audio);
       for (const type of MEDIA_EVENTS) audio.addEventListener(type, () => note(`<audio> ${"AB"[index]}${player.diagnostics().active === index ? " (activo)" : ""}: ${type} @ ${audio.currentTime.toFixed(2)} s`));
-      for (const type of ["playing", "seeked"])
+      // También play/pause: una pausa más corta que un tic (250 ms) caía entre dos medidas y salía como «corte» de su duración.
+      for (const type of ["play", "playing", "pause", "seeked"])
         audio.addEventListener(type, () => {
           mediaOffset = undefined;
           mediaSettle = performance.now() + 500;
