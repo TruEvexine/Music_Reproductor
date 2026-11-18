@@ -297,6 +297,7 @@ const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOp
     else if (!hidden.current && before && track && before.id !== track.id && !motionReduced() && document.documentElement.dataset.input !== "key") setLeaving(before);
   }, [neighbors.key]);
   const wide = useMedia("(min-width: 1000px)");
+  const mountedKey = useRef(neighbors.key); // el título se funde al cambiar de pista, no al montar el reproductor
   if (!track) return null;
   return (
     <>
@@ -359,7 +360,7 @@ const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOp
       </div>
       <div className="now-controls">
         <TutorialHint slot="player" />
-        <div className="now-copy" key={neighbors.key}>
+        <div className="now-copy" data-fade={neighbors.key !== mountedKey.current || undefined} key={neighbors.key}>
           <h2 className="now-title">
             <Marquee>{track.title}</Marquee>
           </h2>

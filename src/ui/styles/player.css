@@ -234,10 +234,11 @@
   transition: opacity var(--fast) var(--ease);
 }
 
-/* Cambio de pista: el título nuevo se funde (el bloque se remonta con la pista) y la portada anterior se disuelve encima de la nueva. Ni con teclado
-   ni con movimiento reducido: el gesto del carrusel ya movió la portada y los atajos no se animan (principio 5). */
+/* Cambio de pista: el título nuevo se funde (el bloque se remonta con la pista y lleva data-fade; al montar el reproductor no, que al abrirlo
+   ya se mueve la hoja) y la portada anterior se disuelve encima de la nueva. Ni con teclado ni con movimiento reducido: el gesto del carrusel
+   ya movió la portada y los atajos no se animan (principio 5). */
 @starting-style {
-  .now-copy {
+  .now-copy[data-fade] {
     opacity: 0;
   }
 }
