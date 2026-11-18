@@ -7,12 +7,17 @@ import { PanelHidden, usePresence } from "./motion";
 import { iconSmall } from "./parts";
 import { useMedia } from "./useMedia";
 
-/** Registra que la persona ya tiene delante esa cosa (cuando `when`): es lo único que puede disparar su aviso. Se repite tras «Ver tutoriales otra vez». */
+/**
+ * Registra que la persona ya tiene delante esa cosa (cuando `when`): es lo único que puede disparar su aviso. Se repite tras «Ver tutoriales otra vez».
+ * Dentro de un panel cerrado que sigue montado (las filas de la cola precargada) no la tiene delante: no cuenta.
+ */
 export function useEncounter(id: TutorialId, when = true) {
   const resets = useTutorials((state) => state.resets);
+  const hidden = useContext(PanelHidden);
+  const visible = when && !hidden;
   useEffect(() => {
-    if (when) tutorials.encounter(id);
-  }, [id, when, resets]);
+    if (visible) tutorials.encounter(id);
+  }, [id, visible, resets]);
 }
 
 /**

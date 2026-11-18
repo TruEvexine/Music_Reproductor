@@ -347,7 +347,7 @@ if (!quick) {
   console.log(`INFO scroll rápido en desarrollo (solo informativo): p50 ${frames.p50.toFixed(1)} ms · p95 ${frames.p95.toFixed(1)} ms · máx ${frames.max.toFixed(1)} ms`);
   const prod = await scrollP95Production();
   check("scroll rápido en producción: cuadros por debajo de 50 ms (mediana de 3 pasadas del p95)", prod[1] < 50, `p95 por pasada ${prod.map((value) => value.toFixed(1)).join(" / ")} ms`);
-  check("al final de la lista se pinta la última fila", (await page.locator(".virtual-row").last().getAttribute("aria-posinset")) === "5000");
+  check("al final de la lista se pinta la última fila", (await page.locator(".main .virtual-row").last().getAttribute("aria-posinset")) === "5000");
 
   const searchTime = await page.evaluate(async () => {
     const input = document.querySelector('input[type="search"]');

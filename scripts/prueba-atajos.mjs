@@ -101,7 +101,7 @@ await page.getByLabel("Buscar en tu música").fill("");
 await idle();
 
 // 4. Deslizador: las flechas ajustan el valor y no cambian de canción; el resto de atajos sigue vivo.
-const volume = page.locator(".volume input");
+const volume = page.locator(".player-bar .volume input"); // la barra: el reproductor grande (oculto, precargado) tiene otro
 await volume.focus();
 const v0 = Number(await volume.inputValue());
 await page.keyboard.press("ArrowLeft");

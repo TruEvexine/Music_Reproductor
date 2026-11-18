@@ -95,7 +95,7 @@ await page.waitForTimeout(500);
 check("seek mueve la posición", (await position()) >= 4.9, `pos=${await position()}`);
 
 // 7. Volumen y silencio por teclado.
-const volume = () => page.locator(".volume input").inputValue();
+const volume = () => page.locator(".player-bar .volume input").inputValue(); // la barra: el reproductor grande (oculto, precargado) tiene otro
 await idle();
 await page.keyboard.press("ArrowDown");
 await page.keyboard.press("ArrowDown");

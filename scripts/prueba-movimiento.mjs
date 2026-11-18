@@ -121,9 +121,14 @@ async function closeWith(page, selector, close) {
   let title = await copy();
   check("título: al abrir el reproductor no se funde (ya se mueve la hoja)", !title.fade && title.opacity === 1, JSON.stringify(title));
   await wait(page, 500);
-  await page.locator(".now-playing").getByRole("button", { name: "Siguiente canción" }).click();
-  await wait(page, 30);
-  title = await copy();
+  // Clic y lectura en el cuadro siguiente, dentro de la página: con la máquina cargada, 30 ms medidos desde Playwright ya superaban el fundido (120 ms).
+  await page.locator(".now-playing").getByRole("button", { name: "Siguiente canción" }).hover();
+  title = await page.evaluate(async () => {
+    document.querySelector('.now-playing button[aria-label="Siguiente canción"]').click();
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+    const el = document.querySelector(".now-copy");
+    return { fade: el.hasAttribute("data-fade"), opacity: Number(getComputedStyle(el).opacity) };
+  });
   check("título: al cambiar de pista sí se funde", title.fade && title.opacity < 1, JSON.stringify(title));
   await wait(page, 400);
   await page.locator(".now-playing").getByRole("button", { name: "Cola de reproducción" }).click();
