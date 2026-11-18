@@ -229,6 +229,15 @@
   }
 }
 
+/* Filas que se deslizan de lado: lo que se acerca al borde de la pantalla se desvanece en vez de cortarse en seco. El fundido mide lo que el margen
+   lateral (--gutter), que está vacío en reposo: la primera y la última no pierden opacidad. Desde 1000 px la lista de playlists es columna y no desliza. */
+@media (max-width: 999px) {
+  :is(.tabs, .playlist-list) {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent); /* Chrome < 120 */
+    mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent);
+  }
+}
+
 /* Pestañas de vista: se deslizan dentro de su fila en pantallas estrechas; la página nunca. */
 .tabs {
   display: flex;
