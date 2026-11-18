@@ -111,7 +111,7 @@ Cuando una pista no trae carátula, la app pinta una **funda** (`core/coverArt.t
 
 ### Iconos
 
-Lucide, trazo 1.75, 22 px (18 px en acciones de fila). Rellenos solo play, pausa, anterior y siguiente. Todo botón de icono lleva `aria-label` y `title`.
+Lucide, trazo 1.75, 22 px (18 px en acciones de fila). Dentro de un botón con texto (`.button`, peso 600) el trazo sube a 2.25 para igualar el grosor del texto (a 18 px dibuja 1.69 px en vez de 1.31); la pestaña activa lo sube a 2.4. Rellenos solo play, pausa, anterior y siguiente. Todo botón de icono lleva `aria-label` y `title`.
 
 ## 4. Estructura
 

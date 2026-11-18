@@ -244,6 +244,11 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   transition: transform var(--fast) var(--ease);
 }
 
+/* El icono de 18 px a 1.75 dibuja 1.31 px; junto a texto de peso 600 (tallo ≈ 1.6 px) se veía más fino que él. 2.25 → 1.69 px. */
+.button svg {
+  stroke-width: 2.25;
+}
+
 .button.primary {
   background: var(--accent);
   color: var(--on-accent);
