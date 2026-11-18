@@ -209,6 +209,11 @@
   box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
 }
 
+.split-menu[data-end="true"] {
+  right: 0;
+  left: auto;
+}
+
 .split-menu button {
   display: flex;
   align-items: center;

@@ -66,6 +66,10 @@ for (const name of matrix) {
   await page.getByLabel("Elegir archivos de música").setInputFiles(files);
   await page.waitForFunction(() => !document.querySelector(".scan-bar"), null, { timeout: 30_000 });
   await check("02-biblioteca");
+  // El menú «Añadir» abierto también cuenta: anclado a la izquierda se salía de la ventana en escritorio.
+  await page.getByRole("button", { name: "Añadir", exact: true }).click();
+  await check("02a-menu-anadir");
+  await page.keyboard.press("Escape");
 
   // Vistas de la Fase 3: rejilla de álbumes, detalle, artistas y la hoja de carpetas/copia.
   await page.getByRole("link", { name: "Álbumes", exact: true }).click();
@@ -141,6 +145,12 @@ for (const name of matrix) {
 
   await page.goto(`${base}/app/ajustes`);
   await check("10-ajustes");
+
+  // Ayuda y legal (fuera de la app) también: ninguna página puede desplazarse en horizontal en ningún viewport.
+  await page.goto(`${base}/app/ayuda`);
+  await check("10b-ayuda");
+  await page.goto(`${base}/privacidad`);
+  await check("10c-legal");
 
   await page.goto(`${base}/`);
   await check("09-landing");

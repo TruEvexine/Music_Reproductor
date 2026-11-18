@@ -250,6 +250,13 @@ function AddSplit({ primary = false, onFiles, onFolder }: { primary?: boolean; o
   const box = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const menu = useRef<HTMLDivElement>(null);
+  // Con el botón a la derecha de la cabecera, el menú nace hacia la izquierda: si anclado a la izquierda se saldría de la ventana.
+  useLayoutEffect(() => {
+    const el = menu.current;
+    const main = el?.closest("main"); // su borde visible: sin la barra de desplazamiento
+    if (el && main) el.dataset.end = String(el.getBoundingClientRect().right > main.getBoundingClientRect().left + main.clientWidth);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const outside = (event: PointerEvent) => !box.current?.contains(event.target as Node) && setOpen(false);
@@ -278,7 +285,7 @@ function AddSplit({ primary = false, onFiles, onFolder }: { primary?: boolean; o
         <ChevronDown {...iconSmall} />
       </button>
       {open && (
-        <div className="split-menu" id={menuId}>
+        <div className="split-menu" id={menuId} ref={menu}>
           <button onClick={choose(onFolder)} type="button">
             <FolderOpen {...icon} />
             <span className="row-copy">
