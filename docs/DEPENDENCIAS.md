@@ -19,7 +19,13 @@ Cómo se probó: rama temporal desde `desarrollo` (ya borrada), `npm ci`, el cam
 Orden sugerido en `desarrollo`: 1) PR agrupada de menores y parches, 2) vite 8 + plugin-react 6 en un solo commit, 3) gitleaks-action.
 Los avisos de seguridad de Dependabot siguen yendo a la rama por defecto (`main`): `target-branch` no los afecta.
 
-## Vite 8 + plugin-react 6, aplicados y revertidos (2026-11-18)
+## Navegadores mínimos soportados (Vite 8, 2026-11-18)
+
+Decisión tomada: Vite 8.3.8 y @vitejs/plugin-react 6.3.0 vuelven a `desarrollo` con el objetivo de navegadores **por defecto de Vite 8** (`baseline-widely-available`, sin `build.target` propio).
+Ese es el mínimo soportado: **Chrome y Edge 111, Firefox 114, Safari 16.4 (y iOS 16.4)**. Por debajo, el CSS de producción no se interpreta (`oklch()` sin convertir, media queries en sintaxis de rango).
+Si cambia el mínimo, se cambia aquí y en `build.target`; el historial de lo anterior está en la sección siguiente.
+
+## Vite 8 + plugin-react 6, primera vez: aplicados y revertidos (2026-11-18)
 
 Se aplicaron juntos en `desarrollo` (`cd349d5`) y se revirtieron (`9151ef6`) porque **cambia el resultado del build**:
 
