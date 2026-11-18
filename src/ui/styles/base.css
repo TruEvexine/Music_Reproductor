@@ -157,8 +157,9 @@ a {
   font-size: var(--text-s);
 }
 
-/* Cifras de ancho fijo: los contadores («12 canciones») y la hora del temporizador no bailan al cambiar. */
-.subtitle,
+/* Cifras de ancho fijo donde un número cambia en su sitio: contador de la cabecera y de la cola, hora del temporizador. No en todo .subtitle:
+   las cifras tabulares ensanchan hasta un 6 % un texto con muchos números y en 320 px eso partía líneas de Ajustes. */
+:is(.view-header, .queue-header) .subtitle,
 .menu-value {
   font-variant-numeric: tabular-nums;
 }
