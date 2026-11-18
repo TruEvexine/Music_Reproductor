@@ -358,21 +358,28 @@ export function LibraryView({ path }: { path: string }) {
   const groupBy = tabs.find((item) => item.id === tab)?.group;
   const groupKey = rawKey ? decodeKey(rawKey) : undefined;
 
-  const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
+  // Al importar, `tracks` cambia cada 250 ms: el orden anterior acelera el siguiente (mismo resultado, ver sortTracks) y el índice por id solo se arma en un grupo.
+  const lastSort = useRef(new Map<TrackSort, Track[]>());
+  const sortFrom = (list: Track[], sort: TrackSort) => {
+    const sorted = sortTracks(list, sort, lastSort.current.get(sort));
+    lastSort.current.set(sort, sorted);
+    return sorted;
+  };
+  const byId = useMemo(() => (groupKey ? new Map(tracks.map((track) => [track.id, track])) : undefined), [tracks, groupKey]);
   const key = searchKey(search);
   const matching = useMemo(() => (key ? tracks.filter((track) => matches(searchText(track), key)) : tracks), [tracks, key]);
   const groups = useMemo(() => {
     if (!groupBy) return [];
-    const all = groupTracks(sortTracks(tracks, "album"), groupBy);
+    const all = groupTracks(sortFrom(tracks, "album"), groupBy);
     return groupKey ? all : sortGroups(key ? all.filter((group) => matches(searchKey(`${group.label} ${group.subtitle}`), key)) : all, groupSort);
   }, [tracks, groupBy, groupKey, key, groupSort]);
   const group = groupKey ? groups.find((item) => item.key === groupKey) : undefined;
   const visible = useMemo(() => {
     if (group) {
-      const inGroup = group.trackIds.map((id) => byId.get(id)!).filter((track) => !key || matches(searchText(track), key));
+      const inGroup = group.trackIds.map((id) => byId!.get(id)!).filter((track) => !key || matches(searchText(track), key));
       return tab === "albumes" ? inGroup : sortTracks(inGroup, "artist");
     }
-    return tab === "recientes" ? recentTracks(matching) : sortTracks(matching, trackSort);
+    return tab === "recientes" ? recentTracks(matching) : sortFrom(matching, trackSort);
   }, [group, byId, key, tab, matching, trackSort]);
 
   const addFiles = () => filesInput.current?.click();

@@ -132,7 +132,12 @@ const albumOrder = (a: Track, b: Track) =>
   (a.trackNumber ?? Infinity) - (b.trackNumber ?? Infinity) ||
   collator.compare(a.title, b.title);
 
-export function sortTracks(tracks: Track[], sort: TrackSort): Track[] {
+/**
+ * Orden estable: los empates quedan en el orden de `tracks`. `previous` (un resultado anterior de casi las mismas pistas) solo acelera:
+ * se ordena desde ahí con el empate decidido por la posición en `tracks`, así que sale lo mismo, pero casi ordenado TimSort hace ~n
+ * comparaciones en vez de n·log n (re-ordenar 5 000 pistas a cada lote de metadatos costaba ≈ 50 ms con la CPU 4× más lenta).
+ */
+export function sortTracks(tracks: Track[], sort: TrackSort, previous?: Track[]): Track[] {
   const compare: Record<TrackSort, (a: Track, b: Track) => number> = {
     title: (a, b) => collator.compare(a.title, b.title),
     artist: (a, b) => unknownLast(a.artist, b.artist) || collator.compare(a.artist, b.artist) || albumOrder(a, b),
@@ -140,7 +145,12 @@ export function sortTracks(tracks: Track[], sort: TrackSort): Track[] {
     added: (a, b) => (b.addedAt ?? 0) - (a.addedAt ?? 0) || collator.compare(a.path, b.path),
     duration: (a, b) => (b.duration ?? 0) - (a.duration ?? 0),
   };
-  return [...tracks].sort(compare[sort]);
+  const at = new Map(previous ? tracks.map((track, i) => [track, i]) : []);
+  const kept = previous?.filter((track) => at.has(track)) ?? [];
+  const seen = new Set(kept);
+  // Sin pista, o con pistas repetidas (la posición no desempataría), el orden de siempre.
+  if (!previous || at.size !== tracks.length || seen.size !== kept.length) return [...tracks].sort(compare[sort]);
+  return [...kept, ...tracks.filter((track) => !seen.has(track))].sort((a, b) => compare[sort](a, b) || at.get(a)! - at.get(b)!);
 }
 
 export const RECENT_LIMIT = 200;
