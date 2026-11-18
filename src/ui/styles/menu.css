@@ -91,7 +91,6 @@
 .menu-body {
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable; /* alto fijo y páginas de distinto largo: la barra aparece y desaparece sin mover el ancho */
   padding: var(--s2) var(--s4) calc(var(--s4) + var(--safe-bottom));
 }
 

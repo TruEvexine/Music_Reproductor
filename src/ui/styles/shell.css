@@ -11,8 +11,15 @@
   grid-area: main;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable; /* la barra clásica no hace saltar el contenido al cambiar de vista ni al abrir el menú (que bloquea el scroll) */
   padding-top: var(--safe-top);
+}
+
+/* Barra clásica (ratón): su hueco queda reservado y el contenido no salta al cambiar de vista ni al abrir el menú, que bloquea el scroll.
+   Solo con puntero fino: en táctil las barras flotan sobre el contenido y no ocupan sitio, así que el móvil no cambia. */
+@media (hover: hover) and (pointer: fine) {
+  :is(.main, .menu-body, .queue-list, .add-list) {
+    scrollbar-gutter: stable;
+  }
 }
 
 .nav {
