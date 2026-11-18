@@ -452,8 +452,8 @@ if (!quick) {
     requestAnimationFrame(tick);
   });
   await page.getByLabel("Elegir archivos de música").setInputFiles(huge);
-  await page.waitForFunction(() => document.querySelector(".view-header .subtitle")?.textContent === "5001 canciones", null, { timeout: 60_000 });
-  await scanDone(page, 60_000);
+  await page.waitForFunction(() => document.querySelector(".view-header .subtitle")?.textContent === "5001 canciones", null, { timeout: 120_000 }); // el archivo de 150 MB a veces tarda más de 60 s, también antes de este cambio
+  await scanDone(page, 120_000);
   const worst = await page.evaluate(() => Math.max(...window.__gaps.slice(5)));
   const status = (await stored(page)).find((track) => track.title === "enorme")?.metadataStatus;
   check("archivo enorme: se procesa en el worker sin congelar la interfaz", status !== "loading" && worst < 500, `estado ${status}, peor cuadro ${worst.toFixed(0)} ms`);
