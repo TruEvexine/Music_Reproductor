@@ -157,6 +157,12 @@ a {
   font-size: var(--text-s);
 }
 
+/* Cifras de ancho fijo: los contadores («12 canciones») y la hora del temporizador no bailan al cambiar. */
+.subtitle,
+.menu-value {
+  font-variant-numeric: tabular-nums;
+}
+
 .subtitle {
   overflow: hidden;
   text-overflow: ellipsis;
