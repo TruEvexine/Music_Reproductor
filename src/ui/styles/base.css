@@ -489,6 +489,7 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 .add-list {
   max-height: 46dvh;
   overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .add-row {

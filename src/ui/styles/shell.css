@@ -11,6 +11,7 @@
   grid-area: main;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable; /* la barra clásica no hace saltar el contenido al cambiar de vista ni al abrir el menú (que bloquea el scroll) */
   padding-top: var(--safe-top);
 }
 
