@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useReducedMotion } from "./motion";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { PanelHidden, useReducedMotion } from "./motion";
 
 const SPEED = 30; // px por segundo, constante
 const HOLD = 1500; // ms quieto en cada extremo
@@ -23,7 +23,8 @@ export function Marquee({ children }: { children: string }) {
   }, [children]);
 
   const reduced = useReducedMotion();
-  const animate = shift > 0 && !reduced;
+  const hidden = useContext(PanelHidden); // en un panel cerrado no se ve: sin bucle
+  const animate = shift > 0 && !reduced && !hidden;
   useEffect(() => {
     if (!animate) return;
     const travel = (shift / SPEED) * 1000;

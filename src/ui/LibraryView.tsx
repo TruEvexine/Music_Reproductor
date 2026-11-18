@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
 import { AudioLines, ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Pause, Pencil, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { trackCoverSeed } from "../core/coverArt";
@@ -340,7 +340,8 @@ function Reconnect() {
   );
 }
 
-export function LibraryView({ path }: { path: string }) {
+// memo: abrir o cerrar un panel cambia la ruta y re-renderiza el Shell; la biblioteca no depende de eso.
+export const LibraryView = memo(function LibraryView({ path }: { path: string }) {
   const tracks = useLibrary((state) => state.tracks);
   const ready = useLibrary((state) => state.ready);
   const notice = useLibrary((state) => state.notice);
@@ -559,4 +560,4 @@ export function LibraryView({ path }: { path: string }) {
       {sheet && <LibrarySheet onClose={() => setSheet(false)} />}
     </section>
   );
-}
+});

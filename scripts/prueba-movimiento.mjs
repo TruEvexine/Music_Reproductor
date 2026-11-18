@@ -1,6 +1,7 @@
 // Prueba del sistema de movimiento en Chromium contra `npm run dev`. Uso: node scripts/prueba-movimiento.mjs [url-base]
-// Comprueba, leyendo los estilos calculados del navegador: entradas (animación y duración), salidas (data-closing, --exit, desmontaje),
-// pulsar (--press; ni en transporte ni por teclado), lo frecuente sin animación (pestañas, filas) y movimiento reducido (sin esperas).
+// Comprueba, leyendo los estilos calculados del navegador: entradas (animación y duración), salidas (data-closing, --exit, desmontaje; el
+// reproductor y la cola no se desmontan: quedan ocultos, inert y aria-hidden), el foco al abrir y cerrar esos dos paneles, pulsar (--press;
+// ni en transporte ni por teclado), lo frecuente sin animación (pestañas, filas) y movimiento reducido (sin esperas).
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
 import "./requiere-audio.mjs";
@@ -37,6 +38,10 @@ const style = (page, selector) =>
     return { name: css.animationName, duration: parseFloat(css.animationDuration) * 1000, transitionDuration: parseFloat(css.transitionDuration) * 1000, transform: css.transform, closing: el.dataset.closing ?? null };
   });
 const present = (page, selector) => page.locator(selector).count();
+// Cerrado: desmontado (diálogos) u oculto del todo (reproductor y cola, que siguen montados: ui/motion.ts, useKeptPanel).
+const closed = (page, selector) =>
+  page.evaluate((sel) => [...document.querySelectorAll(sel)].every((el) => el.hasAttribute("data-closed") && el.inert && el.getAttribute("aria-hidden") === "true" && getComputedStyle(el).visibility === "hidden"), selector);
+const active = (page) => page.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? document.activeElement?.tagName);
 const scale = (transform) => (transform === "none" ? 1 : Number(transform.match(/matrix\(([\d.]+)/)?.[1] ?? NaN));
 const wait = (page, ms) => page.waitForTimeout(ms);
 
@@ -46,7 +51,7 @@ async function closeWith(page, selector, close) {
   await wait(page, 60); // a mitad de la salida (--exit = 140 ms)
   const during = (await present(page, selector)) ? await style(page, selector) : null;
   await wait(page, 450);
-  return { during, gone: (await present(page, selector)) === 0 };
+  return { during, gone: await closed(page, selector) };
 }
 
 // ───────────── Escritorio ─────────────
@@ -73,7 +78,7 @@ async function closeWith(page, selector, close) {
   check("cola en columna (escritorio): sin animación de entrada", s.name === "none", s.name);
   await page.locator(".queue-panel").getByRole("button", { name: "Cerrar cola" }).click();
   await wait(page, 40);
-  check("cola en columna: se desmonta al instante (no hay salida que animar)", (await present(page, ".queue-panel")) === 0);
+  check("cola en columna: se oculta al instante (no hay salida que animar)", await closed(page, ".queue-panel"));
 
   // Frecuente: pestañas y filas sin animación.
   await page.getByRole("link", { name: "Álbumes", exact: true }).click();
@@ -119,9 +124,9 @@ async function closeWith(page, selector, close) {
   check("cola sobre el reproductor: entra con transición en --base", s.name === "none" && Math.round(s.transitionDuration) === 220, `${s.name} ${s.transitionDuration} ms`);
   await wait(page, 400);
   out = await closeWith(page, ".queue-panel", () => page.locator(".queue-panel").getByRole("button", { name: "Cerrar cola" }).click());
-  check("la cola sobre el reproductor sale con transición en --exit y se desmonta", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
+  check("la cola sobre el reproductor sale con transición en --exit y queda oculta", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
   out = await closeWith(page, ".now-playing", () => page.getByRole("button", { name: "Cerrar reproductor" }).click());
-  check("el reproductor grande sale con transición en --exit y se desmonta", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
+  check("el reproductor grande sale con transición en --exit y queda oculto", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
   // Dos Escape seguidos: el primero cierra el menú (que tarda --exit en salir) y el segundo no se pierde: cierra el reproductor.
   await page.locator(".bar-track").click();
   await wait(page, 500);
@@ -130,7 +135,33 @@ async function closeWith(page, selector, close) {
   await page.keyboard.press("Escape");
   await page.keyboard.press("Escape");
   await wait(page, 600);
-  check("dos Escape seguidos cierran el menú y el reproductor (el menú que sale no se traga el segundo)", (await present(page, "dialog.menu")) === 0 && (await present(page, ".now-playing")) === 0);
+  check("dos Escape seguidos cierran el menú y el reproductor (el menú que sale no se traga el segundo)", (await present(page, "dialog.menu")) === 0 && (await closed(page, ".now-playing")));
+
+  // Foco: al abrir entra en el panel (su botón de cerrar) y al cerrar vuelve a quien lo tenía. Cerrado, Tab no entra.
+  await page.locator(".bar-track").focus();
+  await page.keyboard.press("Enter");
+  await wait(page, 400);
+  check("foco: abrir el reproductor lo lleva a «Cerrar reproductor»", (await active(page)) === "Cerrar reproductor", await active(page));
+  await page.locator(".now-playing").getByRole("button", { name: "Cola de reproducción" }).focus();
+  await page.keyboard.press("Enter");
+  await wait(page, 400);
+  check("foco: abrir la cola lo lleva a «Cerrar cola»", (await active(page)) === "Cerrar cola", await active(page));
+  await page.keyboard.press("Escape");
+  await wait(page, 400);
+  const backInPlayer = await page.evaluate(() => Boolean(document.activeElement?.closest(".now-playing")));
+  check("foco: cerrar la cola lo devuelve al botón de la cola del reproductor", (await active(page)) === "Cola de reproducción" && backInPlayer, await active(page));
+  await page.keyboard.press("Escape");
+  await wait(page, 400);
+  check("foco: cerrar el reproductor lo devuelve al mini reproductor", (await active(page))?.startsWith("Abrir reproductor"), await active(page));
+  for (let i = 0; i < 25; i++) await page.keyboard.press("Tab");
+  check("cerrados: Tab no entra en el reproductor ni en la cola ocultos", !(await page.evaluate(() => Boolean(document.activeElement?.closest(".now-playing, .queue-panel")))));
+  await page.locator(".player-bar").getByRole("button", { name: "Cola de reproducción" }).focus();
+  await page.keyboard.press("Enter");
+  await wait(page, 300);
+  check("foco: la cola en columna también lo recibe al abrirse", (await active(page)) === "Cerrar cola", await active(page));
+  await page.keyboard.press("Escape");
+  await wait(page, 300);
+  check("foco: y lo devuelve al botón de la barra al cerrarse", (await active(page)) === "Cola de reproducción" && !(await page.evaluate(() => Boolean(document.activeElement?.closest(".queue-panel")))), await active(page));
   check("sin errores de página (escritorio)", errors.length === 0, errors.join(" | "));
   await context.close();
 }
@@ -151,13 +182,17 @@ async function closeWith(page, selector, close) {
   check("reproductor grande (móvil): sube como hoja (transición, --slow)", s.name === "none" && Math.round(s.transitionDuration) === 280, `${s.name} ${s.transitionDuration} ms`);
   await wait(page, 500);
   out = await closeWith(page, ".now-playing", () => page.getByRole("button", { name: "Cerrar reproductor" }).tap());
-  check("reproductor grande (móvil): baja con transición en --exit y se desmonta", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
+  check("reproductor grande (móvil): baja con transición en --exit y queda oculto", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
   await page.locator(".bar-track").tap();
   await wait(page, 500);
   await page.locator(".now-playing").getByRole("button", { name: "Cola de reproducción" }).tap();
   await wait(page, 400);
   out = await closeWith(page, ".queue-panel", () => page.locator(".queue-panel").getByRole("button", { name: "Cerrar cola" }).tap());
-  check("cola (móvil): sale con exit-fade en --exit y se desmonta", out.during?.closing === "true" && out.gone, JSON.stringify(out.during));
+  check("cola (móvil): sale con exit-fade en --exit y queda oculta", out.during?.closing === "true" && out.gone, JSON.stringify(out.during));
+  check("foco (móvil): cerrar la cola con el dedo lo devuelve al botón de la cola", (await active(page)) === "Cola de reproducción", await active(page));
+  await page.getByRole("button", { name: "Cerrar reproductor" }).tap();
+  await wait(page, 400);
+  check("foco (móvil): cerrar el reproductor lo devuelve al mini reproductor", (await active(page))?.startsWith("Abrir reproductor"), await active(page));
   check("sin errores de página (móvil)", errors.length === 0, errors.join(" | "));
   await context.close();
 }
@@ -176,7 +211,7 @@ async function closeWith(page, selector, close) {
   await wait(page, 100);
   await page.getByRole("button", { name: "Cerrar reproductor" }).click();
   await wait(page, 30);
-  check("movimiento reducido: el reproductor grande se desmonta al instante", (await present(page, ".now-playing")) === 0);
+  check("movimiento reducido: el reproductor grande se oculta al instante", await closed(page, ".now-playing"));
   check("sin errores de página (movimiento reducido)", errors.length === 0, errors.join(" | "));
   await context.close();
 }

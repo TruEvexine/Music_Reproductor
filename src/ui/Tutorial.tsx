@@ -1,9 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { Lightbulb } from "lucide-react";
 import { nextTutorial } from "../core/tutorials";
 import type { TutorialId, TutorialSlot } from "../core/tutorials";
 import { tutorials, useTutorials } from "../state/tutorials";
-import { usePresence } from "./motion";
+import { PanelHidden, usePresence } from "./motion";
 import { iconSmall } from "./parts";
 import { useMedia } from "./useMedia";
 
@@ -22,7 +22,8 @@ export function useEncounter(id: TutorialId, when = true) {
 export function TutorialHint({ slot, enabled = true }: { slot: TutorialSlot; enabled?: boolean }) {
   const state = useTutorials();
   const pointer = useMedia("(hover: hover) and (pointer: fine)");
-  const tip = enabled && state.ready ? nextTutorial(state, state.encountered, pointer ? "pointer" : "touch", slot) : null;
+  const hidden = useContext(PanelHidden); // dentro de un panel cerrado (que sigue montado) no es la superficie visible
+  const tip = enabled && !hidden && state.ready ? nextTutorial(state, state.encountered, pointer ? "pointer" : "touch", slot) : null;
   // Al descartarse sigue pintándose mientras sale (--exit), como el aviso de «Deshacer».
   const last = useRef(tip);
   if (tip) last.current = tip;

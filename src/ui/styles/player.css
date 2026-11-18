@@ -354,6 +354,19 @@ html[data-input="key"] .now-copy {
   .shell[data-panel="player"][data-queue] .now-playing {
     right: 22rem;
   }
+  /* Cerrada en columna fija no ocupa la columna. */
+  .shell:not([data-panel="player"]) .queue-panel[data-closed] {
+    display: none;
+  }
+}
+
+/* Cerrados siguen montados (ui/motion.ts, useKeptPanel): ocultos en su pose de entrada y sin transición, así abrir parte de ahí igual que con
+   @starting-style y cerrar del todo no anima nada que no se ve. visibility (no display) conserva el layout: abrir no recalcula el panel entero. */
+.shell :is(.now-playing, .queue-panel)[data-closed] {
+  visibility: hidden;
+  transform: var(--t0, none);
+  opacity: var(--o0, 1);
+  transition: none;
 }
 
 /* Volumen (solo en escritorio, en la barra y bajo el transporte del reproductor grande: en móvil mandan los botones del dispositivo) */

@@ -38,7 +38,8 @@ const center = async (locator) => {
   const box = await locator.boundingBox();
   return { x: box.x + box.width / 2, y: box.y + box.height / 2, box };
 };
-const count = (selector) => page.locator(selector).count();
+// el reproductor y la cola cerrados siguen montados (ocultos, con data-closed): cuentan solo los abiertos
+const count = (selector) => page.locator(`${selector}:not([data-closed])`).count();
 const row = (index) => page.locator(".track-row").nth(index);
 const queueTitles = async () => {
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent("keydown", { key: "q" })));
