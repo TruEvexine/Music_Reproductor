@@ -666,6 +666,11 @@ ol.track-list .row-album {
   margin-top: var(--s4);
 }
 
+/* Mismo aire que deja arriba el índice fijo (24 px = --s5, ver jump() en SettingsView.tsx); hoy el salto lo calcula el JS, esto cubre cualquier ancla nativa. */
+.settings-section > h2 {
+  scroll-margin-top: var(--s5);
+}
+
 .settings-stack {
   display: grid;
   gap: var(--s4);
