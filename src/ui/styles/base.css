@@ -51,6 +51,16 @@ h2 {
   font-weight: 650;
   line-height: 1.15;
   letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h3 {
+  text-wrap: balance;
+}
+
+p,
+.hint {
+  text-wrap: pretty;
 }
 
 button,
