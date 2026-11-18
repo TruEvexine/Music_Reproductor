@@ -215,7 +215,7 @@
   gap: var(--s3);
   min-height: var(--tap-l);
   padding: var(--s2) var(--s3);
-  border-radius: var(--radius-s);
+  border-radius: max(0px, calc(var(--radius-m) - var(--s1))); /* concéntrico: radio del menú menos su relleno (8 px) */
   text-align: left;
 }
 
