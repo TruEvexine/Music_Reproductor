@@ -686,7 +686,10 @@ html:not([data-input="key"]) :is(.dialog, .menu) :focus-visible {
 .edit-actions {
   position: sticky;
   bottom: 0;
-  padding-block: var(--s3);
+  /* Pegada al borde de la hoja, la barra de inicio del iPhone no debe taparla: el relleno de más lleva el botón por encima de esa franja.
+     El margen negativo evita contarla dos veces con el relleno del cuerpo. Sin muesca (--safe-bottom: 0) no cambia nada. */
+  padding-block: var(--s3) calc(var(--s3) + var(--safe-bottom));
+  margin-bottom: calc(var(--safe-bottom) * -1);
   background: var(--surface-1);
 }
 
