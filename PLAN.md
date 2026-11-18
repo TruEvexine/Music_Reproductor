@@ -894,6 +894,8 @@ Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio br
 
 Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max. En B1–B3 (2026-11-18): ponytail, design-motion-principles (modo crear), make-interfaces-feel-better, impeccable.
 
+- [x] Vite 8 + plugin-react 6 (2026-11-18): aplicados y revertidos porque Vite 8 sube el objetivo de navegadores y el CSS deja `oklch()` y media queries de rango que Chrome 107–110 y Safari 16.0–16.3 no entienden. Detalle y vía para retomarlo (fijar `build.target`) en `docs/DEPENDENCIAS.md`.
+
 ### 11.1q Auditoría de CSS (2026-11-17)
 
 - [x] `docs/AUDITORIA_CSS.md`: los 20 detalles de la lista (estado, evidencia y decisión), con la comprobación de geometría en móvil y escritorio y lo que no se pudo verificar.
