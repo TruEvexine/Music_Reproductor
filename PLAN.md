@@ -905,6 +905,16 @@ Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-int
 
 Skills aplicadas: ponytail, impeccable, make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max (solo lectura de criterio; sin cambios de tema).
 
+### 11.1r Pausas rápidas desde los controles del sistema con la página oculta (2026-11-18)
+
+Síntoma (Poco F7 Pro, Chrome, audífonos Bluetooth, producción 271b726): con Satin en segundo plano, varias pausas rápidas desde la isla de HyperOS (MediaSession) dejaron un silencio largo y la música volvió despacio. El informe de `?diag=1` no lo recogió: el búfer de 300 líneas ya lo había desplazado.
+
+- [x] **`?diag=1`**: cada orden con su origen (`orden: pause ← mediaSession:pause`, botón, teclado, barra o la app); inicio y fin de cada rampa (pausa, reanudación, búsqueda, volumen, fundido entre pistas) con el valor final; lo ocurrido con la página oculta se guarda aparte (hasta 5 000 líneas) y va en su propia sección del informe. Falso «corte» del `<audio>` corregido: una pausa más corta que un tic (250 ms) caía entre dos medidas; ahora `play`/`pause` reinician la medida.
+- [x] **Reproducción en Chromium** con la página oculta de verdad (Chromium lanzado a mano y CDP: con Playwright conectado nunca pasa a `hidden`): 10 alternancias por MediaSession cada 150–250 ms → la ganancia vuelve a 1 en ≤ 27 ms y `currentTime` avanza en ≤ 72 ms, también con el frenado de un móvil emulado (temporizadores a 1 s, sin rAF). **Hipótesis descartada para nuestro código:** el camino de play no usa temporizadores ni rAF, las rampas ya iban en el reloj de audio y el contexto se reanuda antes de subir la ganancia. Chromium de escritorio ni siquiera frena los temporizadores de una página oculta con el AudioContext en marcha.
+- [x] **Lo que sí dependía de temporizadores** (con el frenado de 1 s): el `<audio>.pause()` tras la rampa (el `<audio>` seguía mudo hasta 1 s y la canción avanzaba 0,6–1 s en silencio en cada pausa) y el salto de una búsqueda (`seekto` callado hasta 1 s). Ahora los dispara el `ended` de una fuente muda programada en el reloj de audio (`atAudioTime`), con un temporizador de respaldo por si el contexto se para. Con el frenado: pausa real en 40 ms (antes 588 ms) y `seekto` en 74 ms (antes 1 021 ms).
+- [x] Pruebas: `prueba-pausa.mjs` §3 (oculta, con y sin frenado: reanudación, pausa real, el último toque gana, `seekto`; con el motor anterior fallan 2), 3 unitarias nuevas en `PlayerEngine.test.ts`; `prueba-audio.mjs` «Espacio reanuda» espera a que avance la posición (hasta 3 s) en vez de 600 ms fijos: 10 de 10.
+- **Sin confirmar en el teléfono:** la causa del silencio largo. Lo que queda fuera de nuestro código: Android/HyperOS cerrando la salida de audio o el Bluetooth al quedar la página en silencio, y su vuelta lenta. El panel nuevo debería registrarlo.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

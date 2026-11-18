@@ -351,7 +351,7 @@ export class PlayerEngine {
 
   /** Baja el volumen (al menos CUT_RAMP; `fade` para la pausa suave y el temporizador) y pausa al terminar. Sin Web Audio, pausa al instante. */
   pause(fade = 0) {
-    this.turn += 1;
+    const turn = ++this.turn;
     this.trace?.("orden: pause");
     this.wanted = false;
     this.starting = false;
@@ -370,11 +370,14 @@ export class PlayerEngine {
     if (context && master && context.state === "running" && !this.current.audio.paused) {
       fade = Math.max(fade, CUT_RAMP);
       const end = this.rampMaster(0, fade, "de pausa") + PAUSE_MARGIN;
-      // Reloj de audio, no el de JS: el <audio> se para solo cuando la rampa ya se calculó entera.
-      const wait = () => {
-        this.pauseTimer = context.state !== "running" || context.currentTime >= end ? void hardPause() : setTimeout(wait, 10);
+      const done = () => {
+        if (turn !== this.turn || this.pauseTimer === undefined) return;
+        clearTimeout(this.pauseTimer);
+        hardPause();
       };
-      this.pauseTimer = setTimeout(wait, fade * 1000);
+      // Reloj de audio, no el de JS: el <audio> se para solo cuando la rampa ya se calculó entera.
+      this.atAudioTime(end, done);
+      this.pauseTimer = setTimeout(done, (end - context.currentTime) * 1000 + 250); // si el contexto se para antes, `ended` no llega
     } else hardPause();
   }
 
@@ -414,14 +417,15 @@ export class PlayerEngine {
     };
     // Reloj de audio, como en la pausa: se salta cuando la bajada ya se calculó entera.
     const jump = () => {
-      if (turn !== this.seekTurn) return;
-      if (context.state === "running" && context.currentTime < end) return void (this.seekTimer = setTimeout(jump, 5));
+      if (turn !== this.seekTurn || this.seekTarget === null) return;
+      clearTimeout(this.seekTimer);
       this.seekTarget = null;
       audio.addEventListener("seeked", restore, { once: true });
       audio.currentTime = target;
       this.seekTimer = setTimeout(restore, SEEK_GIVE_UP);
     };
-    this.seekTimer = setTimeout(jump, SEEK_DIP * 1000);
+    this.atAudioTime(end, jump);
+    this.seekTimer = setTimeout(jump, SEEK_DIP * 1000 + 250); // si el contexto se para antes, `ended` no llega
   }
 
   /** Abandona una búsqueda suave (cambio de pista, parada, búsqueda en pausa) y devuelve el volumen. */
