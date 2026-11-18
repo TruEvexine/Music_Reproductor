@@ -6,7 +6,7 @@ body:has(.landing) {
 .landing {
   --edge: clamp(16px, 5vw, 64px); /* un solo par de márgenes, igual a ambos lados, en todo el ancho */
   --gap: clamp(5rem, 12vw, 10rem); /* entre secciones, claramente mayor que cualquier hueco interno */
-  padding: 0 var(--edge) calc(var(--gap) / 2);
+  padding: 0 calc(var(--edge) + var(--safe-right)) calc(var(--gap) / 2 + var(--safe-bottom)) calc(var(--edge) + var(--safe-left));
 }
 
 .landing-bar {
