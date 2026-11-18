@@ -894,6 +894,15 @@ Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio br
 
 Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max.
 
+### 11.1q Auditoría de CSS (2026-11-17)
+
+- [x] `docs/AUDITORIA_CSS.md`: los 20 detalles de la lista (estado, evidencia y decisión), con la comprobación de geometría en móvil y escritorio y lo que no se pudo verificar.
+- [x] Aplicado sin cambiar lo que se ve: `scrollbar-gutter: stable` (solo con puntero fino), `overscroll-behavior`, `text-wrap` en h2/h3/p, `tabular-nums` en contadores y hora del temporizador, `scroll-margin-top` en Ajustes y áreas seguras (landing y acciones fijas del editor).
+- [x] Aplicado por decisión del usuario: degradados CSS del fondo en OKLCH (con respaldo), fundido en pestañas y lista de playlists, radio concéntrico del menú «Añadir» y trazo 2.25 en iconos de botones.
+- Descartado: icono con desenfoque (choca con §3 y `motion.test.ts`; el transporte no se anima) y `mix-blend-mode: multiply` (las portadas no son fotos sobre blanco).
+
+Skills aplicadas: ponytail, impeccable, make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max (solo lectura de criterio; sin cambios de tema).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
