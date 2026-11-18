@@ -33,6 +33,7 @@
   --s6: 32px;
   --s7: 48px;
   --gutter: clamp(16px, 4vw, 40px);
+  --page-max: calc(96rem + 2 * var(--gutter)); /* contenedor único de todas las páginas, pegado a la izquierda */
   --radius-s: 6px;
   --radius-m: 12px;
   --tap: 44px;
