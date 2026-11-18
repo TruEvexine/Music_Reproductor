@@ -27,7 +27,7 @@ export function TutorialHint({ slot, enabled = true }: { slot: TutorialSlot; ena
   // Al descartarse sigue pintándose mientras sale (--exit), como el aviso de «Deshacer».
   const last = useRef(tip);
   if (tip) last.current = tip;
-  const { mounted, closing } = usePresence(tip !== null);
+  const { mounted, closing } = usePresence(tip !== null, !hidden); // oculto con su panel: se va sin salida que nadie ve
   const shown = tip ?? last.current;
   if (!mounted || !shown) return null;
   return (

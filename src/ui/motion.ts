@@ -60,7 +60,11 @@ export function useExit(onClose: () => void) {
   return { closing: closing || undefined, request };
 }
 
-/** Mantiene montado un panel mientras sale. `animated` en falso (sin animación de salida) lo desmonta al instante. */
+/**
+ * Mantiene montado un panel mientras sale. `animated` en falso (sin animación de salida) lo desmonta al instante.
+ * Espera `--exit` + 100 ms: el compositor arranca la transición uno o más cuadros después del cambio de estilo (38 ms con la CPU 4× más lenta),
+ * así que un temporizador de `--exit` justo cortaba el final y Chromium marcaba la animación cancelada como no compuesta (compositeFailed).
+ */
 export function usePresence(open: boolean, animated = true) {
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true);
@@ -68,7 +72,7 @@ export function usePresence(open: boolean, animated = true) {
     if (open || !mounted) return;
     const ms = animated ? exitMs() : 0;
     if (!ms) return setMounted(false);
-    const timer = window.setTimeout(() => setMounted(false), ms);
+    const timer = window.setTimeout(() => setMounted(false), ms + 100);
     return () => clearTimeout(timer);
   }, [open, mounted, animated]);
   return { mounted: open || mounted, closing: !open || undefined };

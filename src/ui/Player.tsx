@@ -360,7 +360,7 @@ const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOp
       </div>
       <div className="now-controls">
         <TutorialHint slot="player" />
-        <div className="now-copy" data-fade={neighbors.key !== mountedKey.current || undefined} key={neighbors.key}>
+        <div className="now-copy" data-fade={(neighbors.key !== mountedKey.current && !hidden.current) || undefined} key={neighbors.key}>
           <h2 className="now-title">
             <Marquee>{track.title}</Marquee>
           </h2>
