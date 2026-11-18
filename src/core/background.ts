@@ -113,16 +113,18 @@ const rgb = ([r, g, b]: Rgb, alpha: number, gamut: Gamut) => {
 /**
  * Fondo en CSS puro: respaldo del lienzo (sin WebGL, contexto perdido, movimiento reducido), tinte sutil con el
  * reproductor colapsado y fondo "Estático". `blobs` = cuatro manchas fijas; `linear` = degradado de dos colores.
- * Siempre termina en `var(--bg)`, así que nunca queda transparente.
+ * Siempre termina en `var(--bg)`, así que nunca queda transparente. Con `oklch` interpola en OKLCH: el medio entre dos tonos distintos
+ * conserva el croma en vez de volverse gris. Lo decide quien llama según el navegador, porque uno viejo descartaría la declaración entera.
  */
-export function gradientCss(colors: Rgb[], intensity: number, kind: "blobs" | "linear" = "blobs", gamut: Gamut = "srgb"): string {
-  if (kind === "linear") return `linear-gradient(165deg, ${rgb(colors[0], intensity, gamut)} 0%, ${rgb(colors[1], intensity * 0.8, gamut)} 55%, transparent 100%), var(--bg)`;
+export function gradientCss(colors: Rgb[], intensity: number, kind: "blobs" | "linear" = "blobs", gamut: Gamut = "srgb", oklch = false): string {
+  const space = oklch ? "in oklch " : "";
+  if (kind === "linear") return `linear-gradient(${space}165deg, ${rgb(colors[0], intensity, gamut)} 0%, ${rgb(colors[1], intensity * 0.8, gamut)} 55%, transparent 100%), var(--bg)`;
   const spots = [
     ["60% 50%", "20% 22%", 1],
     ["55% 50%", "82% 30%", 0.9],
     ["60% 55%", "28% 88%", 0.8],
     ["50% 50%", "86% 82%", 0.7],
   ] as const;
-  const layers = spots.map(([size, at, weight], i) => `radial-gradient(${size} at ${at}, ${rgb(colors[i % colors.length], intensity * weight, gamut)}, transparent 70%)`);
+  const layers = spots.map(([size, at, weight], i) => `radial-gradient(${space}${size} at ${at}, ${rgb(colors[i % colors.length], intensity * weight, gamut)}, transparent 70%)`);
   return `${layers.join(", ")}, var(--bg)`;
 }

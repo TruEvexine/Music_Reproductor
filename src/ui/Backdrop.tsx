@@ -13,6 +13,9 @@ import { useHdrLook } from "./hdr";
 import { useReducedMotion } from "./motion";
 import { PaletteContext } from "./usePalette";
 
+// Navegadores sin interpolación `in oklch` (Chrome < 111, Safari < 16.2, Firefox < 127) reciben el degradado de siempre.
+const oklch = typeof CSS !== "undefined" && CSS.supports("background-image", "linear-gradient(in oklch, red, blue)");
+
 // Fondo del reproductor. Portada / Ritmo: lienzo WebGL animado (con el interruptor HDR, con curva de contraste y reflejos). Estático: degradado CSS fijo. AMOLED: nada (negro).
 // Respaldo CSS (mismo aspecto, sin movimiento) si no hay WebGL, se pierde el contexto o el sistema pide menos movimiento.
 // El lienzo solo existe mientras este componente está montado: con el reproductor colapsado no hay bucle ni contexto.
@@ -38,6 +41,9 @@ interface Stats {
   /** Multiplicador de velocidad y brillo por la música en el último cuadro (solo para las pruebas). */
   rate: number;
   swell: number;
+  /** Mayor salto (ms) del reloj que ven el análisis y las luces entre dos cuadros: no debe incluir el tiempo con la página oculta. */
+  analysisGapMs: number;
+  lastAnalysis: number;
 }
 
 /** Bucle de dibujo. Devuelve la función que lo detiene y libera todo. */
@@ -54,7 +60,7 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   const analysis = createAnalysis();
   const light = createLight();
   const shown = live.current.colors.map((color) => [...color] as Rgb); // colores en pantalla: se acercan a los objetivos al cambiar de pista
-  const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0, rate: 1, swell: 0 };
+  const stats: Stats = { frames: 0, cpuMs: 0, level: governor.level, mode: "", intensity: 0, rate: 1, swell: 0, analysisGapMs: 0, lastAnalysis: 0 };
   if (import.meta.env.DEV) ((window as unknown as { __backdrop?: Stats[] }).__backdrop ??= []).push(stats); // solo desarrollo: lo leen las pruebas
 
   let previewFor: Palette | null = null;
@@ -62,14 +68,17 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   let shownIntensity = live.current.settings.intensity;
   let time = 0;
   let last = performance.now();
+  let hiddenAt = 0;
+  let hiddenFor = 0; // ms con la página oculta: el análisis y las luces ven un reloj continuo, sin el hueco (si no, saltan al volver)
   let raf = 0;
   let sizedFor = -1;
   let dirty = true;
   const observer = new ResizeObserver(() => (dirty = true));
   observer.observe(host);
 
-  function tick(now: number) {
+  function tick(frameTime: number) {
     raf = requestAnimationFrame(tick);
+    const now = frameTime - hiddenFor;
     const { settings, colors, hdr } = live.current;
     const interval = 1000 / fpsCap(settings.fps, governor.level);
     const dt = now - last;
@@ -77,6 +86,8 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     last = now;
     const level = governor.frame(dt, interval);
     const started = performance.now();
+    stats.analysisGapMs = Math.max(stats.analysisGapMs, now - (stats.lastAnalysis || now));
+    stats.lastAnalysis = now;
 
     const analyser = player.analyser();
     let bands: Bands | null = null;
@@ -137,8 +148,11 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
   const onVisibility = () => {
     cancelAnimationFrame(raf);
     raf = 0;
-    if (!document.hidden) {
-      last = performance.now();
+    if (document.hidden) hiddenAt ||= performance.now();
+    else {
+      if (hiddenAt) hiddenFor += performance.now() - hiddenAt;
+      hiddenAt = 0;
+      last = performance.now() - hiddenFor;
       raf = requestAnimationFrame(tick);
     }
   };
@@ -203,7 +217,7 @@ export function Backdrop() {
   if (animated) return <div aria-hidden="true" className="backdrop" ref={host} />;
   if (settings.mode === "amoled") return null;
   const kind = settings.mode === "static" ? "linear" : "blobs";
-  return <div aria-hidden="true" className="backdrop" style={{ background: gradientCss(colors, settings.intensity, kind, settings.hdr ? hdr.gamut : "srgb") }} />;
+  return <div aria-hidden="true" className="backdrop" style={{ background: gradientCss(colors, settings.intensity, kind, settings.hdr ? hdr.gamut : "srgb", oklch) }} />;
 }
 
 /** Tinte sutil de toda la app con el reproductor colapsado (solo en los modos con color): CSS, sin lienzo ni bucle. */
@@ -212,5 +226,5 @@ export function Tint() {
   const palette = useContext(PaletteContext);
   const hdr = useHdrLook();
   if (!isAnimated(settings.mode)) return null;
-  return <div aria-hidden="true" className="tint" style={{ background: gradientCss(backgroundColors(settings, palette, hdr), settings.intensity * 0.3, "blobs", settings.hdr ? hdr.gamut : "srgb") }} />;
+  return <div aria-hidden="true" className="tint" style={{ background: gradientCss(backgroundColors(settings, palette, hdr), settings.intensity * 0.3, "blobs", settings.hdr ? hdr.gamut : "srgb", oklch) }} />;
 }

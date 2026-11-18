@@ -73,6 +73,9 @@ const engine = new PlayerEngine({
   onError: () => fail(),
 });
 
+const MARK_PLAYED_AFTER_MS = 5000;
+/** Recientes se actualiza unos segundos después de arrancar: rehace las vistas de la biblioteca (cientos de ms en un móvil) y no compite con el arranque del audio. */
+const markPlayedSoon = (id: string) => setTimeout(() => library.markPlayed(id), MARK_PLAYED_AFTER_MS);
 const q = () => usePlayer.getState().queue;
 const trackOf = (id: string | null | undefined) => useLibrary.getState().tracks.find((track) => track.id === id);
 const pauseFade = () => (usePlayer.getState().audio.fadePause ? FADE_PAUSE_SECONDS : 0);
@@ -108,7 +111,7 @@ function nearEnd(position: number) {
       fading = true;
       setTimeout(() => (fading = false), 1000);
       loadedId = next.current.key;
-      library.markPlayed(nextId);
+      markPlayedSoon(nextId);
       usePlayer.setState({ queue: next, position: 0, duration: trackOf(nextId)?.duration ?? 0 });
       return;
     }
@@ -132,7 +135,8 @@ function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolea
   const { id, key } = queue.current;
   const track = trackOf(id);
   // Cola y posición en el mismo cambio: si no, la sesión se guardaría con la posición de la pista anterior.
-  usePlayer.setState({ queue, position: options.startAt ?? 0, duration: track?.duration ?? 0 });
+  // Con autoplay, «sonando» desde el toque: mientras se lee el archivo, otro toque ya es una pausa.
+  usePlayer.setState({ queue, position: options.startAt ?? 0, duration: track?.duration ?? 0, ...(options.autoplay && { isPlaying: true }) });
   if (track?.unsupported) {
     fail(`Este navegador no puede reproducir archivos ${track.fileName.split(".").pop()?.toUpperCase() ?? "de este tipo"}.`);
     return;
@@ -157,7 +161,7 @@ function apply(queue: QueueState, options: { autoplay: boolean; restart?: boolea
     loadedId = key;
     engine.load(url, options.startAt, gainOf(id));
     if (options.autoplay) {
-      library.markPlayed(id);
+      markPlayedSoon(id);
       void engine.play().catch(() => fail());
     }
   });
@@ -235,10 +239,11 @@ export const player = {
   clear() {
     apply(clearQueue(q()), { autoplay: false });
   },
+  /** Decide con lo que se ve (`isPlaying` cambia en el mismo toque): toques muy seguidos alternan sin perder ninguno. */
   toggle() {
     if (q().current === null) return;
-    if (engine.paused || loadedId !== q().current?.key) player.play();
-    else player.pause();
+    if (usePlayer.getState().isPlaying) player.pause();
+    else player.play();
   },
   play() {
     const { current } = q();
@@ -248,6 +253,7 @@ export const player = {
     else if (engine.paused) void engine.play(pauseFade()).catch(() => fail());
   },
   pause() {
+    loadToken += 1; // un arranque que aún lee su archivo ya no debe sonar
     engine.pause(pauseFade());
   },
   next() {
@@ -295,6 +301,8 @@ export const player = {
   },
   /** Analizador del grafo de audio (fondo "Ritmo"). Existe tras la primera reproducción. */
   analyser: () => engine.analyser,
+  /** Solo para el panel `?diag=1` (ui/diag.ts). */
+  diagnostics: () => engine.diagnostics(),
 };
 
 // --- Sistema: pantalla de bloqueo, notificación y auriculares. ---
@@ -390,7 +398,9 @@ export async function initSession() {
     storage.get<{ id: string | null; position: number }>("position"),
     library.init(),
   ]);
-  setAudio(sanitizeAudioSettings(audio));
+  // D30: en la disposición móvil no hay control de volumen (mandan los botones del teléfono): arranca siempre al 100 % y sin silencio.
+  const mobileLayout = !matchMedia("(min-width: 1000px)").matches;
+  setAudio({ ...sanitizeAudioSettings(audio), ...(mobileLayout && { volume: 1, muted: false }) });
   const session = stored && { ...stored, queue: upgradeQueue(stored.queue) };
   saved = session && last && last.id === session.queue.current?.key ? { ...session, position: last.position } : session;
   restore();

@@ -5,6 +5,7 @@
 import { chromium } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const shots = process.argv[3];
@@ -71,10 +72,10 @@ await page.keyboard.press("Escape");
 await page.waitForTimeout(300);
 
 const gestures = await page.locator("#help-gestures ~ .help-list li h3").allInnerTexts();
-check("cuatro gestos: deslizar fila, pulsación larga, deslizar portada y arrastrar para cerrar", gestures.join("|") === "Deslizar una fila|Pulsación larga|Deslizar la portada|Arrastrar para cerrar", gestures.join("|"));
+check("cinco gestos: deslizar fila, pulsación larga, deslizar portada, arrastrar para cerrar y ajuste fino de la barra", gestures.join("|") === "Deslizar una fila|Pulsación larga|Deslizar la portada|Arrastrar para cerrar|Ajuste fino de la barra", gestures.join("|"));
 const swipeText = await page.locator("#help-gestures ~ .help-list li").first().innerText();
 check("la ayuda de deslizar usa las etiquetas que ve la persona en la fila", hints.includes("Siguiente") && hints.includes("A la cola") && swipeText.includes("«Siguiente»") && swipeText.includes("«A la cola»"), hints.join(","));
-check("cada gesto dice qué hacer sin él", (await page.locator("#help-gestures ~ .help-list .hint").count()) === 4);
+check("cada gesto dice qué hacer sin él", (await page.locator("#help-gestures ~ .help-list .hint").count()) === 5);
 
 const items = await page.locator(".faq-item").count();
 check("la FAQ trae de 1 a 10 preguntas, sin subgrupos", items >= 1 && items <= 10 && (await page.locator(".help-group h3").count()) === 0, `${items}`);

@@ -864,6 +864,45 @@ Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel
 
 Skills aplicadas: ponytail, impeccable (contexto y craft floor), make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max, design-motion-principles (solo los tokens existentes, sin animación nueva).
 
+### 11.1ñ Cinco retoques (2026-11-16)
+
+- [x] «Sobre Satin» con el texto definitivo del usuario; comprobado con y sin cuentas (D26).
+- [x] Ajustes en escritorio: elegida la opción C de tres maquetadas (anclado; tarjetas en dos columnas desde 66 rem; sin índice ahí). Por debajo de 1000 px, posiciones y tamaños iguales en 320, 360, 390, 412, 844×390, 768×1024 y 999 (solo cambia el texto de «Sobre Satin»).
+- [x] Progreso: la burbuja del tiempo dice la velocidad y cómo cambiarla mientras se arrastra; «Ajuste fino de la barra» en Ayuda → Gestos.
+- [x] Volumen en el reproductor grande de escritorio (mismo estado que la barra). **Riesgo en móvil anotado:** `audio.volume`/`muted` se guardan y viajan en la copia de seguridad, y en móvil no hay control para recuperarlos (ver DECISIONES_PENDIENTES).
+- [x] Páginas legales: «Volver a la app» devuelve a Ajustes → Acerca de si se llegó desde ahí; por URL, a /app.
+
+Skills aplicadas: ponytail, impeccable (contexto cargado) y make-interfaces-feel-better. design-taste-frontend, ui-ux-pro-max y design-motion-principles no se cargaron en esta tanda; se siguió `DESIGN.md` (sin animación nueva: la pista del progreso es transporte).
+
+### 11.1o Audio en Android: arranque, chasquido, segundo plano y D30 (2026-11-17)
+
+Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio breve en la primera reproducción, chasquido y toques perdidos al pausar rápido, audio que raspa en segundo plano, volumen sin control en móvil.
+
+- [x] **Panel de diagnóstico** `?diag=1` (`ui/diag.ts`, carga aparte): estado, sampleRate, baseLatency/outputLatency y latencyHint del AudioContext, cadena de nodos activa, eventos del `<audio>` y de la página con marca de tiempo, deriva del reloj de audio y del `<audio>` frente a `performance.now()` y, si el navegador las expone, sus estadísticas de subdesbordamiento (`playbackStats`). No hace peticiones; «Copiar» lleva el informe al portapapeles.
+- [x] **Pausa y reanudación** (`engine/PlayerEngine.ts`, `state/player.ts`): el motor guarda la intención (`wanted`) y avisa en el mismo toque; un toque durante `resume()` o `audio.play()` ya no se pierde (antes `paused` leía el `<audio>`, que cambia tarde, y `play()` no comprobaba el turno tras `resume()`); una pausa cancela un arranque que aún lee el archivo; rampa mínima de 20 ms (`CUT_RAMP`) al pausar y reanudar aunque el fundido esté apagado. `prueba-chasquido.mjs`, sin fundido: mayor salto entre muestras 0,58 → 0,035 (tono sonando: 0,035).
+- [x] **Arranque**: la ruta de audio ya se montaba antes de sonar; Recientes (`markPlayed`) se actualiza 5 s después de empezar (rehacía las vistas de la biblioteca en el primer segundo). Medido en Chromium con CPU ×4 y 5 000 pistas, 4 s tras tocar: tareas largas ≈ 800 → 620 ms.
+- [x] **Segundo plano**: `latencyHint: "playback"` (el motor programa rampas y pausas en el reloj de audio; no necesita baja latencia); el bucle del fondo ya se paraba con la página oculta, y ahora el análisis y las luces no ven el hueco al volver (sin salto).
+- [x] **D30** (decidido por el usuario): volumen y silencio fuera de la copia de seguridad; en la disposición móvil se arranca al 100 % y sin silencio.
+- [x] Pruebas: `engine/PlayerEngine.test.ts` (máquina de pausa con `resume()` lento y rampa), `scripts/prueba-pausa.mjs` (20 y 21 toques en < 2 s con `resume()` retrasado 150 ms como en un móvil; página oculta y vuelta). Con el código anterior, 21 toques acababan sonando. `prueba-biblioteca` y `prueba-privacidad` esperan los 5 s de Recientes y pausan para que el avance automático no anote otra pista. Suite completa en verde (246 unitarias, 25 pruebas de navegador, `capturas.mjs` en los 9 viewports, build y CSP); sin `prueba-lan*`.
+- **Sin confirmar en el teléfono:** que «playback» quite el raspado y el silencio inicial (hipótesis; ver el informe de `?diag=1`). Con «playback» las luces del modo Ritmo van unos ms por detrás del sonido (la latencia de salida).
+
+### 11.1p Auditoría de animaciones (2026-11-17)
+
+- [x] `docs/AUDITORIA_ANIMACIONES.md`: las 20 leyes y el resto de la lista, punto por punto (estado, evidencia, propuesta y prioridad), medición con trazas de Chromium con la CPU 4× más lenta, propuestas que cambian lo visible (N8 aparte) y flujos para grabar en el teléfono a 0,25×.
+- [x] Aplicado sin cambiar lo que se ve: un solo lector de duraciones en JS (`tokenMs`) y movimiento reducido en el cierre por arrastre.
+- [ ] Propuestas B1 (lotes de metadatos tras importar) y B2 (montaje del reproductor en el toque): las más caras medidas; B2 condiciona N8.
+
+Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max.
+
+### 11.1q Auditoría de CSS (2026-11-17)
+
+- [x] `docs/AUDITORIA_CSS.md`: los 20 detalles de la lista (estado, evidencia y decisión), con la comprobación de geometría en móvil y escritorio y lo que no se pudo verificar.
+- [x] Aplicado sin cambiar lo que se ve: `scrollbar-gutter: stable` (solo con puntero fino), `overscroll-behavior`, `text-wrap` en h2/h3/p, `tabular-nums` en contadores y hora del temporizador, `scroll-margin-top` en Ajustes y áreas seguras (landing y acciones fijas del editor).
+- [x] Aplicado por decisión del usuario: degradados CSS del fondo en OKLCH (con respaldo), fundido en pestañas y lista de playlists, radio concéntrico del menú «Añadir» y trazo 2.25 en iconos de botones.
+- Descartado: icono con desenfoque (choca con §3 y `motion.test.ts`; el transporte no se anima) y `mix-blend-mode: multiply` (las portadas no son fotos sobre blanco).
+
+Skills aplicadas: ponytail, impeccable, make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max (solo lectura de criterio; sin cambios de tema).
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el

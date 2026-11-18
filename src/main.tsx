@@ -31,6 +31,8 @@ void initBackground();
 void initTutorials();
 void initProfile();
 void playlists.init();
+// Diagnóstico de audio para probar en un teléfono; se carga aparte y solo si se pide.
+if (new URLSearchParams(location.search).get("diag") === "1") void import("./ui/diag").then(({ startDiagnostics }) => startDiagnostics());
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

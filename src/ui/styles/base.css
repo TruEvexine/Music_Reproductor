@@ -51,6 +51,16 @@ h2 {
   font-weight: 650;
   line-height: 1.15;
   letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+h3 {
+  text-wrap: balance;
+}
+
+p,
+.hint {
+  text-wrap: pretty;
 }
 
 button,
@@ -147,6 +157,13 @@ a {
   font-size: var(--text-s);
 }
 
+/* Cifras de ancho fijo donde un número cambia en su sitio: contador de la cabecera y de la cola, hora del temporizador. No en todo .subtitle:
+   las cifras tabulares ensanchan hasta un 6 % un texto con muchos números y en 320 px eso partía líneas de Ajustes. */
+:is(.view-header, .queue-header) .subtitle,
+.menu-value {
+  font-variant-numeric: tabular-nums;
+}
+
 .subtitle {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -227,6 +244,11 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   transition: transform var(--fast) var(--ease);
 }
 
+/* El icono de 18 px a 1.75 dibuja 1.31 px; junto a texto de peso 600 (tallo ≈ 1.6 px) se veía más fino que él. 2.25 → 1.69 px. */
+.button svg {
+  stroke-width: 2.25;
+}
+
 .button.primary {
   background: var(--accent);
   color: var(--on-accent);
@@ -292,6 +314,7 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
   border-radius: var(--radius-m) var(--radius-m) 0 0;
   background: var(--surface-1);
   color: var(--ink);
+  overscroll-behavior: contain;
 }
 
 .dialog::backdrop {
@@ -489,6 +512,7 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 .add-list {
   max-height: 46dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .add-row {
@@ -667,7 +691,10 @@ html:not([data-input="key"]) :is(.dialog, .menu) :focus-visible {
 .edit-actions {
   position: sticky;
   bottom: 0;
-  padding-block: var(--s3);
+  /* Pegada al borde de la hoja, la barra de inicio del iPhone no debe taparla: el relleno de más lleva el botón por encima de esa franja.
+     El margen negativo evita contarla dos veces con el relleno del cuerpo. Sin muesca (--safe-bottom: 0) no cambia nada. */
+  padding-block: var(--s3) calc(var(--s3) + var(--safe-bottom));
+  margin-bottom: calc(var(--safe-bottom) * -1);
   background: var(--surface-1);
 }
 

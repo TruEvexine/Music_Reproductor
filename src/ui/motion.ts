@@ -25,10 +25,13 @@ export function useReducedMotion(): boolean {
   );
 }
 
+/** Un token de duración de tokens.css (`--fast`, `--exit`…) en ms: el único sitio de JS que lee las duraciones. */
+export const tokenMs = (name: string) => cssMs(getComputedStyle(document.documentElement).getPropertyValue(name));
+
 /** Duración de toda salida (`--exit`) en ms; 0 con movimiento reducido. */
 function exitMs(): number {
   if (motionReduced()) return 0;
-  return cssMs(getComputedStyle(document.documentElement).getPropertyValue("--exit"));
+  return tokenMs("--exit");
 }
 
 /** Cierre con salida: `request()` marca `closing` y llama a `onClose` cuando termina la animación de salida. */

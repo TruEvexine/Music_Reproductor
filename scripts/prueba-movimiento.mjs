@@ -3,6 +3,7 @@
 // pulsar (--press; ni en transporte ni por teclado), lo frecuente sin animación (pestañas, filas) y movimiento reducido (sin esperas).
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");

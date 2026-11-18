@@ -103,4 +103,11 @@ describe("gradiente CSS de respaldo", () => {
     expect(css).toMatch(/^linear-gradient/);
     expect(css).not.toContain("radial");
   });
+
+  it("con oklch interpola en OKLCH en todas las capas; sin él, el degradado de siempre", () => {
+    expect(gradientCss(colors, 0.5, "linear", "srgb", true)).toMatch(/^linear-gradient\(in oklch 165deg,/);
+    expect(gradientCss(colors, 0.6, "blobs", "srgb", true).match(/radial-gradient\(in oklch /g)).toHaveLength(4);
+    expect(gradientCss(colors, 0.5, "linear")).toMatch(/^linear-gradient\(165deg,/);
+    expect(gradientCss(colors, 0.6)).not.toContain("oklch");
+  });
 });

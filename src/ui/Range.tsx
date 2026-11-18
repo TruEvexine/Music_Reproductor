@@ -12,6 +12,8 @@ export function fineRate(distance: number): number {
   return distance < 40 ? 1 : distance < 96 ? 0.5 : distance < 160 ? 0.25 : 0.1;
 }
 const RATE_LABEL: Record<number, string> = { 0.5: "½", 0.25: "¼", 0.1: "⅒" };
+const fineHintText = (rate: number, mouse?: boolean) =>
+  rate === 1 ? `Aleja ${mouse ? "el puntero" : "el dedo"} de la barra para más precisión` : rate > 0.1 ? "Aléjalo más para más precisión" : "Máxima precisión";
 
 const decimals = (step: number) => (String(step).split(".")[1] ?? "").length;
 
@@ -22,6 +24,7 @@ interface Gesture {
   sent: number;
   rate: number;
   rect: DOMRect;
+  mouse: boolean;
   /** Táctil: no se toca el valor hasta saber que no es un desplazamiento de la página (que cancelaría el gesto). */
   pending: boolean;
 }
@@ -39,6 +42,7 @@ export function Range({
   disabled = false,
   vertical = false,
   commit = false,
+  fineHint = false,
   className = "",
 }: {
   /** Nombre accesible; sin él, el del <label> que lo envuelve. */
@@ -57,9 +61,11 @@ export function Range({
   vertical?: boolean;
   /** Confirmar al soltar: el puntero llama a `onChange` solo al terminar el gesto (teclado: una vez por tecla). */
   commit?: boolean;
+  /** Arrastrando, la burbuja dice la velocidad («Normal», «Fino ¼») y cómo cambiarla: sin ella, el ajuste fino no se descubre. */
+  fineHint?: boolean;
   className?: string;
 }) {
-  const [drag, setDrag] = useState<{ value: number; rate: number; waiting?: boolean } | null>(null);
+  const [drag, setDrag] = useState<{ value: number; rate: number; waiting?: boolean; mouse?: boolean } | null>(null);
   const gesture = useRef<Gesture | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const shown = drag?.value ?? value;
@@ -71,7 +77,7 @@ export function Range({
   const apply = (g: Gesture, raw: number) => {
     g.raw = Math.min(Math.max(raw, min), max);
     const snapped = Number(Math.min(max, min + Math.round((g.raw - min) / step) * step).toFixed(decimals(step)));
-    setDrag({ value: snapped, rate: g.rate });
+    setDrag({ value: snapped, rate: g.rate, mouse: g.mouse });
     if (snapped !== g.sent) {
       g.sent = snapped;
       if (!commit) onChange(snapped);
@@ -103,7 +109,7 @@ export function Range({
         event.currentTarget.setPointerCapture(event.pointerId);
         input.current?.focus({ preventScroll: true }); // las flechas siguen donde se tocó
         const position = along(rect, event);
-        const g: Gesture = { raw: min + (Math.min(Math.max(position, 0), length(rect)) / length(rect)) * span, last: position, start: value, sent: value, rate: 1, rect, pending: event.pointerType !== "mouse" };
+        const g: Gesture = { raw: min + (Math.min(Math.max(position, 0), length(rect)) / length(rect)) * span, last: position, start: value, sent: value, rate: 1, rect, mouse: event.pointerType === "mouse", pending: event.pointerType !== "mouse" };
         gesture.current = g;
         if (g.pending) setDrag({ value, rate: 1, waiting: true });
         else apply(g, g.raw);
@@ -137,7 +143,8 @@ export function Range({
       {drag && (drag.rate < 1 || (commit && !drag.waiting)) && (
         <span aria-hidden="true" className="range-value">
           {format(drag.value)}
-          {drag.rate < 1 && ` · fino ${RATE_LABEL[drag.rate]}`}
+          {fineHint ? ` · ${drag.rate < 1 ? `Fino ${RATE_LABEL[drag.rate]}` : "Normal"}` : drag.rate < 1 && ` · fino ${RATE_LABEL[drag.rate]}`}
+          {fineHint && <span className="range-hint">{fineHintText(drag.rate, drag.mouse)}</span>}
         </span>
       )}
       <input

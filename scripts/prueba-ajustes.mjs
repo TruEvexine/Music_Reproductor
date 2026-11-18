@@ -4,6 +4,7 @@
 // ajustes tras confirmar. No toca la prueba de restaurar biblioteca.
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
@@ -35,13 +36,34 @@ const sections = await page.locator(".settings-section > h2").allInnerTexts();
 check("siete secciones, «Acerca de» al final", sections.join("|") === "Perfil|Apariencia y luces|Reproducción|Biblioteca|Accesibilidad|Privacidad y datos|Acerca de", sections.join("|"));
 check("no hay ajustes de tema ni de idioma (la app no los tiene)", (await page.locator(".settings").getByText(/idioma|tema claro/i).count()) === 0);
 
-// Acerca de: «Sobre Satin» en primera persona (60–100 palabras, sin «nosotros»), el café solo si hay enlace y los dos enlaces legales.
+// Escritorio ancho (1440 sin cola): tarjetas en dos columnas fijas pegadas a la navegación, sin índice; el orden del DOM sigue siendo el de las secciones.
+const columns = await page.evaluate(() => {
+  const nav = document.querySelector(".settings-nav");
+  const navBar = document.querySelector(".nav")?.getBoundingClientRect();
+  return {
+    navShown: nav ? getComputedStyle(nav).display !== "none" : null,
+    cols: [...document.querySelectorAll(".settings-col")].map((col) => ({ x: Math.round(col.getBoundingClientRect().x), w: Math.round(col.getBoundingClientRect().width), ids: [...col.querySelectorAll(".settings-section > h2")].map((h) => h.id) })),
+    card: getComputedStyle(document.querySelector(".settings-section")).backgroundColor,
+    gap: Math.round(document.querySelector(".settings").getBoundingClientRect().x - (navBar?.right ?? 0)),
+  };
+});
+const [colA, colB] = columns.cols;
+check(
+  "1440: dos columnas de tarjetas (Perfil, Apariencia, Reproducción | Biblioteca, Accesibilidad, Privacidad, Acerca de), sin índice",
+  columns.navShown === false && colA?.ids.join() === "set-profile,set-look,set-play" && colB?.ids.join() === "set-lib,set-a11y,set-data,set-about" && colB.x > colA.x + colA.w && colA.w >= 512 && columns.card !== "rgba(0, 0, 0, 0)",
+  JSON.stringify(columns),
+);
+check("1440: la página arranca junto a la navegación (no centrada; como mucho el margen lateral de 40 px)", columns.gap <= 40, `${columns.gap} px`);
+
+// Acerca de: «Sobre Satin» (60–100 palabras, sin «nosotros»), el café solo si hay enlace y los dos enlaces legales. El índice se prueba a 1280, donde existe.
+await page.setViewportSize({ width: 1280, height: 800 });
+await wait(page, 300);
 const index = await page.getByRole("navigation", { name: "Apartados de Ajustes" }).getByRole("link").allInnerTexts();
 check("el índice de escritorio tiene las mismas secciones, «Acerca de» incluida", index.join("|") === sections.join("|"), index.join("|"));
 const about = page.getByRole("region", { name: "Acerca de" });
 const aboutText = await about.locator(".help-about").innerText();
 const words = aboutText.split(/\s+/).filter(Boolean).length;
-check("«Sobre Satin»: título, una sola persona en México, de 60 a 100 palabras y sin «nosotros»", (await about.getByRole("heading", { level: 3, name: "Sobre Satin" }).count()) === 1 && /una sola persona en México, y soy yo/.test(aboutText) && words >= 60 && words <= 100 && !/nosotros/i.test(aboutText), `${words} palabras`);
+check("«Sobre Satin»: título, una sola persona en México, de 60 a 100 palabras y sin «nosotros»", (await about.getByRole("heading", { level: 3, name: "Sobre Satin" }).count()) === 1 && /una sola persona en México que no quiso conformarse/.test(aboutText) && /se quedan en tu dispositivo, y usarlo así es gratis\./.test(aboutText) && words >= 60 && words <= 100 && !/nosotros/i.test(aboutText), `${words} palabras`);
 check("sin VITE_CAFE_URL no hay café en Acerca de", (await about.getByText(/café/).count()) === 0);
 await page.getByRole("navigation", { name: "Apartados de Ajustes" }).getByRole("link", { name: "Acerca de" }).click();
 await wait(page, 200);
@@ -52,6 +74,16 @@ await page.keyboard.press("Tab");
 const secondLink = await page.evaluate(() => document.activeElement?.textContent);
 check("teclado: desde el título, Tab pasa por «Aviso de privacidad» y «Términos de uso»", firstLink === "Aviso de privacidad" && secondLink === "Términos de uso", `${firstLink} → ${secondLink}`);
 await page.locator(".main").evaluate((main) => (main.scrollTop = 0));
+await page.setViewportSize({ width: 1440, height: 900 });
+await wait(page, 300);
+
+// Con la cola abierta a 1440 la vista no llega a dos columnas: índice y una columna, como antes.
+await page.locator(".bar-end").getByRole("button", { name: "Cola de reproducción" }).click();
+await wait(page, 500);
+const withQueue = await page.evaluate(() => ({ nav: getComputedStyle(document.querySelector(".settings-nav")).display, cols: new Set([...document.querySelectorAll(".settings-section")].map((s) => Math.round(s.getBoundingClientRect().x))).size }));
+check("1440 con la cola abierta: índice visible y una sola columna", withQueue.nav !== "none" && withQueue.cols === 1, JSON.stringify(withQueue));
+await page.getByRole("button", { name: "Cerrar cola" }).click();
+await wait(page, 400);
 
 // HDR: un solo estado compartido con el menú del reproductor.
 const hdrSwitch = page.locator(".settings").getByRole("switch", { name: "HDR simulado en toda la app" });

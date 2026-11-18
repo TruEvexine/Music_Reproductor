@@ -73,6 +73,7 @@
   display: flex;
   gap: var(--s2);
   overflow-x: auto;
+  overscroll-behavior-x: contain; /* el borde del carrusel no dispara el atrás por gesto del navegador */
   margin: 0 calc(var(--gutter) * -1);
   padding: 2px var(--gutter);
   scrollbar-width: none;
@@ -214,7 +215,7 @@
   gap: var(--s3);
   min-height: var(--tap-l);
   padding: var(--s2) var(--s3);
-  border-radius: var(--radius-s);
+  border-radius: max(0px, calc(var(--radius-m) - var(--s1))); /* concéntrico: radio del menú menos su relleno (8 px) */
   text-align: left;
 }
 
@@ -228,11 +229,21 @@
   }
 }
 
+/* Filas que se deslizan de lado: lo que se acerca al borde de la pantalla se desvanece en vez de cortarse en seco. El fundido mide lo que el margen
+   lateral (--gutter), que está vacío en reposo: la primera y la última no pierden opacidad. Desde 1000 px la lista de playlists es columna y no desliza. */
+@media (max-width: 999px) {
+  :is(.tabs, .playlist-list) {
+    -webkit-mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent); /* Chrome < 120 */
+    mask-image: linear-gradient(to right, transparent, #000 var(--gutter), #000 calc(100% - var(--gutter)), transparent);
+  }
+}
+
 /* Pestañas de vista: se deslizan dentro de su fila en pantallas estrechas; la página nunca. */
 .tabs {
   display: flex;
   gap: var(--s1);
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   margin: 0 calc(var(--gutter) * -1);
   padding: 0 var(--gutter);
   scrollbar-width: none;
@@ -466,6 +477,7 @@
   gap: var(--s2);
   max-height: 60dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: var(--s4) 0 30dvh;
 }
 
@@ -663,6 +675,11 @@ ol.track-list .row-album {
   margin-top: var(--s4);
 }
 
+/* Mismo aire que deja arriba el índice fijo (24 px = --s5, ver jump() en SettingsView.tsx); hoy el salto lo calcula el JS, esto cubre cualquier ancla nativa. */
+.settings-section > h2 {
+  scroll-margin-top: var(--s5);
+}
+
 .settings-stack {
   display: grid;
   gap: var(--s4);
@@ -680,11 +697,14 @@ ol.track-list .row-album {
   padding: 0 var(--s1);
 }
 
-/* Escritorio: índice de apartados a la izquierda (fijo al desplazar) y contenido de hasta 44 rem a la derecha, el conjunto centrado.
-   La consulta es sobre la propia vista: con la cola abierta en una pantalla justa queda la columna de siempre. En móvil el índice no existe
-   y los envoltorios no cuentan (display: contents), así que la página es la misma. */
+/* Escritorio, pegado a la navegación (no centrado). Desde 43 rem de vista: índice de apartados a la izquierda (fijo al desplazar) y contenido
+   de hasta 44 rem. Desde 66 rem (1440 px sin cola): las secciones pasan a tarjetas de tono en dos columnas fijas, sin índice (la página
+   queda a la mitad de largo); fijas y no `columns`, para que una sección que crece no salte de columna. La consulta es sobre la propia
+   vista: con la cola abierta en una pantalla justa queda la columna de siempre. En móvil el índice no existe y los envoltorios no cuentan
+   (display: contents), así que la página es la misma. */
 .settings-columns,
-.settings-body {
+.settings-body,
+.settings-col {
   display: contents;
 }
 
@@ -695,15 +715,14 @@ ol.track-list .row-album {
 @media (min-width: 1000px) {
   .settings:not(.help) {
     container-type: inline-size;
-    max-width: calc(12rem + var(--s7) + 44rem + 2 * var(--gutter));
-    margin-inline: auto;
+    max-width: calc(96rem + 2 * var(--gutter));
   }
 }
 
 @container (min-width: 43rem) {
   .settings-columns {
     display: grid;
-    grid-template-columns: 12rem minmax(0, 1fr);
+    grid-template-columns: 12rem minmax(0, 44rem);
     column-gap: var(--s7);
     align-items: start;
   }
@@ -724,6 +743,34 @@ ol.track-list .row-album {
     display: grid;
     gap: var(--s1);
     margin-top: var(--s4);
+  }
+}
+
+/* Cada columna mide ≥ 32 rem: dentro de la tarjeta (24 px de relleno) las 10 bandas del ecualizador siguen cabiendo a ≥ 44 px. */
+@container (min-width: 66rem) {
+  .settings-columns {
+    display: block;
+  }
+
+  .settings-nav {
+    display: none;
+  }
+
+  .settings-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .settings-col {
+    display: grid;
+    gap: var(--s4);
+  }
+
+  .settings-section {
+    margin-top: 0;
+    padding: var(--s5);
+    border-radius: var(--radius-m);
+    background: var(--surface-1);
   }
 }
 

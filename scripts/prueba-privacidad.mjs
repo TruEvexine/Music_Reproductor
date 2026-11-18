@@ -6,6 +6,7 @@ import { chromium } from "@playwright/test";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadEnv } from "vite";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const shots = process.argv[3];
@@ -83,7 +84,8 @@ const stored = async (page) => Object.fromEntries(await page.locator(".stored > 
   await page.locator(".nav").getByRole("link", { name: "Biblioteca", exact: true }).click();
   await wait(page, 500);
   await page.locator(".track-row .row-main").nth(1).click();
-  await wait(page, 700);
+  await wait(page, 5300); // Recientes se actualiza 5 s después de arrancar (state/player.ts, MARK_PLAYED_AFTER_MS)
+  await page.getByRole("button", { name: "Pausar" }).first().click(); // sin avance automático, nada más se anota antes de borrar
   await page.getByRole("link", { name: "Recientes", exact: true }).click();
   await wait(page, 400);
   const first = () => page.locator(".track-row .title").first().innerText();

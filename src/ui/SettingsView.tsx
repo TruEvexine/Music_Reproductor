@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { MouseEvent } from "react";
 import { APP_NAME } from "../core/brand";
 import { useBackground, background } from "../state/background";
@@ -36,6 +36,10 @@ const legalLinks: [to: string, label: string][] = [
 // Sin desplazamiento suave (nada que reducir con movimiento reducido) y sin tocar la URL: en la app nativa el hash es la ruta.
 function jump(event: MouseEvent<HTMLAnchorElement>, id: string) {
   event.preventDefault();
+  showSection(id);
+}
+
+function showSection(id: string) {
   const heading = document.getElementById(id);
   const main = heading?.closest(".main");
   if (!heading || !main) return;
@@ -51,6 +55,13 @@ export function SettingsView({ auth }: { auth: AuthController }) {
   const shortcuts = useBackground((state) => state.shortcuts);
   const reduced = useReducedMotion();
   const [rewatched, setRewatched] = useState(false);
+  // De vuelta de una página legal (su «Volver» o el atrás del sistema): a «Acerca de», que es de donde se salió.
+  useEffect(() => {
+    const section = (history.state as { section?: string } | null)?.section;
+    if (!section) return;
+    history.replaceState(null, "");
+    showSection(section);
+  }, []);
   return (
     <section className="view settings">
       <header className="view-header">
@@ -68,71 +79,82 @@ export function SettingsView({ auth }: { auth: AuthController }) {
           ))}
         </nav>
         <div className="settings-body">
-          <ProfileSection />
-          <section aria-labelledby="set-look" className="settings-section">
-            <h2 id="set-look">Apariencia y luces</h2>
-            <div className="settings-stack">
-              <BackgroundPage />
-            </div>
-          </section>
-          <section aria-labelledby="set-play" className="settings-section">
-            <h2 id="set-play">Reproducción</h2>
-            <div className="settings-stack">
-              <SoundControls />
-              <h3 className="settings-sub">Ecualizador</h3>
-              <EqPage />
-            </div>
-          </section>
-          <section aria-labelledby="set-lib" className="settings-section">
-            <h2 id="set-lib">Biblioteca</h2>
-            <FoldersSection />
-          </section>
-          <section aria-labelledby="set-a11y" className="settings-section">
-            <h2 id="set-a11y">Accesibilidad</h2>
-            <div className="settings-stack">
-              <section className="menu-group">
-                <SwitchRow checked={reduceMotion} label="Reducir movimiento" onChange={(next) => background.set({ reduceMotion: next })} />
-                <p className="hint" role="status">
-                  Quita animaciones y transiciones y deja el fondo quieto.
-                  {reduced && !reduceMotion ? " Tu sistema ya pide menos movimiento: se respeta aunque esto esté apagado." : " Si tu sistema lo pide, se respeta siempre."}
+          {/* Escritorio ancho: dos columnas fijas de tarjetas (styles/library.css); en lo demás, display: contents. */}
+          <div className="settings-col">
+            <ProfileSection />
+            <section aria-labelledby="set-look" className="settings-section">
+              <h2 id="set-look">Apariencia y luces</h2>
+              <div className="settings-stack">
+                <BackgroundPage />
+              </div>
+            </section>
+            <section aria-labelledby="set-play" className="settings-section">
+              <h2 id="set-play">Reproducción</h2>
+              <div className="settings-stack">
+                <SoundControls />
+                <h3 className="settings-sub">Ecualizador</h3>
+                <EqPage />
+              </div>
+            </section>
+          </div>
+          <div className="settings-col">
+            <section aria-labelledby="set-lib" className="settings-section">
+              <h2 id="set-lib">Biblioteca</h2>
+              <FoldersSection />
+            </section>
+            <section aria-labelledby="set-a11y" className="settings-section">
+              <h2 id="set-a11y">Accesibilidad</h2>
+              <div className="settings-stack">
+                <section className="menu-group">
+                  <SwitchRow checked={reduceMotion} label="Reducir movimiento" onChange={(next) => background.set({ reduceMotion: next })} />
+                  <p className="hint" role="status">
+                    Quita animaciones y transiciones y deja el fondo quieto.
+                    {reduced && !reduceMotion ? " Tu sistema ya pide menos movimiento: se respeta aunque esto esté apagado." : " Si tu sistema lo pide, se respeta siempre."}
+                  </p>
+                </section>
+                <section className="menu-group">
+                  <SwitchRow checked={shortcuts} label="Atajos de teclado" onChange={(next) => background.set({ shortcuts: next })} />
+                  <p className="hint">Espacio, flechas, X, P y más. Apágalos si chocan con tu dictado por voz o tu lector de pantalla.</p>
+                  <button className="link" onClick={openShortcutHelp} type="button">
+                    Ver la lista de atajos
+                  </button>
+                </section>
+                <section className="menu-group">
+                  <button className="button" onClick={() => (tutorials.reset(), setRewatched(true))} type="button">
+                    Ver tutoriales otra vez
+                  </button>
+                  <p className="hint" role="status">
+                    {rewatched ? "Listo: cada aviso volverá a salir la próxima vez que encuentres esa función." : "Los avisos de primera vez, como el de deslizar una canción, vuelven a aparecer."}
+                  </p>
+                </section>
+              </div>
+            </section>
+            <PrivacySection auth={auth} />
+            <section aria-labelledby="set-about" className="settings-section">
+              <h2 id="set-about">Acerca de</h2>
+              <h3 className="settings-sub">Sobre {APP_NAME}</h3>
+              <div className="help-about">
+                <p>
+                  Hola. Detrás de {APP_NAME} no hay una empresa ni un equipo: hay una sola persona en México que no quiso conformarse con las opciones que había y empezó a construir el reproductor que le gustaría usar, con la idea de compartirlo con los demás.
                 </p>
-              </section>
-              <section className="menu-group">
-                <SwitchRow checked={shortcuts} label="Atajos de teclado" onChange={(next) => background.set({ shortcuts: next })} />
-                <p className="hint">Espacio, flechas, X, P y más. Apágalos si chocan con tu dictado por voz o tu lector de pantalla.</p>
-                <button className="link" onClick={openShortcutHelp} type="button">
-                  Ver la lista de atajos
-                </button>
-              </section>
-              <section className="menu-group">
-                <button className="button" onClick={() => (tutorials.reset(), setRewatched(true))} type="button">
-                  Ver tutoriales otra vez
-                </button>
-                <p className="hint" role="status">
-                  {rewatched ? "Listo: cada aviso volverá a salir la próxima vez que encuentres esa función." : "Los avisos de primera vez, como el de deslizar una canción, vuelven a aparecer."}
+                <p>
+                  Por eso existe {APP_NAME}: un reproductor para tu propia música. Tus canciones son tuyas y se quedan en tu dispositivo, y usarlo así es gratis.
                 </p>
-              </section>
-            </div>
-          </section>
-          <PrivacySection auth={auth} />
-          <section aria-labelledby="set-about" className="settings-section">
-            <h2 id="set-about">Acerca de</h2>
-            <h3 className="settings-sub">Sobre {APP_NAME}</h3>
-            <div className="help-about">
-              <p>Hola. Detrás de {APP_NAME} no hay una empresa ni un equipo: hay una sola persona en México, y soy yo.</p>
-              <p>
-                {APP_NAME} es un reproductor para la música que ya tienes guardada, sin anuncios y sin pedirte nada a cambio. Tus canciones son tuyas: se quedan en tu dispositivo y {APP_NAME} solo las lee ahí. Todo lo que hace con tu música local es gratis. Gracias por darle una oportunidad.
-              </p>
-            </div>
-            <CafeNote />
-            <div className="about-links">
-              {legalLinks.map(([to, label]) => (
-                <a className="link" href={to} key={to} onClick={(event) => (event.preventDefault(), navigate(to))}>
-                  {label}
-                </a>
-              ))}
-            </div>
-          </section>
+              </div>
+              <CafeNote />
+              <div className="about-links">
+                {legalLinks.map(([to, label]) => (
+                  <a className="link" href={to} key={to} onClick={(event) => {
+                      event.preventDefault();
+                      history.replaceState({ section: "set-about" }, "");
+                      navigate(to, false, { fromApp: true });
+                    }}>
+                    {label}
+                  </a>
+                ))}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </section>

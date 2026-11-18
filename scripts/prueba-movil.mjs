@@ -3,6 +3,7 @@
 // con pointerType "touch", y touch-action aplicado por el navegador). Sale con 1 si algo falla.
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
@@ -208,7 +209,7 @@ check("arrastrar el control de posición no cierra el reproductor", (await count
   await page.waitForTimeout(300);
   const expectedNormal = (90 / box.width) * (await page.locator(".now-controls .seek input").getAttribute("max"));
   check("deslizador: al pulsar se engrosa la barra y aparece el tirador", pressed.active && pressed.rail === "none" && pressed.thumb === "1", JSON.stringify(pressed));
-  check("deslizador: alejarse 120 px en vertical ajusta a ¼ de velocidad y muestra el valor", fine - start <= 1.5 && bubble.includes("fino ¼"), `${start} → ${fine} s en 180 px · «${bubble}»`);
+  check("deslizador: alejarse 120 px en vertical ajusta a ¼ de velocidad y muestra el valor", fine - start <= 1.5 && bubble.includes("Fino ¼"), `${start} → ${fine} s en 180 px · «${bubble}»`);
   check("deslizador: de vuelta en la barra, velocidad normal", normal - fine >= expectedNormal - 1.5, `${fine} → ${normal} s en 90 px (esperado ≈ ${expectedNormal.toFixed(1)})`);
   check("deslizador: al soltar vuelve a su grosor y el reproductor sigue abierto", !(await range.evaluate((el) => el.hasAttribute("data-active"))) && (await count(".now-playing")) === 1);
 }

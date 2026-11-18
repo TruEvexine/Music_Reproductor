@@ -356,7 +356,7 @@ html[data-input="key"] .now-copy {
   }
 }
 
-/* Volumen (solo en la barra de escritorio: en móvil mandan los botones del dispositivo) */
+/* Volumen (solo en escritorio, en la barra y bajo el transporte del reproductor grande: en móvil mandan los botones del dispositivo) */
 .volume {
   display: flex;
   align-items: center;
@@ -364,6 +364,14 @@ html[data-input="key"] .now-copy {
 
 .volume .range {
   width: 96px;
+}
+
+.now-controls .volume {
+  justify-self: center;
+}
+
+.now-controls .volume .range {
+  width: 12rem;
 }
 
 /* Móvil: el reproductor grande sube desde abajo como una hoja y se cierra arrastrando hacia abajo (ver gestures.tsx). */

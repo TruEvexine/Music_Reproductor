@@ -15,6 +15,15 @@ export interface Backup {
   settings: { audio?: unknown; background?: unknown };
 }
 
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** D30: el volumen y el silencio son del dispositivo: ni salen en la copia ni se aplican al importarla (copias anteriores sí los traen). */
+function withoutDeviceAudio(audio: unknown) {
+  if (!isRecord(audio)) return undefined;
+  const { volume: _volume, muted: _muted, ...rest } = audio;
+  return rest;
+}
+
 export function buildBackup(
   playlists: { name: string; trackIdentifiers: string[] }[],
   settings: Backup["settings"],
@@ -25,7 +34,7 @@ export function buildBackup(
     version: BACKUP_VERSION,
     exportedAt: now.toISOString(),
     playlists: playlists.map((playlist) => ({ name: playlist.name, tracks: [...playlist.trackIdentifiers] })),
-    settings,
+    settings: { ...settings, audio: withoutDeviceAudio(settings.audio) },
   };
 }
 
@@ -49,7 +58,6 @@ export function buildAccountExport(
   };
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
 const identity = /^track:v[12]:[^\s]{1,2000}$/;
 
 /** Devuelve la copia válida o un mensaje para el usuario. Descarta en silencio las pistas con identidad desconocida. */
@@ -78,7 +86,7 @@ export function parseBackup(text: string): { backup: Backup } | { error: string 
       version: BACKUP_VERSION,
       exportedAt: typeof data.exportedAt === "string" ? data.exportedAt : "",
       playlists,
-      settings: { audio: isRecord(settings.audio) ? settings.audio : undefined, background: isRecord(settings.background) ? settings.background : undefined },
+      settings: { audio: withoutDeviceAudio(settings.audio), background: isRecord(settings.background) ? settings.background : undefined },
     },
   };
 }

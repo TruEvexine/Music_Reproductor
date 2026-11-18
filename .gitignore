@@ -58,5 +58,4 @@ tests/fixtures/landing/
 docs/producto/privado/
 
 # Auditorías locales: no se versionan
-rendimiento_auditoria.md
-seguridad_auditoria.md
+/*_auditoria.md

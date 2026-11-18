@@ -3,6 +3,7 @@
 // lo mismo al tocar y con cada flecha. Una búsqueda que interrumpe a otra no deja el volumen bajo. Sale con 1 si algo falla.
 import { chromium } from "@playwright/test";
 import { join } from "node:path";
+import "./requiere-audio.mjs";
 
 const base = (process.argv[2] ?? "http://localhost:5173").replace(/\/$/, "");
 const audio = (name) => join(import.meta.dirname, "..", "tests", "fixtures", "audio", name);
@@ -68,6 +69,7 @@ const during = (await seeks()) - before;
 check("arrastrando no se escribe currentTime", during === 0, `${during} escrituras`);
 check("arrastrando la reproducción sigue en su posición", t1 > t0 && t1 - t0 < 1.5, `${t0.toFixed(2)} → ${t1.toFixed(2)} s`);
 check("arrastrando se muestra el tiempo de destino", thumb >= 4 && /^0:0\d/.test(bubble) && bubble.startsWith(`0:0${Math.round(thumb)}`), `tirador ${thumb} s · «${bubble}»`);
+check("con ratón, la burbuja dice la velocidad y la pista con «el puntero»", /· Normal\s+Aleja el puntero de la barra para más precisión/.test(bubble), bubble.replace(/\n/g, " / "));
 await page.mouse.up();
 await page.waitForTimeout(400);
 let after = await seeks();
@@ -125,6 +127,76 @@ await page.waitForTimeout(150);
 const live = await master();
 await page.mouse.up();
 check("el volumen sigue en vivo mientras se arrastra", live < 0.6, `ganancia ${live?.toFixed(3)} sin soltar`);
+
+// 5b. Volumen en el reproductor grande (escritorio): el mismo estado que el de la barra.
+await page.evaluate(() => (history.pushState(null, "", "/app?panel=player"), dispatchEvent(new PopStateEvent("popstate"))));
+await page.waitForTimeout(800);
+const bigVolume = page.locator(".now-playing .volume").getByRole("slider", { name: "Volumen" });
+const barVolume = page.locator(".bar-end .volume input");
+check("reproductor grande: hay un deslizador «Volumen» con su valor", (await bigVolume.count()) === 1 && /^\d+ %$/.test((await bigVolume.getAttribute("aria-valuetext")) ?? ""), await bigVolume.getAttribute("aria-valuetext"));
+await bigVolume.focus();
+const v0 = Number(await bigVolume.inputValue());
+for (let i = 0; i < 5; i++) await page.keyboard.press("ArrowRight");
+await page.waitForTimeout(150);
+const v1 = Number(await bigVolume.inputValue());
+check("flechas en el grande: suben el volumen y la barra lo refleja (un solo estado)", Math.abs(v1 - v0 - 0.05) < 0.001 && (await barVolume.inputValue()) === String(v1) && Math.abs((await master()) - v1) < 0.02, `${v0} → ${v1}, barra ${await barVolume.inputValue()}, ganancia ${(await master()).toFixed(3)}`);
+check("el foco de teclado se ve en el deslizador", await page.locator(".now-playing .volume .range").evaluate((el) => getComputedStyle(el.querySelector(".range-rail")).outlineStyle === "solid"));
+await page.locator(".now-playing .volume").getByRole("button", { name: "Silenciar" }).click();
+await page.waitForTimeout(150);
+check("el icono silencia: valor 0 anunciado como «Silenciado», también en la barra", (await bigVolume.inputValue()) === "0" && (await bigVolume.getAttribute("aria-valuetext")) === "Silenciado" && (await barVolume.inputValue()) === "0" && (await page.locator(".now-playing .volume").getByRole("button", { name: "Activar sonido" }).count()) === 1);
+await page.locator(".now-playing .volume").getByRole("button", { name: "Activar sonido" }).click();
+const vbig = await page.locator(".now-playing .volume .range").boundingBox();
+await page.mouse.move(vbig.x + vbig.width / 2, vbig.y + vbig.height / 2);
+await page.mouse.wheel(0, 100);
+await page.waitForTimeout(150);
+check("la rueda del ratón baja el volumen (≈ 5 % por clic)", Math.abs(Number(await bigVolume.inputValue()) - (v1 - 0.05)) < 0.011, `${v1} → ${await bigVolume.inputValue()}`);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(400);
+
+// 6. Táctil (gesto simulado por CDP, móvil, reproductor grande): la burbuja junto al tiempo dice la velocidad y cómo cambiarla mientras dura el gesto.
+for (const reducedMotion of ["no-preference", "reduce"]) {
+  const phone = await browser.newPage({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion });
+  phone.on("pageerror", (e) => errors.push(e.message));
+  await phone.route("**/demoCatalog.dev.ts*", (route) => route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }));
+  await phone.goto(`${base}/app`);
+  await phone.getByLabel("Elegir archivos de música").setInputFiles([audio("01-amanecer.flac"), audio("02-marea.flac")]);
+  await phone.waitForTimeout(2500);
+  await phone.locator(".track-row .row-main", { hasText: "amanecer" }).tap();
+  await phone.evaluate(() => (history.pushState(null, "", "/app?panel=player"), dispatchEvent(new PopStateEvent("popstate"))));
+  await phone.waitForTimeout(900);
+  if (reducedMotion === "reduce") check("móvil: el reproductor grande no tiene volumen (mandan los botones del teléfono)", (await phone.locator(".now-playing .volume").count()) === 0);
+  const seekBox = await phone.locator(".now-playing .seek .range").boundingBox();
+  const cdp = await phone.context().newCDPSession(phone);
+  const touch = (type, x, y) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: type === "touchEnd" ? [] : [{ x, y }] });
+  const sy = seekBox.y + seekBox.height / 2;
+  const sx = seekBox.x + seekBox.width * 0.3;
+  const text = () => phone.locator(".now-playing .range-value").innerText().catch(() => "");
+  await touch("touchStart", sx, sy);
+  await touch("touchMove", sx + 20, sy);
+  await touch("touchMove", sx + 30, sy);
+  await phone.waitForTimeout(100);
+  const normal = await text();
+  await touch("touchMove", sx + 30, sy + 110); // ¼ (96–160 px)
+  await phone.waitForTimeout(100);
+  const quarter = await text();
+  await touch("touchMove", sx + 30, sy + 180); // ⅒ (≥ 160 px)
+  await phone.waitForTimeout(100);
+  const tenth = await text();
+  const motion = await phone.locator(".now-playing .range-value").evaluate((el) => {
+    const style = getComputedStyle(el);
+    return `${style.transitionDuration}|${style.animationName}`;
+  });
+  await touch("touchEnd");
+  await phone.waitForTimeout(200);
+  const label = reducedMotion === "reduce" ? "movimiento reducido" : "táctil";
+  check(`${label}: cerca de la barra, «Normal» y «Aleja el dedo de la barra…»`, /· Normal\s+Aleja el dedo de la barra para más precisión/.test(normal), normal.replace(/\n/g, " / "));
+  check(`${label}: a 110 px, «Fino ¼» y «Aléjalo más…»`, /· Fino ¼\s+Aléjalo más para más precisión/.test(quarter), quarter.replace(/\n/g, " / "));
+  check(`${label}: a 180 px, «Fino ⅒» y «Máxima precisión»`, /· Fino ⅒\s+Máxima precisión/.test(tenth), tenth.replace(/\n/g, " / "));
+  // Sin transición propia; con movimiento reducido la regla global deja 0,01 ms (1e-05 s) en todo.
+  check(`${label}: la etiqueta aparece sin animación`, /^(0s|1e-05s)\|none$/.test(motion), motion);
+  check(`${label}: al soltar, la etiqueta desaparece`, (await phone.locator(".range-value").count()) === 0);
+  await phone.close();
+}
 
 check("sin errores en la página", errors.length === 0, errors.join(" | "));
 await browser.close();

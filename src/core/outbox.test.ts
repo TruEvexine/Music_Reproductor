@@ -72,6 +72,14 @@ describe("copia de seguridad", () => {
     expect("backup" in parsed && parsed.backup).toEqual(backup);
   });
 
+  it("el volumen y el silencio no viajan: ni al exportar ni al importar una copia antigua (D30)", () => {
+    const backup = buildBackup([], { audio: { volume: 0.2, muted: true, speed: 1.5 } }, new Date(0));
+    expect(backup.settings.audio).toEqual({ speed: 1.5 });
+    const old = JSON.stringify({ app: "reproductor", version: 1, playlists: [], settings: { audio: { volume: 0, muted: true, eqEnabled: true } } });
+    const parsed = parseBackup(old);
+    expect("backup" in parsed && parsed.backup.settings.audio).toEqual({ eqEnabled: true });
+  });
+
   it("valida la entrada: tipo, versión y campos", () => {
     expect(parseBackup("{no es json")).toHaveProperty("error");
     expect(parseBackup(JSON.stringify({ app: "otra" }))).toHaveProperty("error");
