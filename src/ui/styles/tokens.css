@@ -124,7 +124,7 @@
 @supports (color: oklch(from red l c h)) {
   :root[data-hdr],
   :root[data-hdr] .shell {
-    --accent: oklch(from var(--accent-in) min(l, var(--hdr-peak)) min(calc(c * var(--hdr-chroma)), var(--hdr-cmax)) h);
+    --accent: oklch(from var(--accent-in) min(l, var(--hdr-peak)) max(c, min(calc(c * var(--hdr-chroma)), var(--hdr-cmax))) h); /* el tope nunca baja el croma de la portada */
     --glow: oklch(from var(--glow-in) l min(calc(c * var(--hdr-chroma)), var(--hdr-cmax)) h);
   }
 }

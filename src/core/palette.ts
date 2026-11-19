@@ -93,19 +93,52 @@ function linearRgb(l: number, c: number, h: number): Rgb {
   ];
 }
 
+// Declaración de función (no flecha): fallbackPalette, arriba, ya la usa al cargar el módulo.
+function linearIn(l: number, c: number, h: number, gamut: Gamut): Rgb {
+  return gamut === "p3" ? toLinearP3(linearRgb(l, c, h)) : linearRgb(l, c, h);
+}
+
+/** El mayor croma (≤ c) con el que el color cabe en la gama, mismo tono y luminosidad. */
+export function fitChroma(l: number, c: number, h: number, gamut: Gamut = "srgb"): number {
+  let chroma = c;
+  while (chroma > 0.002 && linearIn(l, chroma, h, gamut).some((v) => v < -0.001 || v > 1.001)) chroma *= 0.92;
+  return chroma;
+}
+
 /**
  * OKLCH → RGB codificado (0–1) en la gama pedida (Display P3 usa la misma curva de transferencia que sRGB).
  * Si el color cae fuera de la gama, baja el croma hasta que quepa (mismo tono y luminosidad).
  */
 export function oklchToRgb(l: number, c: number, h: number, gamut: Gamut = "srgb"): Rgb {
-  const linear = (chroma: number) => (gamut === "p3" ? toLinearP3(linearRgb(l, chroma, h)) : linearRgb(l, chroma, h));
-  let chroma = c;
-  let rgb = linear(chroma);
-  while (chroma > 0.002 && rgb.some((v) => v < -0.001 || v > 1.001)) {
-    chroma *= 0.92;
-    rgb = linear(chroma);
-  }
+  const rgb = linearIn(l, fitChroma(l, c, h, gamut), h, gamut);
   return [fromLinear(rgb[0]), fromLinear(rgb[1]), fromLinear(rgb[2])];
+}
+
+/** Luminancia relativa (WCAG) de un color sRGB codificado (0–1). */
+export const luminance = ([r, g, b]: Rgb) => 0.2126 * toLinear(r * 255) + 0.7152 * toLinear(g * 255) + 0.0722 * toLinear(b * 255);
+export const contrastRatio = (a: number, b: number) => (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+
+/** Superficie más clara con texto en acento encima (`--surface-3`, la pastilla de la pista actual): el acento da ≥ 4,5:1 sobre ella y sobre todo lo más oscuro. */
+export const ACCENT_TEXT_SURFACE = luminance(oklchToRgb(0.29, 0.007, 70));
+/** Croma mínimo (OKLCH) del tono elegido: por debajo, la portada cuenta como gris o casi monocroma y manda el acento de la app. */
+export const ACCENT_MIN_CHROMA = 0.03;
+
+/**
+ * Acento de un tono: tan vivo como quepa en sRGB (croma de la portada realzado, 0,11–0,19) entre las luminosidades que dan ≥ 4,5:1
+ * sobre `--surface-3` (texto; los controles, que piden 3:1, quedan cubiertos). Gana la de más croma y, a igualdad, la más baja: el
+ * rojo o el azul salen hacia L 0,65; el amarillo y el lima, cuya cúspide de sRGB está arriba, hacia L 0,85 (más abajo se vuelven oliva).
+ */
+export function accentFor(hue: number, chroma: number): { l: number; c: number } {
+  const wanted = Math.min(Math.max(chroma * 1.25, 0.11), 0.19);
+  let best = { l: 0.88, c: fitChroma(0.88, wanted, hue) };
+  let found = false;
+  for (let l = 0.6; l <= 0.88; l += 0.005) {
+    const c = fitChroma(l, wanted, hue);
+    if (contrastRatio(luminance(oklchToRgb(l, c, hue)), ACCENT_TEXT_SURFACE) < 4.5) continue;
+    if (!found || c > best.c + 0.005) best = { l, c };
+    found = true;
+  }
+  return best;
 }
 
 /** Los cuatro tonos analógicos (tono, +38°, −38°, +76°) alrededor de un tono: son la paleta de "acento" y "elegida". */
@@ -127,12 +160,16 @@ export function colorsFromHue(hue: number, chroma = 0.12): Rgb[] {
  * croma²), elige los sectores más pesados separados al menos 45° y completa con giros del dominante si faltan.
  * Devuelve null si la imagen es gris o transparente.
  */
-export function paletteSwatches(rgba: ArrayLike<number>, count = 4): Swatch[] | null {
+/** Píxeles con color agrupados en 12 sectores de tono de 30°, del más pesado (croma² sumado: vivo y abundante) al más ligero. `total`: píxeles opacos con luz. */
+function hueBins(rgba: ArrayLike<number>) {
   const bins = Array.from({ length: 12 }, () => ({ a: 0, b: 0, weight: 0, chroma: 0, pixels: 0 }));
+  let total = 0;
   for (let i = 0; i + 3 < rgba.length; i += 4) {
     if (rgba[i + 3] < 128) continue;
     const { l, c, h } = rgbToOklch(rgba[i], rgba[i + 1], rgba[i + 2]);
-    if (l < 0.12 || l > 0.97 || c < 0.02) continue;
+    if (l < 0.12 || l > 0.97) continue;
+    total += 1;
+    if (c < 0.02) continue;
     const bin = bins[Math.floor(h / 30) % 12];
     const w = c * c;
     const rad = (h * Math.PI) / 180;
@@ -142,7 +179,11 @@ export function paletteSwatches(rgba: ArrayLike<number>, count = 4): Swatch[] | 
     bin.chroma += c;
     bin.pixels += 1;
   }
-  const ranked = bins.filter((bin) => bin.weight > 1e-4).sort((x, y) => y.weight - x.weight);
+  return { ranked: bins.filter((bin) => bin.weight > 1e-4).sort((x, y) => y.weight - x.weight), total };
+}
+
+export function paletteSwatches(rgba: ArrayLike<number>, count = 4): Swatch[] | null {
+  const { ranked } = hueBins(rgba);
   if (ranked.length === 0) return null;
   const chosen: { hue: number; chroma: number }[] = [];
   for (const bin of ranked) {
@@ -166,30 +207,21 @@ export function paletteColors(rgba: ArrayLike<number>, count = 4): Rgb[] | null 
 const css = (l: number, c: number, h: number) => `oklch(${l.toFixed(3)} ${c.toFixed(3)} ${h.toFixed(1)})`;
 
 /**
- * Color dominante = media de los píxeles ponderada por croma (los grises casi no cuentan),
- * y después se fuerza a rangos seguros: el acento siempre claro, el ambiente siempre oscuro.
+ * Acento = el sector de tono más pesado (croma² sumado: el color más vivo que además ocupa la portada; la media de todos los píxeles
+ * mezclaba tonos opuestos y salía apagada). Si su croma no llega a ACCENT_MIN_CHROMA o es una mota (< 3 % de la portada), la portada
+ * cuenta como gris y se usa la paleta de la app. Después se fuerza a rangos seguros: acento con contraste, ambiente siempre oscuro.
  */
 export function paletteFromPixels(rgba: ArrayLike<number>): Palette {
-  let a = 0;
-  let b = 0;
-  let weight = 0;
-  for (let i = 0; i + 3 < rgba.length; i += 4) {
-    if (rgba[i + 3] < 128) continue;
-    const { l, c, h } = rgbToOklch(rgba[i], rgba[i + 1], rgba[i + 2]);
-    if (l < 0.12 || l > 0.97) continue;
-    const w = c * c;
-    const rad = (h * Math.PI) / 180;
-    a += Math.cos(rad) * c * w;
-    b += Math.sin(rad) * c * w;
-    weight += w;
-  }
-  if (weight < 1e-4) return fallbackPalette;
-  const chroma = Math.hypot(a, b) / weight;
-  if (chroma < 0.02) return fallbackPalette;
-  const hue = ((Math.atan2(b, a) * 180) / Math.PI + 360) % 360;
+  const { ranked, total } = hueBins(rgba);
+  const top = ranked[0];
+  if (!top) return fallbackPalette;
+  const chroma = Math.hypot(top.a, top.b) / top.weight; // ponderado por croma²: tira hacia lo vivo del sector
+  if (chroma < ACCENT_MIN_CHROMA || top.pixels < total * 0.03) return fallbackPalette;
+  const hue = ((Math.atan2(top.b, top.a) * 180) / Math.PI + 360) % 360;
+  const accent = accentFor(hue, chroma);
   const swatches = paletteSwatches(rgba);
   return {
-    accent: css(0.82, Math.min(Math.max(chroma, 0.07), 0.14), hue),
+    accent: css(accent.l, accent.c, hue),
     onAccent: css(0.2, 0.04, hue),
     glow: css(0.32, Math.min(chroma, 0.09), hue),
     hue,
@@ -214,7 +246,7 @@ export function sleevePalette(hue: number): Palette {
  * Versión del algoritmo que saca la paleta de una portada. Cada portada guardada lleva la versión con que se calculó su paleta; si no coincide con esta, se recalcula al pedirla.
  * Cambia el algoritmo (`paletteFromPixels`, `paletteSwatches`) → sube este número; `palette.test.ts` falla si se te olvida.
  */
-export const PALETTE_VERSION = 1;
+export const PALETTE_VERSION = 2;
 
 /** ¿La paleta guardada con una portada sigue siendo válida? Sin paleta o calculada con otra versión del algoritmo, no. */
 export const paletteIsCurrent = (record: { palette?: Palette; paletteVersion?: number }) => record.palette !== undefined && record.paletteVersion === PALETTE_VERSION;
