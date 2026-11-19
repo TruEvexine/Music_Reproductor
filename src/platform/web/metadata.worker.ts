@@ -10,7 +10,8 @@ import type { MetadataJob, MetadataReply } from "./metadata";
 const scope = self as unknown as { onmessage: ((event: MessageEvent) => void) | null; postMessage(data: unknown): void };
 const MAX_COVER_BYTES = 12 * 1024 * 1024;
 const THUMB_SIZES = { small: 96, large: 600 } as const;
-// Portadas ya guardadas (las envía el hilo principal) o hechas por este worker: no se vuelven a reducir.
+// Portadas ya guardadas (las envía el hilo principal cuando las escribió): no se vuelven a reducir. Las que hace el worker no se apuntan aquí:
+// si su respuesta se descarta (escaneo cancelado), la siguiente lectura devolvería solo el hash y la pista apuntaría a una portada inexistente.
 const known = new Set<string>();
 
 const positive = (value: number | undefined | null) => (value !== undefined && value !== null && Number.isFinite(value) && value > 0 ? value : undefined);
@@ -33,7 +34,6 @@ async function coverFrom(bytes: Uint8Array<ArrayBuffer>, type: string): Promise<
     const keepRaw = Math.max(bitmap.width, bitmap.height) <= 2 * MASTER_SIDE && bytes.byteLength <= MASTER_RAW_BYTES;
     const [small, large, master] = await Promise.all([scale(THUMB_SIZES.small, 0.86), scale(THUMB_SIZES.large, 0.86), keepRaw ? original : scale(MASTER_SIDE, 0.82)]);
     bitmap.close();
-    known.add(hash);
     return { hash, small, large, master, largeSide: Math.min(THUMB_SIZES.large, side) };
   } catch (error) {
     console.warn("Portada descartada, se usa la funda generada:", (error as Error)?.name); // sin datos del archivo

@@ -37,6 +37,13 @@ export const storage: Storage = {
       return [];
     }
   },
+  async keys(table: Table) {
+    try {
+      return await (await db()).getAllKeys(table);
+    } catch {
+      return undefined;
+    }
+  },
   async read<T>(table: Table, key: IDBValidKey) {
     try {
       return (await (await db()).get(table, key)) as T | undefined;

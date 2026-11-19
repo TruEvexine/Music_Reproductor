@@ -105,5 +105,20 @@ if (hasFfmpeg) {
     return Buffer.concat([latin(line), stamp]);
   });
   lyricMp3("11-sylt.mp3", "Letra Sincronizada", frame("SYLT", Buffer.concat([Buffer.from([0]), Buffer.from("spa"), Buffer.from([2, 1]), latin(""), ...entries])));
+
+  // m4a con portada (covr) y el átomo moov al principio (faststart) o al final (lo que hace ffmpeg por defecto), en AAC y ALAC: scripts/prueba-portadas-m4a.mjs.
+  // En su carpeta para no cambiar las capturas ni las pruebas que importan tests/fixtures/audio entero.
+  const m4a = join(out, "m4a");
+  mkdirSync(m4a, { recursive: true });
+  const ff = (args) => execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...args], { stdio: "inherit" });
+  const jpeg = join(m4a, "portada.jpg");
+  if (!existsSync(jpeg)) ff(["-f", "lavfi", "-i", "gradients=s=600x600:c0=#0e7490:c1=#3b0764:x0=0:y0=0:x1=600:y1=600", "-frames:v", "1", jpeg]);
+  for (const [codec, args] of [["aac", ["-c:a", "aac", "-b:a", "192k"]], ["alac", ["-c:a", "alac"]]]) {
+    for (const [where, flags] of [["inicio", ["-movflags", "+faststart"]], ["final", []]]) {
+      const target = join(m4a, `${codec}-moov-${where}.m4a`);
+      if (existsSync(target)) continue;
+      ff(["-f", "lavfi", "-i", "sine=frequency=262:duration=20", "-i", jpeg, "-map", "0:a", "-map", "1:v", ...args, "-c:v", "mjpeg", "-disposition:v", "attached_pic", ...flags, "-metadata", `title=${codec.toUpperCase()} moov al ${where}`, "-metadata", "artist=Ñandú Eléctrico", target]);
+    }
+  }
 }
 console.log(`Audio sintético listo en ${out}`);
