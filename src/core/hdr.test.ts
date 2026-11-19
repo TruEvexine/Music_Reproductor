@@ -4,9 +4,9 @@ import type { Gamut, Rgb } from "./palette";
 
 // Las cifras salen de tokens.css (`--hdr-*`): si cambian allí, cambian aquí. Aquí se comprueba el peor caso del HDR simulado.
 const looks: { name: string; gamut: Gamut; gain: number; cmax: number; peak: number }[] = [
-  { name: "sRGB", gamut: "srgb", gain: 1.2, cmax: 0.15, peak: 0.86 },
-  { name: "Display P3", gamut: "p3", gain: 1.5, cmax: 0.18, peak: 0.86 },
-  { name: "Display P3 + HDR declarado", gamut: "p3", gain: 1.5, cmax: 0.18, peak: 0.9 },
+  { name: "sRGB", gamut: "srgb", gain: 1.2, cmax: 0.23, peak: 0.86 },
+  { name: "Display P3", gamut: "p3", gain: 1.5, cmax: 0.29, peak: 0.86 },
+  { name: "Display P3 + HDR declarado", gamut: "p3", gain: 1.5, cmax: 0.29, peak: 0.9 },
 ];
 
 const linear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);

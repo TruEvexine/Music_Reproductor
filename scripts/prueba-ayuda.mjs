@@ -72,7 +72,7 @@ await page.keyboard.press("Escape");
 await page.waitForTimeout(300);
 
 const gestures = await page.locator("#help-gestures ~ .help-list li h3").allInnerTexts();
-check("cinco gestos: deslizar fila, pulsación larga, deslizar portada, arrastrar para cerrar y ajuste fino de la barra", gestures.join("|") === "Deslizar una fila|Pulsación larga|Deslizar la portada|Arrastrar para cerrar|Ajuste fino de la barra", gestures.join("|"));
+check("cinco gestos: deslizar fila, pulsación larga, deslizar portada, arrastrar para abrir y cerrar y ajuste fino de la barra", gestures.join("|") === "Deslizar una fila|Pulsación larga|Deslizar la portada|Arrastrar para abrir y cerrar|Ajuste fino de la barra", gestures.join("|"));
 const swipeText = await page.locator("#help-gestures ~ .help-list li").first().innerText();
 check("la ayuda de deslizar usa las etiquetas que ve la persona en la fila", hints.includes("Siguiente") && hints.includes("A la cola") && swipeText.includes("«Siguiente»") && swipeText.includes("«A la cola»"), hints.join(","));
 check("cada gesto dice qué hacer sin él", (await page.locator("#help-gestures ~ .help-list .hint").count()) === 5);

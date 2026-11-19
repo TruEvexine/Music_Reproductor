@@ -80,7 +80,7 @@
   --surface-3: oklch(0.285 0.007 70);
   --danger: oklch(0.78 0.16 25);
   --hdr-chroma: 1.2;
-  --hdr-cmax: 0.15;
+  --hdr-cmax: 0.23; /* el acento llega hasta 0,19 (core/palette.ts: accentFor): ×1,2 cabe */
   --hdr-contrast: 0.35;
   --hdr-glint: 0.6;
   --hdr-peak: 0.86;
@@ -91,7 +91,7 @@
   :root[data-hdr] {
     --danger: color(display-p3 1 0.47 0.4);
     --hdr-chroma: 1.5;
-    --hdr-cmax: 0.18;
+    --hdr-cmax: 0.29; /* 0,19 × 1,5 */
     --hdr-contrast: 0.25;
     --hdr-glint: 0.8;
     --hdr-cover: saturate(1.16) contrast(1.06);

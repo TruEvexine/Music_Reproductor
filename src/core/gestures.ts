@@ -9,7 +9,7 @@ export const LONG_PRESS_MS = 500;
 export const DISMISS_PX = 96;
 
 export interface GestureHelp {
-  id: "swipe-row" | "long-press" | "swipe-cover" | "drag-open" | "drag-close" | "fine-seek";
+  id: "swipe-row" | "long-press" | "swipe-cover" | "drag-close" | "fine-seek";
   title: string;
   how: string;
   /** Qué hacer sin el gesto: todo gesto tiene alternativa por botón o teclado. */
@@ -36,16 +36,10 @@ export const GESTURES: readonly GestureHelp[] = [
     alternative: "Los botones anterior y siguiente, o las flechas ← y → del teclado.",
   },
   {
-    id: "drag-open",
-    title: "Arrastrar para abrir",
-    how: "En el teléfono, arrastra hacia arriba el mini reproductor: el reproductor grande sigue a tu dedo. Si a mitad cambias de idea, vuelve hacia abajo y suelta.",
-    alternative: "Toca el mini reproductor.",
-  },
-  {
     id: "drag-close",
-    title: "Arrastrar para cerrar",
-    how: "Arrastra hacia abajo la cabecera de una hoja, del reproductor grande o de la cola para cerrarlos.",
-    alternative: "El botón de cerrar, la tecla Escape o el gesto atrás del sistema.",
+    title: "Arrastrar para abrir y cerrar",
+    how: "Arrastra hacia arriba el mini reproductor para abrir el reproductor grande: sigue a tu dedo y, si a mitad cambias de idea, vuelve y suelta. Arrastra hacia abajo la cabecera de una hoja, del reproductor grande o de la cola para cerrarlos.",
+    alternative: "Toca el mini reproductor para abrir; para cerrar, el botón de cerrar, la tecla Escape o el gesto atrás del sistema.",
   },
   {
     id: "fine-seek",

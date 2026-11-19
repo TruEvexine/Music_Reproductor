@@ -193,6 +193,11 @@
   transform-origin: top;
 }
 
+/* AMOLED: sin ambiente; la tarjeta es negro puro (se funde sobre el mini, teñido, en el primer 12 % del recorrido). */
+:root[data-bg="amoled"] .now-surface {
+  background: var(--bg);
+}
+
 /* La luz de la portada al abrir (playerMorph.ts): un halo de su acento que sale de la miniatura y se apaga cuando el ambiente ya está.
    Es el nacimiento del ambiente del reproductor, el único degradado permitido (DESIGN.md §3). Quieto, invisible. */
 .now-bloom {

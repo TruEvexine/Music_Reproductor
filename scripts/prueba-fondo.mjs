@@ -158,7 +158,8 @@ const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gestur
   await page.screenshot({ path: join(shots, "fondo-05-estatico-1440x900.png") });
 
   await pickMode(page, "AMOLED");
-  const amoled = await page.evaluate(() => ({ attr: document.documentElement.dataset.bg, bg: getComputedStyle(document.querySelector(".now-playing")).backgroundColor, layer: document.querySelectorAll(".now-playing > .backdrop").length }));
+  // El fondo del reproductor es su superficie (la tarjeta que crece desde la barra, ui/playerMorph.ts); la hoja no tiene fondo propio.
+  const amoled = await page.evaluate(() => ({ attr: document.documentElement.dataset.bg, bg: getComputedStyle(document.querySelector(".now-playing > .now-surface")).backgroundColor, layer: document.querySelectorAll(".now-playing > .backdrop").length }));
   check("AMOLED: negro puro y sin capa de fondo", amoled.attr === "amoled" && (amoled.bg === "rgb(0, 0, 0)" || amoled.bg === "oklch(0 0 0)") && amoled.layer === 0, JSON.stringify(amoled));
   await page.screenshot({ path: join(shots, "fondo-06-amoled-1440x900.png") });
 

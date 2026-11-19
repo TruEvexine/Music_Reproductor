@@ -238,7 +238,7 @@ export function Backdrop({ active = true }: { active?: boolean }) {
   useEffect(() => loop.current?.sync(), [active]);
 
   if (animated) return <div aria-hidden="true" className="backdrop" ref={host} />;
-  if (settings.mode === "amoled") return <div aria-hidden="true" className="backdrop" style={{ background: "var(--bg)" }} />; // negro que crece desde la miniatura, como el ambiente
+  if (settings.mode === "amoled") return null;
   const kind = settings.mode === "static" ? "linear" : "blobs";
   return <div aria-hidden="true" className="backdrop" style={{ background: gradientCss(colors, settings.intensity, kind, settings.hdr ? hdr.gamut : "srgb", oklch) }} />;
 }
