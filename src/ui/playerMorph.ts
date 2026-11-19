@@ -20,8 +20,6 @@ interface Geometry {
   /** Lado del halo de luz sin escalar (px). */
   bloomSize: number;
   parts: Record<"surface" | "bloom" | "backdrop" | "art" | "header" | "grabber" | "controls", HTMLElement | null>;
-  barCover: HTMLElement | null;
-  barParts: HTMLElement[];
   nav: HTMLElement | null;
 }
 
@@ -31,6 +29,7 @@ let geo: Geometry | null = null;
 let p = 0;
 let anims: Animation[] = [];
 let heading: { target: number; from: number; done?: () => void } | null = null;
+let deferred = 0;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 const ramp = (v: number, from: number, to: number) => clamp01((v - from) / (to - from));
@@ -61,10 +60,10 @@ function poses(at: number, g: Geometry): Pose[] {
     [g.parts.header, { opacity: fadeIn(0.5) }],
     [g.parts.grabber, { opacity: fadeIn(0.5) }],
     [g.parts.controls, { opacity: fadeIn(0.45), transform: `translateY(${(1 - at) * 32}px)` }],
-    [g.barCover, { opacity: at > 0 ? "0" : "1" }], // la portada grande ya está en su sitio, encima
     [g.nav, { opacity: String(1 - ramp(at, 0, 0.5)) }],
   ];
-  for (const part of g.barParts) out.push([part, { opacity: String(1 - ramp(at, 0, 0.15)) }]);
+  // El contenido del mini no se anima: la superficie, opaca y de su mismo color, lo tapa en el primer 12 % (y la portada grande ya está
+  // encima de la pequeña). Cada elemento animado es una capa más que crear en el primer cuadro.
   return out;
 }
 
@@ -73,7 +72,7 @@ const write = (at: number) => {
   for (const [el, frame] of poses(at, geo)) if (el) Object.assign(el.style, frame);
 };
 
-const all = (g: Geometry) => [g.sheet, ...Object.values(g.parts), g.barCover, g.nav, ...g.barParts].filter((el): el is HTMLElement => Boolean(el));
+const all = (g: Geometry) => [g.sheet, ...Object.values(g.parts), g.nav].filter((el): el is HTMLElement => Boolean(el));
 
 /** p de la animación en curso (la de la hoja es lineal en p: su avance da p exacto). */
 function current(): number {
@@ -84,6 +83,8 @@ function current(): number {
 }
 
 function stopAnimations() {
+  cancelAnimationFrame(deferred);
+  deferred = 0;
   p = current();
   for (const anim of anims) anim.cancel();
   anims = [];
@@ -118,8 +119,6 @@ function measure(sheet: HTMLElement): Geometry | null {
     barH: barRect.height,
     bloomSize: parts.bloom?.offsetWidth || 1,
     parts,
-    barCover,
-    barParts: [...bar.querySelectorAll<HTMLElement>(":scope > :is(.bar-progress, .bar-center, .bar-mini, .bar-end), .bar-copy")],
     // La barra inferior solo existe en móvil; en escritorio la navegación es la columna lateral y no se apaga.
     nav: matchMedia("(max-width: 999px)").matches ? shell!.querySelector<HTMLElement>(".nav") : null,
   };
@@ -165,7 +164,7 @@ export const morphActive = () => geo !== null;
  * que falta. Con velocidad, la heredada: la curva --ease arranca a ≈ 4 veces su velocidad media, así que dura 4·distancia/velocidad,
  * entre --fast y --slow. `done` se llama al llegar (no si otra orden la interrumpe).
  */
-export function morphTo(sheet: HTMLElement, target: 0 | 1, { velocity, done }: { velocity?: number; done?: () => void } = {}) {
+export function morphTo(sheet: HTMLElement, target: 0 | 1, { velocity, done, now = false }: { velocity?: number; done?: () => void; now?: boolean } = {}) {
   if (heading?.target === target && geo) {
     heading.done = done ?? heading.done;
     return;
@@ -179,10 +178,37 @@ export function morphTo(sheet: HTMLElement, target: 0 | 1, { velocity, done }: {
     if (target === 1) sheet.animate([{ opacity: 0 }, { opacity: 1 }], { duration: tokenMs("--fast"), easing: tokenValue("--ease") });
     return done?.();
   }
-  if (!geo) {
-    if (target === 0 && p === 0) return done?.(); // ya cerrada
+  if (!geo && now) {
     if (!morphStart(sheet)) return done?.();
-  } else stopAnimations();
+  } else if (!geo) {
+    if (target === 0 && p === 0) return done?.(); // ya cerrada
+    // Por la URL (toque, clic, Escape, atrás), React acaba de cambiar el DOM: medir ya forzaría el recálculo de estilo de toda la página
+    // dentro del toque (14–18 ms con la CPU 4×). Se empieza en el cuadro siguiente, antes de pintarlo: el cálculo cae donde iba a ir.
+    cancelAnimationFrame(deferred);
+    deferred = requestAnimationFrame(() => {
+      deferred = 0;
+      if (morphStart(sheet)) run(target, velocity, done);
+      else done?.();
+    });
+    return;
+  }
+  stopAnimations();
+  run(target, velocity, done);
+}
+
+/**
+ * Abrir o cerrar con un botón (el mini, ⌄): la animación arranca ya, con el DOM todavía sin tocar (medir es barato), y la URL cambia
+ * después del primer cuadro. Así el render de React no retrasa la entrega de la animación al compositor (medido: con la URL primero,
+ * el toque que cierra perdía 3 cuadros de mediana y N8-0, 1). Sin reproductor montado o con movimiento reducido, solo la URL.
+ */
+export function morphButton(target: 0 | 1, route: () => void) {
+  const sheet = document.querySelector<HTMLElement>(".shell .now-playing");
+  if (!sheet || motionReduced()) return route();
+  morphTo(sheet, target, { now: true });
+  requestAnimationFrame(() => setTimeout(route));
+}
+
+function run(target: 0 | 1, velocity: number | undefined, done: (() => void) | undefined) {
   const g = geo!;
   const from = p;
   const distance = Math.abs(target - from);

@@ -894,6 +894,10 @@ Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio br
 
 Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max. En B1–B3 (2026-11-18): ponytail, design-motion-principles (modo crear), make-interfaces-feel-better, impeccable.
 
+- [x] **N8** (2026-11-18): acento más vivo (el color más vivo y abundante de la portada, ≥ 4,5:1 sobre `--surface-3`; grises, el de la app); barra ↔ reproductor grande como transformación de contenedor (`ui/playerMorph.ts`: arrastre en móvil, la misma animación por tiempo al tocar, con ⌄, Escape, atrás y en escritorio; fundido con movimiento reducido); mini en negro teñido por la portada; píldora deslizante en la barra inferior; los colores del mini y de la píldora se funden al cambiar de pista. `prueba-movimiento` abre y cierra con gestos táctiles simulados (lento, rápido, interrumpido, horizontal, barra de progreso, atrás). Medido con `scripts/medir-gestos.mjs` alternando con N8-0: tabla en `docs/AUDITORIA_ANIMACIONES.md` §6. Sin cumplir del todo el objetivo de ≤ 2 cuadros en el arrastre lento de apertura, el interrumpido y cerrar con ⌄ (3–4), con tareas de ≈ 60 ms intermitentes del lienzo WebGL por software; falta confirmarlo en un teléfono.
+
+Skills aplicadas (N8): ponytail, design-motion-principles (modo crear), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max, design-taste-frontend (pantalla de app, refinamiento sobre DESIGN.md).
+
 - [x] Vite 8 + plugin-react 6 (2026-11-18): aplicados y revertidos porque Vite 8 sube el objetivo de navegadores y el CSS deja `oklch()` y media queries de rango que Chrome 107–110 y Safari 16.0–16.3 no entienden. Detalle y vía para retomarlo (fijar `build.target`) en `docs/DEPENDENCIAS.md`.
 
 ### 11.1q Auditoría de CSS (2026-11-17)

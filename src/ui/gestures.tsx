@@ -71,9 +71,18 @@ const FLICK_Y = 0.45; // px/ms: un gesto rápido decide la dirección aunque sea
 export function useMorphDrag(direction: "open" | "close") {
   const gesture = useRef<{ x: number; y: number; lockY: number; from: number; travel: number; mode: "idle" | "drag"; samples: { t: number; y: number }[]; grabbed: boolean } | null>(null);
   const sheet = () => document.querySelector<HTMLElement>(".now-playing");
+  // La URL se pone al día al soltar, tras el primer cuadro de la animación: no al llegar (caía dentro de un cuadro, con la pintura: 60–69 ms
+  // con la CPU 4×) ni en el mismo toque (el render de React retrasaba la entrega de la animación al compositor). Si vuelve a donde estaba, nada.
   const go = (target: 0 | 1, velocity?: number) => {
     const el = sheet();
-    if (el) morphTo(el, target, { velocity, done: () => (target === 1 ? !playerOpen() && openPanel("player") : playerOpen() && closePanel()) });
+    if (!el) return;
+    morphTo(el, target, { velocity });
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        if (target === 1 && !playerOpen()) openPanel("player");
+        else if (target === 0 && playerOpen()) closePanel();
+      }),
+    );
   };
   const end = (event: PointerEvent<HTMLElement>) => {
     const g = gesture.current;

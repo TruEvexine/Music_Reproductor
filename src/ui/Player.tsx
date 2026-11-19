@@ -39,7 +39,7 @@ import { ActionSheet } from "./ActionSheet";
 import { EditDialog } from "./EditDialog";
 import { backdropPreview } from "./Backdrop";
 import { SwipeRow, useCoverSwipe, useDragDismiss, useMorphDrag } from "./gestures";
-import { morphTo } from "./playerMorph";
+import { morphButton, morphTo } from "./playerMorph";
 import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
@@ -144,7 +144,7 @@ export const PlayerBar = memo(function PlayerBar({ queueOpen }: { queueOpen: boo
     <footer aria-label="Reproductor" className="player-bar" {...drag}>
       <ColorFade className="bar-fade" />
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
-      <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
+      <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => morphButton(1, () => openPanel("player"))} type="button">
         <Cover className="bar-cover" seed={trackCoverSeed(track)} hash={track.coverHash} />
         <span className="bar-copy">
           <span className="title">
@@ -313,7 +313,7 @@ const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOp
     <>
       <span aria-hidden="true" className="now-grabber" />
       <header className="now-header">
-        <IconButton label="Cerrar reproductor" onClick={closePanel} ref={closeButton}>
+        <IconButton label="Cerrar reproductor" onClick={() => morphButton(0, closePanel)} ref={closeButton}>
           <ChevronDown {...icon} />
         </IconButton>
         <div className="now-actions">
