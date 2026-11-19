@@ -33,7 +33,7 @@ import type { Track } from "../core/track";
 import { usePaletteOf } from "../state/covers";
 import { library, useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
-import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
+import { ColorFade, Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
 import { ActionSheet } from "./ActionSheet";
 import { EditDialog } from "./EditDialog";
@@ -142,6 +142,7 @@ export const PlayerBar = memo(function PlayerBar({ queueOpen }: { queueOpen: boo
   if (!track) return null;
   return (
     <footer aria-label="Reproductor" className="player-bar" {...drag}>
+      <ColorFade className="bar-fade" />
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
       <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
         <Cover className="bar-cover" seed={trackCoverSeed(track)} hash={track.coverHash} />

@@ -118,8 +118,10 @@
 .shell {
   --accent: var(--accent-in);
   --glow: var(--glow-in);
-  /* Fondo de la barra del reproductor; la tarjeta que crece de ella hacia el reproductor grande lleva el mismo (player.css). */
-  --bar-bg: var(--surface-2);
+  /* Fondo de la barra del reproductor; la tarjeta que crece de ella hacia el reproductor grande lleva el mismo (player.css). En móvil,
+     negro profundo teñido por la portada: 22 % del acento sobre negro (L ≈ 0,14–0,19, croma ≤ 0,04); --ink-2 encima da ≥ 4,5:1 en todos
+     los tonos y el progreso en acento ≥ 3:1 (core.test.ts). color-mix interpola en OKLCH y el negro no tiene tono: queda el del acento. */
+  --bar-bg: color-mix(in oklch, var(--accent) 22%, black);
 }
 
 @media (min-width: 1000px) {

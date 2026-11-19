@@ -92,7 +92,7 @@ Un conjunto cerrado, en `tokens.css`. Solo `transform` y `opacity` (lo comprueba
 | Interrupción | Son transiciones, no keyframes: cerrar mientras abre o reabrir mientras cierra revierte desde el valor actual, sin salto | — |
 | Deshabilitado | Opacidad 0.38, sin hover ni pulsación | No |
 
-`prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista sin gesto (botón o fin de pista): la portada anterior se disuelve sobre la nueva (`--base`) y el título se funde (`--fast`); ni con teclado, ni tras el gesto del carrusel, ni con movimiento reducido. El color (acento) cambia de golpe: animarlo exigiría `color` en la transición. Inventario, medición y límites: `docs/ANIMACIONES.md`.
+`prefers-reduced-motion`: la regla global deja todo en 0,01 ms y las salidas no esperan (se cierran al instante). Cambio de pista sin gesto (botón o fin de pista): la portada anterior se disuelve sobre la nueva (`--base`) y el título se funde (`--fast`); ni con teclado, ni tras el gesto del carrusel, ni con movimiento reducido. El color (acento) cambia de golpe: animarlo exigiría `color` en la transición. Excepción: el fondo del mini se funde por opacidad, con una capa del color anterior encima (`ColorFade`, `ui/parts.tsx`). Inventario, medición y límites: `docs/ANIMACIONES.md`.
 
 **Carga y paso de marca.** El símbolo de `index.html` aparece solo si la carga en frío pasa de 300 ms (`docs/marca/MARCA_DEFINITIVA.md` §3). Al pulsar «Abrir» o «Abrir el reproductor» en la landing, el mismo símbolo cubre el paso a la app durante 600 ms (entra con `--fast`, un brillo deja encendidos los hilos uno a uno con `--base`, sale con `--exit`) mientras la app monta debajo y se descarga el SDK de cuentas; con movimiento reducido es solo un fundido de entrada y salida (`--fast` + `--exit`), la única excepción a la regla global de 0,01 ms. Nunca en la landing ni en /app directo: no retrasa el LCP.
 
@@ -129,7 +129,7 @@ MÓVIL (<1000)                       ESCRITORIO (≥1000)
 ```
 
 - **Navegación:** pestañas inferiores con icono y etiqueta en móvil; columna lateral en escritorio. La cola no es navegación: es una acción del reproductor.
-- **Mini reproductor (móvil):** portada, título, artista, play/pausa, siguiente, y una línea de progreso. Tocarlo o arrastrarlo hacia arriba abre el expandido (ver «Barra ↔ reproductor grande»).
+- **Mini reproductor (móvil):** portada, título, artista, play/pausa, siguiente, y una línea de progreso. Fondo `--bar-bg`: negro profundo teñido por la portada (22 % del acento sobre negro; `--ink` y `--ink-2` encima ≥ 4,5:1 en todos los tonos, comprobado por test); al cambiar de pista el tinte anterior se funde sobre el nuevo (`--base`, solo opacidad; ni con teclado ni con movimiento reducido). Tocarlo o arrastrarlo hacia arriba abre el expandido (ver «Barra ↔ reproductor grande»).
 - **Barra (escritorio):** pista (abre el expandido) · transporte y progreso · calidad y cola.
 - **Reproductor expandido:** pantalla completa en todas las resoluciones. Vertical: portada arriba, controles en la mitad inferior. Horizontal o ancho: portada | controles. En escritorio (≥1000 px), bajo el transporte, el mismo volumen de la barra (icono que silencia, deslizador de 12 rem, flechas y rueda; «Silenciado» se anuncia); en móvil no hay volumen: mandan los botones del teléfono, y la app arranca siempre con su volumen al 100 % y sin silencio (D30).
 - **Cola:** pantalla completa en móvil, columna fija en escritorio.

@@ -63,8 +63,19 @@
   align-items: center;
   gap: var(--s2);
   padding: var(--s2) calc(var(--s2) + var(--safe-right)) var(--s2) calc(var(--s3) + var(--safe-left));
+  isolation: isolate; /* el color que se va (.bar-fade) pinta encima del fondo y debajo del contenido */
   background: var(--bar-bg);
   touch-action: none; /* arrastrar hacia arriba abre el reproductor (gestures.tsx: useMorphDrag); el navegador no debe tomar el gesto */
+}
+
+/* Al cambiar de pista, el tinte anterior se funde sobre el nuevo (ui/parts.tsx: ColorFade). La misma mezcla que --bar-bg, con su --accent. */
+.bar-fade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in oklch, var(--accent) 22%, black);
+  pointer-events: none;
+  animation: exit-fade var(--base) var(--ease) forwards;
 }
 
 .bar-progress {
@@ -117,6 +128,7 @@
     padding: var(--s2) var(--s5);
   }
   .bar-progress,
+  .bar-fade,
   .bar-mini {
     display: none;
   }

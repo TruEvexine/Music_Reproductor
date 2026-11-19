@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ComponentPropsWithRef, CSSProperties, ReactNode } from "react";
 import { X } from "lucide-react";
 import { barsOf, BARS, hueOf } from "../core/coverArt";
@@ -6,7 +6,8 @@ import { coverBucket } from "../core/resample";
 import { useCover } from "../state/covers";
 import type { CoverSize } from "../state/covers";
 import { useDragDismiss } from "./gestures";
-import { useExit } from "./motion";
+import { motionReduced, useExit } from "./motion";
+import { PaletteContext } from "./usePalette";
 
 /** Tamaño y trazo únicos para todos los iconos (Lucide). */
 export const icon = { size: 22, strokeWidth: 1.75, "aria-hidden": true } as const;
@@ -57,6 +58,26 @@ function useDevicePixels(enabled: boolean) {
  * `sharp`: portada grande que se sirve al tamaño real de pantalla (reproductor grande, cabecera de álbum).
  * `label` describe la portada para lectores de pantalla; sin él es decorativa (el título está al lado).
  */
+/**
+ * Al cambiar la portada, el color anterior se queda encima y se funde (`exit-fade`, solo opacity) sobre el nuevo: lo que se tiñe con el
+ * acento (fondo del mini, píldora de la pestaña) no cambia de golpe. Cada capa lleva su `--accent`; `className` decide cómo pinta.
+ * Ni con teclado ni con movimiento reducido (cambian al instante, como el resto del acento).
+ */
+export function ColorFade({ className }: { className: string }) {
+  const { accent } = useContext(PaletteContext);
+  const shown = useRef(accent);
+  const [leaving, setLeaving] = useState<{ key: number; color: string }[]>([]);
+  useLayoutEffect(() => {
+    const before = shown.current;
+    shown.current = accent;
+    if (before === accent || motionReduced() || document.documentElement.dataset.input === "key") return;
+    setLeaving((list) => [...list, { key: performance.now(), color: before }]);
+  }, [accent]);
+  return leaving.map(({ key, color }) => (
+    <span aria-hidden="true" className={className} key={key} onAnimationEnd={() => setLeaving((list) => list.filter((item) => item.key !== key))} style={{ "--accent": color } as CSSProperties} />
+  ));
+}
+
 export function Cover({ hash, size = "small", seed, className = "", sharp = false, label }: { hash?: string; size?: CoverSize; seed: string; className?: string; sharp?: boolean; label?: string }) {
   const [px, ref] = useDevicePixels(sharp);
   const src = useCover(hash, size, px);
