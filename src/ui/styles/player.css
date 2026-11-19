@@ -285,6 +285,9 @@
 
 .now-copy {
   display: grid;
+  /* Sin minmax(0, …) la columna crecía hasta el título entero (min-width: auto) y un título largo llegaba al borde de la pantalla,
+     más allá de la portada; así termina en su margen y el marquee recorta ahí. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s1);
   min-width: 0;
   transition: opacity var(--fast) var(--ease);
@@ -326,8 +329,13 @@ html[data-input="key"] .now-copy {
   white-space: nowrap;
 }
 
+/* Moviéndose, el borde derecho de la caja (el margen de la portada en el reproductor grande) se funde en --fade px con una máscara: el texto
+   no se corta en seco ni llega al borde de la pantalla. La máscara no pinta color (no es un degradado decorativo); el recorrido suma --fade
+   para que el final del texto se lea entero (Marquee.tsx). */
 .marquee[data-moving] {
   text-overflow: clip;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
 }
 
 .marquee[data-moving] > span {

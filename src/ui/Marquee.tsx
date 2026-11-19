@@ -1,8 +1,10 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { PanelHidden, useReducedMotion } from "./motion";
 
 const SPEED = 30; // px por segundo, constante
 const HOLD = 1500; // ms quieto en cada extremo
+const FADE = 16; // px de la máscara del borde derecho (player.css: .marquee[data-moving])
 
 /**
  * Texto de una línea: si cabe, se queda quieto; si desborda, va y vuelve a velocidad constante con pausas en los extremos.
@@ -27,9 +29,10 @@ export function Marquee({ children }: { children: string }) {
   const animate = shift > 0 && !reduced && !hidden;
   useEffect(() => {
     if (!animate) return;
-    const travel = (shift / SPEED) * 1000;
+    const distance = shift + FADE; // el final del texto se detiene fuera de la máscara
+    const travel = (distance / SPEED) * 1000;
     const total = travel * 2 + HOLD * 2;
-    const end = `translateX(-${shift}px)`;
+    const end = `translateX(-${distance}px)`;
     const run = text.current!.animate(
       [
         { transform: "translateX(0)", offset: 0 },
@@ -44,7 +47,7 @@ export function Marquee({ children }: { children: string }) {
   }, [animate, shift]);
 
   return (
-    <span className="marquee" data-moving={animate || undefined} ref={box}>
+    <span className="marquee" data-moving={animate || undefined} ref={box} style={{ "--fade": `${FADE}px` } as CSSProperties}>
       <span ref={text}>{children}</span>
     </span>
   );
