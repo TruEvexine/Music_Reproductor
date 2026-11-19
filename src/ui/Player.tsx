@@ -38,7 +38,8 @@ import { closePanel, openPanel } from "./router";
 import { ActionSheet } from "./ActionSheet";
 import { EditDialog } from "./EditDialog";
 import { backdropPreview } from "./Backdrop";
-import { SwipeRow, useCoverSwipe, useDragDismiss } from "./gestures";
+import { SwipeRow, useCoverSwipe, useDragDismiss, useMorphDrag } from "./gestures";
+import { morphTo } from "./playerMorph";
 import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
@@ -137,9 +138,10 @@ export const PlayerBar = memo(function PlayerBar({ queueOpen }: { queueOpen: boo
   const track = useCurrentTrack();
   const isPlaying = usePlayer((state) => state.isPlaying);
   const progress = usePlayer((state) => (state.duration > 0 ? (state.position / state.duration) * 100 : 0));
+  const drag = useMorphDrag("open"); // móvil: arrastrar hacia arriba abre; tocar también
   if (!track) return null;
   return (
-    <footer aria-label="Reproductor" className="player-bar">
+    <footer aria-label="Reproductor" className="player-bar" {...drag}>
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
       <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
         <Cover className="bar-cover" seed={trackCoverSeed(track)} hash={track.coverHash} />
@@ -235,12 +237,17 @@ export function NowPlaying({ backdrop, closing, closed, queueOpen }: { backdrop:
   const open = !closing && !closed;
   const hasTrack = Boolean(useCurrentTrack());
   const sheet = useRef<HTMLElement>(null);
-  const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
+  const drag = useMorphDrag("close"); // arrastrar hacia abajo lo devuelve a la barra; el botón ⌄, Escape y atrás siguen
   const wide = useMedia("(min-width: 1000px)");
   const closeButton = useRef<HTMLButtonElement>(null);
   const hidden = useRef(false);
   hidden.current = Boolean(closed);
   usePanelFocus(sheet, closeButton, open, Boolean(closed));
+  // Abrir y cerrar por la URL (toque, Escape, atrás): la misma transformación desde la barra, guiada por tiempo. Si un arrastre ya la
+  // llevó a su sitio, no hace nada.
+  useLayoutEffect(() => {
+    if (sheet.current && (open || closing)) morphTo(sheet.current, open ? 1 : 0);
+  }, [open, closing, hasTrack]);
   useEncounter("player-touch", open);
   useEncounter("player-pointer", open);
   if (!hasTrack) return null;
@@ -259,7 +266,9 @@ export function NowPlaying({ backdrop, closing, closed, queueOpen }: { backdrop:
       ref={sheet}
     >
       <PanelHidden.Provider value={Boolean(closed)}>
+        <span aria-hidden="true" className="now-surface" />
         {backdrop}
+        <span aria-hidden="true" className="now-bloom" />
         <PlayerContent closeButton={closeButton} hidden={hidden} queueOpen={queueOpen} />
       </PanelHidden.Provider>
     </section>

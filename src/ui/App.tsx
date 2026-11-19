@@ -26,7 +26,7 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
 import { TutorialHint, useEncounter } from "./Tutorial";
-import { tokenMs, useKeptPanel } from "./motion";
+import { tokenMs, tokenValue, useKeptPanel } from "./motion";
 import { PaletteContext } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
@@ -60,7 +60,9 @@ function Shell() {
     if (!hasTrack || preloaded === 2) return;
     const idle = window.requestIdleCallback ?? ((run: () => void) => window.setTimeout(run, 500));
     idle(() => {
-      tokenMs("--exit"); // leída aquí (sin estilo pendiente) y no en el primer cierre, donde forzaría el recálculo de estilo
+      // Leídos aquí (sin estilo pendiente) y no en el primer toque o cierre, donde forzarían el recálculo de estilo.
+      for (const token of ["--exit", "--fast", "--slow"]) tokenMs(token);
+      tokenValue("--ease");
       startTransition(() => setPreloaded(preloaded + 1));
     });
   }, [hasTrack, preloaded]);

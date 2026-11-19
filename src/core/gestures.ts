@@ -9,7 +9,7 @@ export const LONG_PRESS_MS = 500;
 export const DISMISS_PX = 96;
 
 export interface GestureHelp {
-  id: "swipe-row" | "long-press" | "swipe-cover" | "drag-close" | "fine-seek";
+  id: "swipe-row" | "long-press" | "swipe-cover" | "drag-open" | "drag-close" | "fine-seek";
   title: string;
   how: string;
   /** Qué hacer sin el gesto: todo gesto tiene alternativa por botón o teclado. */
@@ -34,6 +34,12 @@ export const GESTURES: readonly GestureHelp[] = [
     title: "Deslizar la portada",
     how: "En el reproductor grande, desliza la portada a la izquierda para pasar a la siguiente canción y a la derecha para volver a la anterior.",
     alternative: "Los botones anterior y siguiente, o las flechas ← y → del teclado.",
+  },
+  {
+    id: "drag-open",
+    title: "Arrastrar para abrir",
+    how: "En el teléfono, arrastra hacia arriba el mini reproductor: el reproductor grande sigue a tu dedo. Si a mitad cambias de idea, vuelve hacia abajo y suelta.",
+    alternative: "Toca el mini reproductor.",
   },
   {
     id: "drag-close",

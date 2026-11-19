@@ -63,7 +63,8 @@
   align-items: center;
   gap: var(--s2);
   padding: var(--s2) calc(var(--s2) + var(--safe-right)) var(--s2) calc(var(--s3) + var(--safe-left));
-  background: var(--surface-2);
+  background: var(--bar-bg);
+  touch-action: none; /* arrastrar hacia arriba abre el reproductor (gestures.tsx: useMorphDrag); el navegador no debe tomar el gesto */
 }
 
 .bar-progress {
@@ -114,7 +115,6 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 34rem) minmax(0, 1fr);
     gap: var(--s5);
     padding: var(--s2) var(--s5);
-    background: var(--surface-1);
   }
   .bar-progress,
   .bar-mini {
@@ -159,11 +159,50 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   padding: var(--safe-top) calc(var(--gutter) + var(--safe-right)) calc(var(--s5) + var(--safe-bottom))
     calc(var(--gutter) + var(--safe-left));
-  background: var(--bg); /* el fondo animado (Backdrop) va detrás del contenido, ver backdrop.css */
-  --in: var(--slow);
-  --t0: translateY(24px);
-  --o0: 0;
-  --o1: 0;
+  /* Sin fondo propio ni transición: abrir y cerrar es la transformación desde la barra (ui/playerMorph.ts, WAAPI y estilos en línea).
+     Debajo del contenido, la superficie (del color de la barra) y el ambiente (Backdrop, backdrop.css). */
+  --t0: none;
+  --t1: none;
+  --o0: 1;
+  --o1: 1;
+}
+
+.shell .now-playing {
+  overflow: clip; /* la luz que nace de la miniatura no sale de la tarjeta */
+  transition: none;
+}
+
+/* La tarjeta que crece desde la barra: un bloque de color plano, así escalarlo en vertical no deforma nada. */
+.now-surface {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--bar-bg);
+  transform-origin: top;
+}
+
+/* La luz de la portada al abrir (playerMorph.ts): un halo de su acento que sale de la miniatura y se apaga cuando el ambiente ya está.
+   Es el nacimiento del ambiente del reproductor, el único degradado permitido (DESIGN.md §3). Quieto, invisible. */
+.now-bloom {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100vmax;
+  height: 100vmax;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--accent) 45%, transparent), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.now-art {
+  transform-origin: 0 0;
+}
+
+/* Mientras se arrastra o se anima desde la barra, cerrado pero visible. */
+.shell .now-playing[data-closed][data-morph] {
+  visibility: visible;
 }
 
 .now-header {
@@ -407,10 +446,6 @@ html[data-input="key"] .now-copy {
 
 @media (max-width: 999px) {
   .now-playing {
-    --t0: translateY(100%);
-    --t1: translateY(100%);
-    --o0: 1;
-    --o1: 1;
     overscroll-behavior: none;
   }
 }

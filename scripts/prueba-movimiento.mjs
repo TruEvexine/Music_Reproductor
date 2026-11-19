@@ -38,6 +38,8 @@ const style = (page, selector) =>
     return { name: css.animationName, duration: parseFloat(css.animationDuration) * 1000, transitionDuration: parseFloat(css.transitionDuration) * 1000, transform: css.transform, closing: el.dataset.closing ?? null };
   });
 const present = (page, selector) => page.locator(selector).count();
+// El reproductor grande no anima por CSS: abrir y cerrar es la transformación desde la barra (ui/playerMorph.ts), con WAAPI en la hoja.
+const sheetAnimation = (page) => page.locator(".now-playing").evaluate((el) => { const [anim] = el.getAnimations(); return anim ? Math.round(anim.effect.getTiming().duration) : 0; });
 // Cerrado: desmontado (diálogos) u oculto del todo (reproductor y cola, que siguen montados: ui/motion.ts, useKeptPanel).
 const closed = (page, selector) =>
   page.evaluate((sel) => [...document.querySelectorAll(sel)].every((el) => el.hasAttribute("data-closed") && el.inert && el.getAttribute("aria-hidden") === "true" && getComputedStyle(el).visibility === "hidden"), selector);
@@ -115,8 +117,8 @@ async function closeWith(page, selector, close) {
   // Reproductor grande: entrada --slow, salida --exit; la cola encima también sale.
   await page.locator(".bar-track").click();
   await wait(page, 40);
-  s = await style(page, ".now-playing");
-  check("reproductor grande (escritorio): entra con transición en --slow (280 ms)", s.name === "none" && Math.round(s.transitionDuration) === 280, `${s.name} ${s.transitionDuration} ms`);
+  let ms = await sheetAnimation(page);
+  check("reproductor grande (escritorio): crece desde la barra en --slow (280 ms)", ms === 280, `${ms} ms`);
   const copy = () => page.locator(".now-copy").evaluate((el) => ({ fade: el.hasAttribute("data-fade"), opacity: Number(getComputedStyle(el).opacity) }));
   let title = await copy();
   check("título: al abrir el reproductor no se funde (ya se mueve la hoja)", !title.fade && title.opacity === 1, JSON.stringify(title));
@@ -138,8 +140,11 @@ async function closeWith(page, selector, close) {
   await wait(page, 400);
   out = await closeWith(page, ".queue-panel", () => page.locator(".queue-panel").getByRole("button", { name: "Cerrar cola" }).click());
   check("la cola sobre el reproductor sale con transición en --exit y queda oculta", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
-  out = await closeWith(page, ".now-playing", () => page.getByRole("button", { name: "Cerrar reproductor" }).click());
-  check("el reproductor grande sale con transición en --exit y queda oculto", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
+  await page.getByRole("button", { name: "Cerrar reproductor" }).click();
+  await wait(page, 40);
+  ms = await sheetAnimation(page);
+  await wait(page, 450);
+  check("el reproductor grande vuelve a la barra en --exit (140 ms) y queda oculto", ms === 140 && (await closed(page, ".now-playing")), `${ms} ms`);
   // Dos Escape seguidos: el primero cierra el menú (que tarda --exit en salir) y el segundo no se pierde: cierra el reproductor.
   await page.locator(".bar-track").click();
   await wait(page, 500);
@@ -191,11 +196,14 @@ async function closeWith(page, selector, close) {
   check("diálogo (móvil): sale como hoja con transición en --exit y se desmonta", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
   await page.locator(".bar-track").tap();
   await wait(page, 40);
-  s = await style(page, ".now-playing");
-  check("reproductor grande (móvil): sube como hoja (transición, --slow)", s.name === "none" && Math.round(s.transitionDuration) === 280, `${s.name} ${s.transitionDuration} ms`);
+  let ms = await sheetAnimation(page);
+  check("reproductor grande (móvil): tocar el mini lo hace crecer desde la barra, guiado por tiempo (--slow)", ms === 280, `${ms} ms`);
   await wait(page, 500);
-  out = await closeWith(page, ".now-playing", () => page.getByRole("button", { name: "Cerrar reproductor" }).tap());
-  check("reproductor grande (móvil): baja con transición en --exit y queda oculto", out.during?.closing === "true" && Math.round(out.during.transitionDuration) === 140 && out.gone, JSON.stringify(out.during));
+  await page.getByRole("button", { name: "Cerrar reproductor" }).tap();
+  await wait(page, 40);
+  ms = await sheetAnimation(page);
+  await wait(page, 450);
+  check("reproductor grande (móvil): vuelve a la barra en --exit y queda oculto", ms === 140 && (await closed(page, ".now-playing")), `${ms} ms`);
   await page.locator(".bar-track").tap();
   await wait(page, 500);
   await page.locator(".now-playing").getByRole("button", { name: "Cola de reproducción" }).tap();
@@ -206,6 +214,60 @@ async function closeWith(page, selector, close) {
   await page.getByRole("button", { name: "Cerrar reproductor" }).tap();
   await wait(page, 400);
   check("foco (móvil): cerrar el reproductor lo devuelve al mini reproductor", (await active(page))?.startsWith("Abrir reproductor"), await active(page));
+  // Gestos simulados con eventos táctiles de CDP (el navegador los convierte en Pointer Events): arrastrar el mini hacia arriba abre,
+  // la cabecera hacia abajo cierra, a mitad se puede volver, un tirón corto decide por velocidad y lo horizontal es del carrusel.
+  const cdp = await context.newCDPSession(page);
+  const touch = (type, point) => cdp.send("Input.dispatchTouchEvent", { type, touchPoints: point ? [point] : [] });
+  const drag = async (from, to, steps = 24, stepMs = 16) => {
+    await touch("touchStart", from);
+    for (let i = 1; i <= steps; i++) {
+      await touch("touchMove", { x: from.x + ((to.x - from.x) * i) / steps, y: from.y + ((to.y - from.y) * i) / steps });
+      await wait(page, stepMs);
+    }
+    await touch("touchEnd");
+    await wait(page, 600);
+  };
+  const center = async (selector) => {
+    const box = await page.locator(selector).boundingBox();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  const isOpen = () => page.evaluate(() => new URLSearchParams(location.search).get("panel") === "player" && !document.querySelector(".now-playing").hasAttribute("data-closed"));
+  const noPanel = () => page.evaluate(() => !location.search.includes("panel"));
+  let mini = await center(".player-bar");
+  await drag(mini, { x: mini.x, y: mini.y - 120 }, 30, 20);
+  check("gesto: arrastrar el mini hacia arriba, despacio, abre el reproductor (y la URL lo dice)", await isOpen());
+  check("gesto: al abrir así, el foco entra en «Cerrar reproductor»", (await active(page)) === "Cerrar reproductor", await active(page));
+  check("gesto: abierto, la barra inferior y la hoja quedan sin estilos en línea (nada a medias)", await page.evaluate(() => !document.querySelector(".nav").style.opacity && !document.querySelector(".now-playing").style.transform));
+  const header = await center(".now-header");
+  await drag(header, { x: header.x + 20, y: header.y + 340 });
+  check("gesto: arrastrar la cabecera hacia abajo lo cierra (oculto, inert, aria-hidden y sin ?panel)", (await closed(page, ".now-playing")) && (await noPanel()));
+  mini = await center(".player-bar");
+  // Interrumpido: sube 300 px y vuelve casi a donde empezó, despacio. Debe quedarse cerrado.
+  await touch("touchStart", mini);
+  for (let i = 1; i <= 20; i++) {
+    await touch("touchMove", { x: mini.x, y: mini.y - i * 15 });
+    await wait(page, 16);
+  }
+  const midway = await page.locator(".now-playing").evaluate((el) => ({ morph: el.hasAttribute("data-morph"), y: Math.round(new DOMMatrix(getComputedStyle(el).transform).m42) }));
+  for (let i = 19; i >= 0; i--) {
+    await touch("touchMove", { x: mini.x, y: mini.y - i * 15 - 2 });
+    await wait(page, 30);
+  }
+  await touch("touchEnd");
+  await wait(page, 600);
+  check("gesto: a mitad del arrastre la hoja sigue al dedo (visible, a medio camino)", midway.morph && midway.y > 50 && midway.y < 700, JSON.stringify(midway));
+  check("gesto interrumpido: subir a mitad y volver deja el reproductor cerrado", (await closed(page, ".now-playing")) && (await noPanel()));
+  await drag(mini, { x: mini.x, y: mini.y - 80 }, 4, 0); // 80 px casi sin pausa: más rápido que 0,45 px/ms y por debajo de los 96 px de distancia
+  check("gesto rápido: un tirón corto hacia arriba abre (decide la velocidad)", await isOpen());
+  const cover = await center(".now-slot:not([data-side]) .now-cover");
+  await drag(cover, { x: cover.x - 60, y: cover.y + 20 }, 10, 16);
+  check("gesto horizontal sobre la portada: no cierra (es del carrusel)", await isOpen());
+  const seek = await center(".now-playing .seek .range");
+  await drag(seek, { x: seek.x + 30, y: seek.y + 200 }, 16, 16);
+  check("gesto sobre la barra de progreso: no cierra (el ajuste fino es suyo)", await isOpen());
+  await page.goBack();
+  await wait(page, 500);
+  check("gesto atrás del sistema: cierra el reproductor y queda oculto", await closed(page, ".now-playing"));
   check("sin errores de página (móvil)", errors.length === 0, errors.join(" | "));
   await context.close();
 }

@@ -118,6 +118,14 @@
 .shell {
   --accent: var(--accent-in);
   --glow: var(--glow-in);
+  /* Fondo de la barra del reproductor; la tarjeta que crece de ella hacia el reproductor grande lleva el mismo (player.css). */
+  --bar-bg: var(--surface-2);
+}
+
+@media (min-width: 1000px) {
+  .shell {
+    --bar-bg: var(--surface-1);
+  }
 }
 
 /* HDR: los mismos acentos y brillos con más croma (con tope) en toda la app, también fuera de .shell (landing). */

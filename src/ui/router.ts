@@ -58,6 +58,9 @@ export function openPanel(panel: Panel) {
   navigate(url.pathname + url.search, replace);
 }
 
+/** ¿La URL tiene el reproductor grande abierto? (fuera de React: los gestos deciden si abrir o cerrar al terminar) */
+export const playerOpen = () => new URL(raw(), "http://local").searchParams.get("panel") === "player";
+
 /** Cierra el panel abierto volviendo atrás, igual que haría el botón del sistema. */
 export function closePanel() {
   if (new URL(raw(), "http://local").searchParams.has("panel")) history.back();

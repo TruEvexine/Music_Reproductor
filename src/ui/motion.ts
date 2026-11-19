@@ -39,6 +39,16 @@ export function tokenMs(name: string): number {
   return ms;
 }
 
+/** Un token que no es duración (`--ease`), tal cual; leído una vez, como tokenMs. */
+const values = new Map<string, string>();
+export function tokenValue(name: string): string {
+  const cached = values.get(name);
+  if (cached) return cached;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  if (value) values.set(name, value);
+  return value;
+}
+
 /** Duración de toda salida (`--exit`) en ms; 0 con movimiento reducido. */
 function exitMs(): number {
   if (motionReduced()) return 0;
