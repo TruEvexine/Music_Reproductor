@@ -62,7 +62,9 @@
   display: flex;
   align-items: center;
   gap: var(--s2);
-  padding: var(--s2) calc(var(--s2) + var(--safe-right)) var(--s2) calc(var(--s3) + var(--safe-left));
+  /* Márgenes ópticos: la portada en el margen de la página (alineada con las portadas de la lista) y, a la derecha, la tinta del último
+     icono en ese mismo margen (un botón de 44 px con icono de 22 deja 11 px de aire, más el blanco del propio dibujo). Antes: 12 px | 22 px. */
+  padding: var(--s2) calc(var(--gutter) - 12px + var(--safe-right)) var(--s2) calc(var(--gutter) + var(--safe-left));
   isolation: isolate; /* el color que se va (.bar-fade) pinta encima del fondo y debajo del contenido */
   background: var(--bar-bg);
   touch-action: none; /* arrastrar hacia arriba abre el reproductor (gestures.tsx: useMorphDrag); el navegador no debe tomar el gesto */
@@ -156,6 +158,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: var(--s3);
+    margin-right: -11px; /* la tinta del icono de la cola en el margen de la barra, como la portada al otro lado (antes 24 | 37 px) */
   }
   .bar-end .icon-button {
     position: relative;
@@ -225,7 +228,8 @@
 .now-header {
   display: flex;
   justify-content: space-between;
-  margin: var(--s2) calc(var(--s2) * -1);
+  /* Los iconos de los extremos (⌄ y ≡) con su tinta en el borde de la portada, no 4–8 px por dentro: el botón sobresale lo que mide su aire. */
+  margin: var(--s2) calc(var(--s3) * -1);
 }
 
 .now-header .icon-button {

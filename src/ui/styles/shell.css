@@ -20,6 +20,10 @@
   :is(.main, .menu-body, .queue-list, .add-list) {
     scrollbar-gutter: stable;
   }
+  /* En la página, el mismo hueco también a la izquierda: con solo el derecho, los márgenes quedaban 40 | 55 px. */
+  .main {
+    scrollbar-gutter: stable both-edges;
+  }
 }
 
 .nav {

@@ -193,6 +193,7 @@ a {
 
 /* Controles */
 .icon-button {
+  position: relative; /* el punto de «activo» (::after) se coloca respecto al botón, esté donde esté */
   display: inline-grid;
   flex: none;
   place-items: center;
@@ -217,6 +218,12 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 
 .icon-button.is-on {
   color: var(--accent);
+}
+
+/* Alineación óptica: la caja del triángulo de reproducir está centrada, pero su peso cae a la izquierda (medido: centroide 1–1,2 px a la
+   izquierda del centro del círculo, a 22 y 28 px). 1 px a la derecha lo deja en el centro a ojo. `translate`, no `transform`: no pisa la pulsación. */
+.icon-button > .lucide-play {
+  translate: 1px 0;
 }
 
 /* El estado activo no depende solo del color: lleva además un punto debajo. */
@@ -247,6 +254,16 @@ html:not([data-input="key"]) .menu-row:active:not(:disabled) {
 /* El icono de 18 px a 1.75 dibuja 1.31 px; junto a texto de peso 600 (tallo ≈ 1.6 px) se veía más fino que él. 2.25 → 1.69 px. */
 .button svg {
   stroke-width: 2.25;
+}
+
+/* Alineación óptica: el icono es más ligero que el texto y con el mismo relleno parecía empujado hacia dentro; su lado lleva 2 px menos.
+   En esta app el icono va siempre delante del texto; un segundo icono (el ⌄ de «Añadir») cierra el botón por la derecha. */
+.button:has(> svg) {
+  padding-left: calc(var(--s4) - 2px);
+}
+
+.button:has(> svg ~ svg) {
+  padding-right: calc(var(--s4) - 2px);
 }
 
 .button.primary {

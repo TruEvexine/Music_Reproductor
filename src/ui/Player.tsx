@@ -317,7 +317,8 @@ const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOp
         </IconButton>
         <div className="now-actions">
           <IconButton label="Editar información" onClick={() => setEditingId(track.id)}>
-            <Pencil {...icon} />
+            {/* A 20 px: en diagonal llena su caja entera (tinta 20 × 20 a 22 px) y pesaba más que el micrófono, la cola y el menú de al lado. */}
+            <Pencil {...icon} size={20} />
           </IconButton>
           {track.hasLyrics && (
             <IconButton label="Letra" onClick={() => setLyrics(true)}>

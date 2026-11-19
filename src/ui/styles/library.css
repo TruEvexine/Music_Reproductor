@@ -28,6 +28,12 @@
   width: 48px;
 }
 
+/* Márgenes simétricos: la portada queda a 8 px del borde de la fila; la tinta del icono de acción (18 px en 44: 13 px de aire) quedaba a 13.
+   El botón sobresale 5 px y su tinta cae a 8 px del borde, como la portada. */
+.track-row > .icon-button:last-child {
+  margin-right: -5px;
+}
+
 .row-copy {
   display: grid;
   min-width: 0;
@@ -183,6 +189,11 @@
   min-height: 100%;
 }
 
+/* En escritorio el último icono de la cabecera cierra el margen derecho: su tinta en el borde del buscador, no 11 px por dentro. */
+.header-actions > .icon-button:last-child {
+  margin-right: -11px;
+}
+
 .header-actions,
 .empty-actions {
   display: flex;
@@ -294,6 +305,11 @@
   color: var(--ink);
   font: inherit;
   font-size: 1rem;
+}
+
+/* La flecha lleva 6 px de blanco a su izquierda dentro de su caja: sin compensarlo, «‹ Álbumes» empezaba 6 px por dentro del margen. */
+.back-link svg {
+  margin-left: -6px;
 }
 
 .back-link {
