@@ -919,6 +919,20 @@ Síntoma (Poco F7 Pro, Chrome, audífonos Bluetooth, producción 271b726): con S
 - [x] Pruebas: `prueba-pausa.mjs` §3 (oculta, con y sin frenado: reanudación, pausa real, el último toque gana, `seekto`; con el motor anterior fallan 2), 3 unitarias nuevas en `PlayerEngine.test.ts`; `prueba-audio.mjs` «Espacio reanuda» espera a que avance la posición (hasta 3 s) en vez de 600 ms fijos: 10 de 10.
 - **Sin confirmar en el teléfono:** la causa del silencio largo. Lo que queda fuera de nuestro código: Android/HyperOS cerrando la salida de audio o el Bluetooth al quedar la página en silencio, y su vuelta lenta. El panel nuevo debería registrarlo.
 
+### 11.1s Reproductor, alineación óptica, portadas m4a, isla del sistema y rampas (2026-11-19)
+
+- [x] Reproductor grande en móvil sin asa (tiene ⌄; toda la hoja sigue arrastrando para cerrar). El asa queda en cola y menús.
+- [x] Título, artista y formato terminan en el margen de la portada; el marquee se funde ahí con una máscara de 16 px (`prueba-menu`).
+- [x] Alineación óptica medida (centroide de la tinta frente al centro del botón y bordes de la tinta frente a los márgenes): play, lápiz, ⌄/≡, mini, filas, barra y cabecera de escritorio, «‹ Volver», botones con icono y hueco de la barra de desplazamiento a los dos lados.
+- [x] Mini reproductor: deslizar a los lados cambia de pista con vista previa (`useCoverSwipe`, el carrusel del grande); movimiento reducido: cambia al soltar (`prueba-movil`).
+- [x] Portadas m4a: fixtures AAC/ALAC con moov al principio y al final (`tests/fixtures/audio/m4a`); el lector extrae covr en los cuatro casos en Chromium, Firefox y WebKit (lee por acceso aleatorio). Causa corregida: un hash de portada se daba por guardado antes de escribirlo; al arrancar se releen las pistas con portada perdida o lectura fallida (`prueba-portadas-m4a`).
+- [x] Isla del sistema: cada orden de MediaSession devuelve playbackState y posición en su manejador; `?diag=1` anota «estado al sistema» (`prueba-pausa` §4).
+- [x] Rampas: el `<audio>` ya se pausaba siempre a ×0; la traza leía `gain.value` un cuanto de render antes de tiempo. Fin de rampa anotado dos cuantos después y «pausa del <audio>: volumen ×…» (`prueba-pausa` §5).
+- [x] Dependabot «npm-menores-y-parches» (supabase-js, react-virtual, lucide-react, react, react-dom, @playwright/test): con `npx playwright install` pasan prueba-privacidad y prueba-enlace-magico; aplicadas las 6.
+- **Sin probar en un teléfono:** la isla de HyperOS, el deslizamiento del mini con un dedo real y m4a reales con portada que fallaran (los de prueba y los locales cargan).
+
+Skills aplicadas: ponytail, make-interfaces-feel-better (alineación óptica, márgenes, icono junto a texto), impeccable (Operate: precisión sobre expresión), design-motion-principles (el mini reutiliza el gesto del grande; movimiento reducido sin vista previa), ui-ux-pro-max (44 px, alternativa por botón), design-taste-frontend (refinamiento sin cambiar la dirección). Se leyeron sus `SKILL.md` y las referencias de óptica y gotchas de movimiento; no se ejecutaron sus scripts.
+
 ### 11.2 Funciones nuevas (alcance)
 
 - **Agregar carpeta completa:** el botón de añadir pasa a *split button* ("Añadir ▾": archivos / carpeta), visible en el
