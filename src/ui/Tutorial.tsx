@@ -1,18 +1,23 @@
-import { useEffect, useRef } from "react";
+import { useContext, useEffect, useRef } from "react";
 import { Lightbulb } from "lucide-react";
 import { nextTutorial } from "../core/tutorials";
 import type { TutorialId, TutorialSlot } from "../core/tutorials";
 import { tutorials, useTutorials } from "../state/tutorials";
-import { usePresence } from "./motion";
+import { PanelHidden, usePresence } from "./motion";
 import { iconSmall } from "./parts";
 import { useMedia } from "./useMedia";
 
-/** Registra que la persona ya tiene delante esa cosa (cuando `when`): es lo único que puede disparar su aviso. Se repite tras «Ver tutoriales otra vez». */
+/**
+ * Registra que la persona ya tiene delante esa cosa (cuando `when`): es lo único que puede disparar su aviso. Se repite tras «Ver tutoriales otra vez».
+ * Dentro de un panel cerrado que sigue montado (las filas de la cola precargada) no la tiene delante: no cuenta.
+ */
 export function useEncounter(id: TutorialId, when = true) {
   const resets = useTutorials((state) => state.resets);
+  const hidden = useContext(PanelHidden);
+  const visible = when && !hidden;
   useEffect(() => {
-    if (when) tutorials.encounter(id);
-  }, [id, when, resets]);
+    if (visible) tutorials.encounter(id);
+  }, [id, visible, resets]);
 }
 
 /**
@@ -22,11 +27,12 @@ export function useEncounter(id: TutorialId, when = true) {
 export function TutorialHint({ slot, enabled = true }: { slot: TutorialSlot; enabled?: boolean }) {
   const state = useTutorials();
   const pointer = useMedia("(hover: hover) and (pointer: fine)");
-  const tip = enabled && state.ready ? nextTutorial(state, state.encountered, pointer ? "pointer" : "touch", slot) : null;
+  const hidden = useContext(PanelHidden); // dentro de un panel cerrado (que sigue montado) no es la superficie visible
+  const tip = enabled && !hidden && state.ready ? nextTutorial(state, state.encountered, pointer ? "pointer" : "touch", slot) : null;
   // Al descartarse sigue pintándose mientras sale (--exit), como el aviso de «Deshacer».
   const last = useRef(tip);
   if (tip) last.current = tip;
-  const { mounted, closing } = usePresence(tip !== null);
+  const { mounted, closing } = usePresence(tip !== null, !hidden); // oculto con su panel: se va sin salida que nadie ve
   const shown = tip ?? last.current;
   if (!mounted || !shown) return null;
   return (

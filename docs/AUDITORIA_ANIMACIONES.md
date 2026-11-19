@@ -192,10 +192,39 @@ En un Android de gama media o baja, con la grabación de pantalla del sistema (o
 11. Fondo Ritmo sonando: bloquear el teléfono o cambiar de app y volver. Sin salto de luces ni ráfaga de animación.
 12. Un título largo en el mini y en la cola (`Marquee`): velocidad constante y pausa en los extremos, sin tirones.
 
-## 5. Límites de esta auditoría
+## 5. B1–B3 y la salida de la cola, aplicados (2026-11-18)
+
+| Commit | Qué |
+|---|---|
+| `5d35aed` | **B1.** La causa principal no era React: `applyMetadata` rehacía un `Map` de las 5 000 pistas **por cada respuesta** del worker (O(n²), ≈ 34 % de la CPU en la fase de metadatos). Ahora el índice se rehace solo cuando cambia la lista (`state/library.ts`). Lo segundo era re-ordenar las 5 000 pistas por título en cada lote (≈ 49 ms con la CPU 4×): `sortTracks` acepta el orden anterior y ordena desde ahí con el empate decidido por la posición, así que el resultado es idéntico (test con empates, altas y bajas) y TimSort sobre casi ordenado hace ~n comparaciones. Biblioteca final comparada antes y después (servidor de desarrollo, 5 000 pistas): mismas pistas en memoria **en el mismo orden** y mismo contenido en IndexedDB. |
+| `af123fe` | **B2.** El reproductor grande y la cola quedan montados tras abrirse por primera vez o tras precargarse en reposo (`requestIdleCallback` + `startTransition`, primero el reproductor y en otro reposo la cola). Cerrados: `[data-closed]` (`visibility: hidden`, pose de entrada, sin transición), `inert` y `aria-hidden`; sin trabajo: la posición no re-renderiza, `Marquee` se para y el bucle del lienzo WebGL también (el contexto queda, para no crearlo en el toque; al reanudar toma los colores actuales, sin barrido). El contenido va memorizado aparte (`PlayerContent`, `QueueList`), y `LibraryView` y `PlayerBar` también: abrir solo cambia la sección y lo que lee el contexto. Los tokens de duración se leen una vez (leerlos en el toque forzaba ≈ 20 ms de recálculo de estilo). **Foco:** al abrir entra en «Cerrar reproductor» / «Cerrar cola»; al cerrar vuelve a quien lo tenía (el mini, el botón de la cola del reproductor o el de la barra); cerrado, Tab no entra. Lo comprueba `prueba-movimiento.mjs`. Los diálogos abiertos dentro de un panel que se cierra se cierran con él. |
+| `2749ee7` | **B3.** `.now-copy` solo se funde con `data-fade` (cambio de pista tras montar), no al montar el reproductor. Con B2 ya no se remontaba al abrir; esto cubre el montaje en el toque (antes de la precarga o al recargar con `?panel=player`). |
+| `0e00666` | **Salida de la cola (5.2).** Causa, con 6–8 trazas por paso: el temporizador de salida duraba exactamente `--exit`, pero el compositor arranca la transición uno o más cuadros después del cambio de estilo (38 ms con la CPU 4×). El temporizador desmontaba el panel ≈ 10–15 ms antes del final y Chromium marcaba la animación **cancelada** (131104, que llegaba *después* del fin). El fundido sí corría en el compositor. Ahora `usePresence` espera `--exit` + 100 ms. Antes fallaba en 6 de 12 pasadas (1/6 en móvil, 5/6 en escritorio); después, la salida termina siempre antes de ocultar el panel. Quedan 2 de 16 con 1056, registrado ≈ 95 ms después de que la animación terminó, cuando `data-closed` oculta el panel: Chromium revisa una transición ya acabada; no se anima nada en ese momento. Dentro de un panel oculto, el aviso y el título ya no animan (eran 131072, «sin efecto»). |
+
+**Medición, mismo método que §2** (build de producción, `vite preview`, Chromium sin ventana, CPU 4×, 390×844 táctil DPR 2 y 1440×900, una traza por paso desde el toque hasta 700 ms después). Para que el ruido no decida, 3 pasadas por paso antes y después. «Caídos» = `STATE_DROPPED` (+ parciales) / cuadros con actualización. Importar: 5 000 pistas con la CPU 4× desde que se eligen; tareas largas por `PerformanceObserver` y una traza de 3 s en mitad de los metadatos.
+
+| Flujo | Antes: tareas largas · caídos (3 pasadas) | Después: tareas largas · caídos (3 pasadas) |
+|---|---|---|
+| Abrir el reproductor, móvil | 86, 65, 69 ms · 5, 4, 5 | ninguna · 3, 2, 1 |
+| Abrir el reproductor, escritorio | 135 + 59, —, 57 ms · 12, 1, 0 (+9) | ninguna · 3, 1, 2 |
+| Abrir la cola (desde el reproductor), móvil | 90, —, — ms · 4, 1, 1 | ninguna · 0, 0, 0 |
+| Abrir la cola (desde el reproductor), escritorio | 73, 92, — ms · 4, 6, 2 | ninguna · 1, 1, 1 |
+| Abrir la cola (barra, columna fija), escritorio | —, 64, — ms · 1, 2, 1 | ninguna · 0, 0, 0 |
+| Cerrar la cola, móvil / escritorio | ninguna · 0 / 0–1; `compositeFailed` 131104 en 6 de 12 | ninguna · 0 / 0–2; ver `0e00666` |
+| Cerrar el reproductor, móvil / escritorio | ninguna · 1–2 / 1–3 | ninguna · 0 / 1 |
+| Precarga en reposo (4 s tras tocar la primera pista) | — (no había) | ninguna en móvil; en escritorio, a veces 56 ms a los 20 ms: es el propio toque de reproducir (50 ms antes) |
+| Importar 5 000, fase de metadatos, móvil | 74 tareas: 53–84 ms cada 250 ms durante 23,6 s (+ 417 y 298 al empezar) · traza de 3 s: 9 de 59–66 ms, 0 caídos / 83 | 1 tarea (288 ms, al empezar, ver abajo) durante 19,5 s · traza de 3 s: ninguna, 0 / 103 |
+| Importar 5 000, fase de metadatos, escritorio | 100 tareas: 55–91 ms durante 34,2 s (+ 416 y 303) · traza de 3 s: 9 de 63–69 ms, 3 caídos / 81 | 1 tarea (290 ms) durante 27,6 s · traza de 3 s: ninguna, 0 / 86 |
+| Importar 5 000, ingesta (elegir carpeta → lista visible) | ≈ 1,8 s + 0,2 s, ≈ 14 s | igual: no se tocó |
+
+**Lo que queda de la importación** (no era B1): la ingesta es una tarea de ≈ 1,8 s al elegir la carpeta (sobre todo la parte síncrona de `copyIn`, la copia a OPFS, y la entrada de 5 000 archivos) y, justo después, una de ≈ 0,3 s que es la escritura de las 5 000 pistas en IndexedDB en una sola transacción. Trocearlas cambia la ingesta, no los lotes.
+
+**¿Se puede construir encima la transición guiada por el dedo (A1)?** Sí, con la condición que pedía ya cumplida: tras la precarga (o tras la primera apertura) el reproductor está montado y abrir no tiene tareas largas, así que el gesto puede empezar moviendo algo que ya existe. Faltará: quitar `data-closed` al primer `pointermove` (un cambio de atributo, sin montaje) y llevar el `transform` en línea como ya hace el cierre por arrastre; el caso del primer segundo tras la primera pista, antes de la precarga, montaría en el gesto. Los 1–3 cuadros caídos que quedan al abrir son de Chromium sin GPU: hay que confirmarlo en un Android de gama media (flujos 1 y 2 de §4).
+
+## 6. Límites de esta auditoría
 
 - **Sin dispositivo real.** La CPU 4× es una emulación en un PC, y Chromium sin ventana dibuja sin GPU, así que los cuadros caídos del compositor pueden ser más o menos que en un teléfono.
 - **El arrastre táctil sintético no desplazaba** la lista en Chromium sin ventana (ni `synthesizeScrollGesture` ni `dispatchTouchEvent`), así que el desplazamiento en móvil se midió con la rueda. Por eso la fila «con metadatos en curso» del móvil es en realidad la página quieta: las 9 tareas largas son solo los lotes de metadatos.
-- La causa del `compositeFailed` de la salida de la cola no está confirmada; apareció en una de dos pasadas.
-- No se revisó cada componente en sus seis estados (7.1), ni a dónde vuelve el foco al cerrar el reproductor y la cola (6.3).
+- La causa del `compositeFailed` de la salida de la cola no estaba confirmada; apareció en una de dos pasadas. Resuelto en §5 (`0e00666`).
+- No se revisó cada componente en sus seis estados (7.1). A dónde vuelve el foco al cerrar el reproductor y la cola (6.3): resuelto y con prueba en §5 (`af123fe`).
 - WebKit (iPhone) no se probó.

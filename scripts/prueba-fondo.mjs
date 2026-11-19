@@ -73,12 +73,27 @@ const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gestur
 // ───────────── Escritorio, movimiento normal ─────────────
 {
   const { page, errors, context } = await open(browser);
-  check("colapsado: no hay lienzo ni bucle, solo el tinte CSS", (await canvases(page)) === 0 && (await stats(page)).length === 0 && (await page.locator(".tint").count()) === 1);
+  // El reproductor se precarga oculto tras la primera pista (ui/motion.ts, useKeptPanel): su lienzo puede existir, pero sin bucle.
+  const idle = await stats(page);
+  await wait(page, 400);
+  const idleAfter = await stats(page);
+  check("colapsado: sin bucle (el lienzo precargado no dibuja), solo el tinte CSS", (await canvases(page)) <= 1 && idle.length <= 1 && idleAfter.every((s, i) => s.frames === idle[i].frames) && (await page.locator(".tint").count()) === 1, JSON.stringify(idleAfter.map((s) => s.frames)));
   await page.screenshot({ path: join(shots, "fondo-01-tinte-mini-1440x900.png") });
 
   await expand(page);
   check("expandido: el lienzo WebGL se monta en el reproductor", (await page.locator(".now-playing canvas.backdrop-canvas").count()) === 1);
   check("expandido: el tinte de la app desaparece (no hay doble fondo)", (await page.locator(".tint").count()) === 0);
+  // Colapsar para el bucle; el lienzo queda, para que reabrir no lo cree en el toque.
+  await page.locator('.now-header button[aria-label="Cerrar reproductor"]').click();
+  await wait(page, 400);
+  const paused = await stats(page);
+  await wait(page, 400);
+  const pausedAfter = await stats(page);
+  check("al colapsar se para el bucle del lienzo y vuelve el tinte", paused.length === 1 && pausedAfter[0].frames === paused[0].frames && (await page.locator(".tint").count()) === 1, JSON.stringify([paused[0]?.frames, pausedAfter[0]?.frames]));
+  await expand(page);
+  const resumed = (await stats(page))[0].frames;
+  await wait(page, 300);
+  check("al reabrir, el mismo lienzo vuelve a dibujar", (await canvases(page)) === 1 && (await stats(page))[0].frames > resumed);
   await wait(page, 700);
   const a = await stats(page);
   await wait(page, 700);
@@ -185,13 +200,13 @@ const browser = await chromium.launch({ args: ["--autoplay-policy=no-user-gestur
   await wait(page, 400);
   check("al perder el contexto WebGL aparece el gradiente CSS de respaldo", (await canvases(page)) === 0 && (await page.locator(".now-playing > .backdrop[style*='gradient']").count()) === 1);
 
-  // Colapsar: el lienzo se libera.
+  // Colapsar tras perder el contexto: sin lienzo (el respaldo CSS se queda) y vuelve el tinte.
   await page.keyboard.press("Escape");
   await page.goBack().catch(() => undefined);
   await wait(page, 500);
-  if ((await page.locator(".now-playing").count()) > 0) await page.locator('.now-header button[aria-label="Cerrar reproductor"]').click();
+  if ((await page.locator(".now-playing:not([data-closed])").count()) > 0) await page.locator('.now-header button[aria-label="Cerrar reproductor"]').click();
   await wait(page, 400);
-  check("al colapsar el reproductor se libera el lienzo y vuelve el tinte", (await canvases(page)) === 0 && (await stats(page)).length === 0 && (await page.locator(".tint").count()) === 1);
+  check("al colapsar el reproductor sigue sin lienzo y vuelve el tinte", (await canvases(page)) === 0 && (await stats(page)).length === 0 && (await page.locator(".tint").count()) === 1);
   check("sin errores de página (escritorio)", errors.length === 0, errors.join(" | "));
   await context.close();
 }

@@ -68,6 +68,8 @@ export class PlayerEngine {
   private seekTarget: number | null = null;
   /** Para el fondo "Ritmo" y visualizadores. Existe tras la primera reproducción. */
   analyser?: AnalyserNode;
+  /** Solo el panel `?diag=1`: recibe cada orden y el inicio y el fin de cada rampa. */
+  trace?: (text: string) => void;
 
   constructor(private readonly events: EngineEvents) {
     this.decks = [this.createDeck(), this.createDeck()];
@@ -165,7 +167,7 @@ export class PlayerEngine {
   private applyVolume() {
     if (this.master) {
       // En pleno fundido de pausa manda la rampa a 0; en una búsqueda, su subida (que ya usa el volumen nuevo).
-      if (this.pauseTimer === undefined && this.seekTimer === undefined) this.rampMaster(this.volume, VOLUME_RAMP);
+      if (this.pauseTimer === undefined && this.seekTimer === undefined) this.rampMaster(this.volume, VOLUME_RAMP, "de volumen");
     } else for (const deck of this.decks) deck.audio.volume = this.volume;
   }
 
@@ -174,7 +176,7 @@ export class PlayerEngine {
    * El valor se calcula de la última rampa: `gain.value` llega con retraso y `cancelAndHoldAtTime` no ancla si no hay rampa en curso
    * (la nueva interpolaría desde el evento anterior: escalón). Lineal porque una exponencial no llega a 0. Devuelve el fin, en reloj de audio.
    */
-  private rampMaster(target: number, seconds: number): number {
+  private rampMaster(target: number, seconds: number, why: string): number {
     const gain = this.master!.gain;
     const now = this.context!.currentTime;
     const { from, to, start, end } = this.ramp;
@@ -182,8 +184,28 @@ export class PlayerEngine {
     gain.cancelScheduledValues(now);
     gain.setValueAtTime(value, now);
     gain.linearRampToValueAtTime(target, now + seconds);
-    this.ramp = { from: value, to: target, start: now, end: now + seconds };
+    const ramp = (this.ramp = { from: value, to: target, start: now, end: now + seconds });
+    const trace = this.trace;
+    if (trace && seconds > 0) {
+      const round = (x: number) => Math.round(x * 1000) / 1000;
+      trace(`rampa ${why}: volumen ×${round(value)} → ×${round(target)} en ${Math.round(seconds * 1000)} ms`);
+      this.atAudioTime(ramp.end, () => trace(this.ramp === ramp ? `fin rampa ${why}: volumen ×${round(gain.value)}` : `rampa ${why} interrumpida por otra`));
+    }
     return now + seconds;
+  }
+
+  /**
+   * `fn` cuando el reloj de audio llega a `at`. El `ended` de una fuente muda lo despacha el hilo de audio, sin los temporizadores que el
+   * navegador frena a ≥ 1 s con la página oculta (con ellos, el <audio> seguía sonando mudo y la canción avanzaba hasta 1 s en cada pausa).
+   */
+  private atAudioTime(at: number, fn: () => void) {
+    const context = this.context!;
+    const tick = context.createConstantSource();
+    tick.offset.value = 0;
+    tick.connect(context.destination);
+    tick.onended = () => (tick.disconnect(), fn());
+    tick.start();
+    tick.stop(at);
   }
 
   private applyEq() {
@@ -244,6 +266,7 @@ export class PlayerEngine {
 
   /** Carga una pista en el deck activo. Si ya estaba precargada en el otro, simplemente cambia de deck. */
   load(url: string, startAt = 0, gain = 1) {
+    this.trace?.("orden: cargar pista");
     this.cancelSeek();
     this.cancelFade();
     if (this.idle.audio.getAttribute("src") === url && startAt === 0) {
@@ -286,8 +309,10 @@ export class PlayerEngine {
     from.fade.gain.setValueAtTime(1, now);
     from.fade.gain.linearRampToValueAtTime(0, now + seconds);
     this.active = 1 - this.active;
+    this.trace?.(`rampa fundido entre pistas: ${Math.round(seconds * 1000)} ms`);
     void to.audio.play().catch(() => this.events.onError());
     this.fadeTimer = setTimeout(() => {
+      this.trace?.("fin fundido entre pistas: la anterior se vacía");
       this.silence(from);
       if (from.fade) from.fade.gain.value = 1;
     }, seconds * 1000 + 50);
@@ -297,6 +322,7 @@ export class PlayerEngine {
   /** Rechaza con el error del navegador (salvo AbortError: otra carga interrumpió esta). `fade`: segundos de entrada. */
   async play(fade = 0): Promise<void> {
     const turn = ++this.turn;
+    this.trace?.("orden: play");
     this.wanted = true;
     this.starting = true;
     this.events.onPlaying(true); // el estado visual cambia en el mismo toque, no cuando el <audio> arranca
@@ -311,10 +337,10 @@ export class PlayerEngine {
       if (!context || !master) await this.current.audio.play();
       else if (this.current.audio.paused) {
         // Desde silencio, la subida empieza cuando el <audio> ya entrega muestras: antes arrancaba a media rampa (escalón).
-        this.rampMaster(0, 0);
+        this.rampMaster(0, 0, "de reanudación");
         await this.current.audio.play();
-        if (turn === this.turn) this.rampMaster(this.volume, ramp);
-      } else this.rampMaster(this.volume, ramp); // a mitad de una rampa de pausa: sube desde donde iba
+        if (turn === this.turn) this.rampMaster(this.volume, ramp, "de reanudación");
+      } else this.rampMaster(this.volume, ramp, "de reanudación"); // a mitad de una rampa de pausa: sube desde donde iba
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       throw error;
@@ -325,7 +351,8 @@ export class PlayerEngine {
 
   /** Baja el volumen (al menos CUT_RAMP; `fade` para la pausa suave y el temporizador) y pausa al terminar. Sin Web Audio, pausa al instante. */
   pause(fade = 0) {
-    this.turn += 1;
+    const turn = ++this.turn;
+    this.trace?.("orden: pause");
     this.wanted = false;
     this.starting = false;
     this.events.onPlaying(false);
@@ -342,12 +369,15 @@ export class PlayerEngine {
     };
     if (context && master && context.state === "running" && !this.current.audio.paused) {
       fade = Math.max(fade, CUT_RAMP);
-      const end = this.rampMaster(0, fade) + PAUSE_MARGIN;
-      // Reloj de audio, no el de JS: el <audio> se para solo cuando la rampa ya se calculó entera.
-      const wait = () => {
-        this.pauseTimer = context.state !== "running" || context.currentTime >= end ? void hardPause() : setTimeout(wait, 10);
+      const end = this.rampMaster(0, fade, "de pausa") + PAUSE_MARGIN;
+      const done = () => {
+        if (turn !== this.turn || this.pauseTimer === undefined) return;
+        clearTimeout(this.pauseTimer);
+        hardPause();
       };
-      this.pauseTimer = setTimeout(wait, fade * 1000);
+      // Reloj de audio, no el de JS: el <audio> se para solo cuando la rampa ya se calculó entera.
+      this.atAudioTime(end, done);
+      this.pauseTimer = setTimeout(done, (end - context.currentTime) * 1000 + 250); // si el contexto se para antes, `ended` no llega
     } else hardPause();
   }
 
@@ -367,6 +397,7 @@ export class PlayerEngine {
   seek(position: number) {
     if (!Number.isFinite(position)) return;
     const target = Math.max(0, position);
+    this.trace?.(`orden: buscar ${target.toFixed(2)} s`);
     const audio = this.current.audio;
     const context = this.context;
     if (!context || !this.master || context.state !== "running" || audio.paused || this.pauseTimer !== undefined) {
@@ -377,23 +408,24 @@ export class PlayerEngine {
     const turn = ++this.seekTurn;
     clearTimeout(this.seekTimer);
     this.seekTarget = target;
-    const end = this.rampMaster(0, SEEK_DIP);
+    const end = this.rampMaster(0, SEEK_DIP, "de búsqueda");
     const restore = () => {
       if (turn !== this.seekTurn) return;
       clearTimeout(this.seekTimer);
       this.seekTimer = undefined;
-      if (this.pauseTimer === undefined) this.rampMaster(this.volume, SEEK_DIP); // en pleno fundido de pausa manda esa rampa
+      if (this.pauseTimer === undefined) this.rampMaster(this.volume, SEEK_DIP, "de búsqueda"); // en pleno fundido de pausa manda esa rampa
     };
     // Reloj de audio, como en la pausa: se salta cuando la bajada ya se calculó entera.
     const jump = () => {
-      if (turn !== this.seekTurn) return;
-      if (context.state === "running" && context.currentTime < end) return void (this.seekTimer = setTimeout(jump, 5));
+      if (turn !== this.seekTurn || this.seekTarget === null) return;
+      clearTimeout(this.seekTimer);
       this.seekTarget = null;
       audio.addEventListener("seeked", restore, { once: true });
       audio.currentTime = target;
       this.seekTimer = setTimeout(restore, SEEK_GIVE_UP);
     };
-    this.seekTimer = setTimeout(jump, SEEK_DIP * 1000);
+    this.atAudioTime(end, jump);
+    this.seekTimer = setTimeout(jump, SEEK_DIP * 1000 + 250); // si el contexto se para antes, `ended` no llega
   }
 
   /** Abandona una búsqueda suave (cambio de pista, parada, búsqueda en pausa) y devuelve el volumen. */
@@ -403,7 +435,7 @@ export class PlayerEngine {
     clearTimeout(this.seekTimer);
     this.seekTimer = undefined;
     this.seekTarget = null;
-    if (this.master && this.pauseTimer === undefined) this.rampMaster(this.volume, SEEK_DIP);
+    if (this.master && this.pauseTimer === undefined) this.rampMaster(this.volume, SEEK_DIP, "de búsqueda");
   }
 
   /** Durante la bajada de una búsqueda, su destino: varias flechas seguidas suman desde ahí. */

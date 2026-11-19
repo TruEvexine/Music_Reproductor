@@ -28,7 +28,23 @@ const node = () => {
 
 class FakeContext {
   static last: FakeContext;
-  currentTime = 0;
+  private time = 0;
+  private sources: { stopAt: number; onended: (() => void) | null }[] = [];
+  /** Mover el reloj de audio despacha el `ended` de las fuentes que paran antes, como tarea (lo hace el hilo de audio). */
+  get currentTime() {
+    return this.time;
+  }
+  set currentTime(time: number) {
+    this.time = time;
+    const due = this.sources.filter((source) => source.stopAt <= time);
+    this.sources = this.sources.filter((source) => source.stopAt > time);
+    for (const source of due) setTimeout(() => source.onended?.(), 0);
+  }
+  createConstantSource = () => {
+    const source = { offset: new FakeParam(), onended: null as (() => void) | null, stopAt: Infinity, connect: () => {}, disconnect: () => {}, start: () => {}, stop: (at: number) => (source.stopAt = at) };
+    this.sources.push(source);
+    return source;
+  };
   state = "running";
   sampleRate = 48000;
   destination = node();
@@ -163,6 +179,30 @@ describe("rampa al cortar", () => {
     FakeContext.last.currentTime = 10.05;
     await vi.advanceTimersByTimeAsync(20);
     expect(audio().paused).toBe(true);
+  });
+
+  it("página oculta: el <audio> se pausa al llegar el reloj de audio, sin esperar a ningún temporizador (el navegador los frena a ≥ 1 s)", async () => {
+    await playing();
+    engine.pause(0);
+    FakeContext.last.currentTime = 10.05;
+    await vi.advanceTimersByTimeAsync(1); // solo la tarea del `ended`
+    expect(audio().paused).toBe(true);
+  });
+
+  it("si el reloj de audio se para a mitad de la rampa (contexto suspendido), el <audio> se pausa igual", async () => {
+    await playing();
+    engine.pause(0);
+    await vi.advanceTimersByTimeAsync(300);
+    expect(audio().paused).toBe(true);
+  });
+
+  it("buscar sonando salta cuando el reloj de audio acaba la bajada, sin temporizador", async () => {
+    await playing();
+    engine.seek(5);
+    expect(audio().currentTime).toBe(0);
+    FakeContext.last.currentTime = 10.05;
+    await vi.advanceTimersByTimeAsync(1);
+    expect(audio().currentTime).toBe(5);
   });
 
   it("reanudar sin fundido sube desde 0 cuando el <audio> ya entrega muestras", async () => {

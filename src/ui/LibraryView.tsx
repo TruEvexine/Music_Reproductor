@@ -1,4 +1,4 @@
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { DragEvent, MouseEvent, ReactNode } from "react";
 import { AudioLines, ChevronDown, ChevronLeft, FilePlus, FolderOpen, FolderSync, ListPlus, ListStart, Pause, Pencil, Play, Plus, Search, TriangleAlert, X } from "lucide-react";
 import { trackCoverSeed } from "../core/coverArt";
@@ -250,6 +250,13 @@ function AddSplit({ primary = false, onFiles, onFolder }: { primary?: boolean; o
   const box = useRef<HTMLDivElement>(null);
   const toggle = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+  const menu = useRef<HTMLDivElement>(null);
+  // Con el botón a la derecha de la cabecera, el menú nace hacia la izquierda: si anclado a la izquierda se saldría de la ventana.
+  useLayoutEffect(() => {
+    const el = menu.current;
+    const main = el?.closest("main"); // su borde visible: sin la barra de desplazamiento
+    if (el && main) el.dataset.end = String(el.getBoundingClientRect().right > main.getBoundingClientRect().left + main.clientWidth);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const outside = (event: PointerEvent) => !box.current?.contains(event.target as Node) && setOpen(false);
@@ -278,7 +285,7 @@ function AddSplit({ primary = false, onFiles, onFolder }: { primary?: boolean; o
         <ChevronDown {...iconSmall} />
       </button>
       {open && (
-        <div className="split-menu" id={menuId}>
+        <div className="split-menu" id={menuId} ref={menu}>
           <button onClick={choose(onFolder)} type="button">
             <FolderOpen {...icon} />
             <span className="row-copy">
@@ -340,7 +347,8 @@ function Reconnect() {
   );
 }
 
-export function LibraryView({ path }: { path: string }) {
+// memo: abrir o cerrar un panel cambia la ruta y re-renderiza el Shell; la biblioteca no depende de eso.
+export const LibraryView = memo(function LibraryView({ path }: { path: string }) {
   const tracks = useLibrary((state) => state.tracks);
   const ready = useLibrary((state) => state.ready);
   const notice = useLibrary((state) => state.notice);
@@ -358,21 +366,28 @@ export function LibraryView({ path }: { path: string }) {
   const groupBy = tabs.find((item) => item.id === tab)?.group;
   const groupKey = rawKey ? decodeKey(rawKey) : undefined;
 
-  const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
+  // Al importar, `tracks` cambia cada 250 ms: el orden anterior acelera el siguiente (mismo resultado, ver sortTracks) y el índice por id solo se arma en un grupo.
+  const lastSort = useRef(new Map<TrackSort, Track[]>());
+  const sortFrom = (list: Track[], sort: TrackSort) => {
+    const sorted = sortTracks(list, sort, lastSort.current.get(sort));
+    lastSort.current.set(sort, sorted);
+    return sorted;
+  };
+  const byId = useMemo(() => (groupKey ? new Map(tracks.map((track) => [track.id, track])) : undefined), [tracks, groupKey]);
   const key = searchKey(search);
   const matching = useMemo(() => (key ? tracks.filter((track) => matches(searchText(track), key)) : tracks), [tracks, key]);
   const groups = useMemo(() => {
     if (!groupBy) return [];
-    const all = groupTracks(sortTracks(tracks, "album"), groupBy);
+    const all = groupTracks(sortFrom(tracks, "album"), groupBy);
     return groupKey ? all : sortGroups(key ? all.filter((group) => matches(searchKey(`${group.label} ${group.subtitle}`), key)) : all, groupSort);
   }, [tracks, groupBy, groupKey, key, groupSort]);
   const group = groupKey ? groups.find((item) => item.key === groupKey) : undefined;
   const visible = useMemo(() => {
     if (group) {
-      const inGroup = group.trackIds.map((id) => byId.get(id)!).filter((track) => !key || matches(searchText(track), key));
+      const inGroup = group.trackIds.map((id) => byId!.get(id)!).filter((track) => !key || matches(searchText(track), key));
       return tab === "albumes" ? inGroup : sortTracks(inGroup, "artist");
     }
-    return tab === "recientes" ? recentTracks(matching) : sortTracks(matching, trackSort);
+    return tab === "recientes" ? recentTracks(matching) : sortFrom(matching, trackSort);
   }, [group, byId, key, tab, matching, trackSort]);
 
   const addFiles = () => filesInput.current?.click();
@@ -552,4 +567,4 @@ export function LibraryView({ path }: { path: string }) {
       {sheet && <LibrarySheet onClose={() => setSheet(false)} />}
     </section>
   );
-}
+});

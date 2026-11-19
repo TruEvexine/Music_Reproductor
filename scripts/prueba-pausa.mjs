@@ -2,8 +2,12 @@
 // Uso: node scripts/prueba-pausa.mjs [url-base]. Sale con 1 si algo falla.
 // 1. 20 y 21 toques en el botón de reproducir en menos de 2 s: el estado final (botón y <audio> real) es el del último toque, sin excepciones.
 // 2. Página oculta (visibilitychange): el bucle del fondo se detiene, se reanuda al volver y las luces no ven el hueco (sin salto).
-// AudioContext.resume() se retrasa 150 ms, como en un móvil. Usa audio sintético y `window.__engine` / `window.__backdrop` (solo en desarrollo).
+// 3. Página oculta de verdad: 10 alternancias pause/play por MediaSession, con y sin el frenado de temporizadores de un móvil.
+// AudioContext.resume() se retrasa 150 ms, como en un móvil (1 y 2). Usa audio sintético y `window.__engine` / `window.__backdrop` (solo en desarrollo).
 import { chromium } from "@playwright/test";
+import { spawn } from "node:child_process";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import "./requiere-audio.mjs";
 
@@ -97,5 +101,108 @@ check("al volver las luces no ven el hueco (sin salto)", back.analysisGapMs < 20
 check("sin excepciones tras ocultar y volver", errors.length === 0, errors.join(" | "));
 
 await browser.close();
+
+// 3. Pausas rápidas desde los controles del sistema (MediaSession) con la página oculta de verdad.
+// Con Playwright conectado la página nunca pasa a «hidden»: Chromium se lanza a mano, Playwright prepara la reproducción, se desconecta
+// y lo demás va por CDP. Chromium no frena los temporizadores de una página con un AudioContext en marcha, así que se repite con el frenado
+// de un móvil emulado (temporizadores alineados a 1 s, sin requestAnimationFrame): nada de pausar ni reanudar puede depender de ellos.
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const profile = mkdtempSync(join(tmpdir(), "prueba-pausa-"));
+const chrome = spawn(chromium.executablePath(), ["--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`, "--no-first-run", "--autoplay-policy=no-user-gesture-required", "about:blank"], { stdio: "ignore" });
+try {
+  const portFile = join(profile, "DevToolsActivePort");
+  while (!existsSync(portFile)) await wait(50);
+  const devtools = `http://127.0.0.1:${readFileSync(portFile, "utf8").split("\n")[0]}`;
+  const remote = await chromium.connectOverCDP(devtools);
+  const app = remote.contexts()[0].pages()[0];
+  await app.addInitScript(() => {
+    window.__media = {};
+    const set = MediaSession.prototype.setActionHandler;
+    MediaSession.prototype.setActionHandler = function (action, handler) {
+      window.__media[action] = handler;
+      return set.call(this, action, handler);
+    };
+  });
+  await app.route("**/demoCatalog.dev.ts*", (route) => route.fulfill({ contentType: "text/javascript", body: "export const demoFiles = [];" }));
+  await app.goto(`${base}/app`);
+  await app.getByLabel("Elegir archivos de música").setInputFiles(join(fixtures, "01-amanecer.flac"));
+  await app.waitForTimeout(2500);
+  await app.locator(".track-row .row-main", { hasText: "Amanecer" }).click();
+  await app.waitForTimeout(800);
+  await remote.close(); // solo se desconecta
+
+  const target = (await (await fetch(`${devtools}/json`)).json()).find((item) => item.type === "page" && item.url.includes("/app"));
+  const socket = new WebSocket(target.webSocketDebuggerUrl);
+  await new Promise((resolve) => (socket.onopen = resolve));
+  let id = 0;
+  const replies = new Map();
+  socket.onmessage = (message) => {
+    const data = JSON.parse(message.data);
+    replies.get(data.id)?.(data.result?.result?.value);
+  };
+  const run = (expression) =>
+    new Promise((resolve) => {
+      replies.set(++id, resolve);
+      socket.send(JSON.stringify({ id, method: "Runtime.evaluate", params: { expression, awaitPromise: true, returnByValue: true } }));
+    });
+  await fetch(`${devtools}/json/new?about:blank`, { method: "PUT" }); // otra pestaña al frente
+  await wait(500);
+  check("3. la página queda oculta de verdad (otra pestaña al frente)", (await run("document.visibilityState")) === "hidden");
+  const probe = () => run(`(() => { const e = window.__engine, a = e.decks[e.active].audio; return { gain: e.master.gain.value, time: a.currentTime, paused: a.paused, t: performance.now() }; })()`);
+  const system = (action, details = {}) => run(`void window.__media[${JSON.stringify(action)}](${JSON.stringify({ action, ...details })})`);
+  /** Espera hasta 5 s a que se cumpla `done(muestra, primera)`; devuelve los ms o Infinity. */
+  const until = async (done) => {
+    const first = await probe();
+    for (let sample = first; sample.t - first.t < 5000; sample = await probe()) {
+      if (done(sample, first)) return sample.t - first.t;
+      await wait(5);
+    }
+    return Infinity;
+  };
+
+  for (const throttled of [false, true]) {
+    const mode = throttled ? "oculta y con el frenado de un móvil" : "oculta";
+    if (throttled)
+      await run(`(() => {
+        const set = window.setTimeout;
+        window.setTimeout = (fn, ms = 0, ...args) => set(fn, Math.ceil((performance.now() + ms) / 1000) * 1000 - performance.now(), ...args);
+        window.requestAnimationFrame = () => 0;
+      })()`);
+    let gainMs = 0;
+    let moveMs = 0;
+    for (let round = 0; round < 3; round++) {
+      await system("seekto", { seekTime: 0.5 });
+      await wait(800);
+      for (let i = 0; i < 10; i++) {
+        await system(i % 2 === 0 ? "pause" : "play");
+        if (i < 9) await wait(150 + Math.random() * 100);
+      }
+      // Desde la última orden play: ganancia de vuelta a 1 y currentTime avanzando.
+      const [gain, move] = await Promise.all([until((s) => s.gain >= 0.999), until((s, first) => !s.paused && s.time > first.time + 0.05)]);
+      gainMs = Math.max(gainMs, gain);
+      moveMs = Math.max(moveMs, move);
+    }
+    check(`${mode}: tras 10 alternancias pause/play por MediaSession la ganancia vuelve a 1 en < 300 ms`, gainMs < 300, `peor de 3: ${Math.round(gainMs)} ms`);
+    check(`${mode}: … y el <audio> avanza en < 300 ms`, moveMs < 300, `peor de 3: ${Math.round(moveMs)} ms`);
+    const before = await probe();
+    await system("pause");
+    const tail = await until((s) => s.paused);
+    const after = await probe();
+    check(`${mode}: al pausar, el <audio> se para en < 200 ms (no sigue mudo y la canción no avanza en silencio)`, tail < 200 && after.time - before.time < 0.2, `${Math.round(tail)} ms, avanzó ${(after.time - before.time).toFixed(2)} s`);
+    await wait(400);
+    const still = await probe();
+    check(`${mode}: el último toque gana (pause): sigue en pausa`, still.paused && still.time === after.time);
+    await system("play");
+    await wait(600);
+    let dipped = false;
+    await system("seekto", { seekTime: 1 });
+    const seekMs = await until((s) => (dipped ||= s.gain < 0.01) && s.gain >= 0.999);
+    check(`${mode}: seekto vuelve a sonar en < 250 ms`, seekMs < 250, `${Math.round(seekMs)} ms`);
+  }
+  socket.close();
+} finally {
+  chrome.kill();
+}
+
 console.log(failed ? `\n${failed} comprobaciones fallaron` : "\nTodas las comprobaciones pasaron");
 process.exit(failed ? 1 : 0);

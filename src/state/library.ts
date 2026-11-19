@@ -56,7 +56,13 @@ const trackIdOf = (rootId: string, path: string) => `${rootId}:${path}`;
 // Ediciones de metadatos por id de pista (core/edits.ts). Se aplican a la pista en memoria; en IndexedDB, `tracks` guarda solo lo leído del archivo.
 const edits = new Map<string, TrackEdit>();
 const withEdit = (track: Track) => applyEdit(track, edits.get(track.id));
-const byId = () => new Map(useLibrary.getState().tracks.map((track) => [track.id, track]));
+// Índice por id, rehecho solo cuando cambia la lista: cada respuesta de metadatos lo consulta y rehacerlo por respuesta era O(n²) al importar.
+let index: { tracks: Track[]; map: Map<string, Track> } | undefined;
+const byId = () => {
+  const { tracks } = useLibrary.getState();
+  if (index?.tracks !== tracks) index = { tracks, map: new Map(tracks.map((track) => [track.id, track])) };
+  return index.map;
+};
 const say = (notice: string | null) => useLibrary.setState({ notice });
 
 function publishRoots() {

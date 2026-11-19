@@ -18,3 +18,24 @@ Cómo se probó: rama temporal desde `desarrollo` (ya borrada), `npm ci`, el cam
 
 Orden sugerido en `desarrollo`: 1) PR agrupada de menores y parches, 2) vite 8 + plugin-react 6 en un solo commit, 3) gitleaks-action.
 Los avisos de seguridad de Dependabot siguen yendo a la rama por defecto (`main`): `target-branch` no los afecta.
+
+## Navegadores mínimos soportados (Vite 8, 2026-11-18)
+
+Decisión tomada: Vite 8.3.8 y @vitejs/plugin-react 6.3.0 vuelven a `desarrollo` con el objetivo de navegadores **por defecto de Vite 8** (`baseline-widely-available`, sin `build.target` propio).
+Ese es el mínimo soportado: **Chrome y Edge 111, Firefox 114, Safari 16.4 (y iOS 16.4)**. Por debajo, el CSS de producción no se interpreta (`oklch()` sin convertir, media queries en sintaxis de rango).
+Si cambia el mínimo, se cambia aquí y en `build.target`; el historial de lo anterior está en la sección siguiente.
+
+## Vite 8 + plugin-react 6, primera vez: aplicados y revertidos (2026-11-18)
+
+Se aplicaron juntos en `desarrollo` (`cd349d5`) y se revirtieron (`9151ef6`) porque **cambia el resultado del build**:
+
+- Vite 8 sube el objetivo de navegadores por defecto (`baseline-widely-available`): Chrome/Edge 107 → 111, Firefox 104 → 114, Safari 16 → 16.4 (y iOS 16.4).
+  Con Vite 7, esbuild convertía 14 colores `oklch()` a hexadecimal; con Vite 8 (CSS minificado con Lightning CSS) quedan en `oklch()`, que Chrome 107–110
+  no entiende (los tokens de color se invalidan), y las media queries pasan a sintaxis de rango (`@media (width<=999px)`), que Safari 16.0–16.3 ignora.
+- Fijando `build.target` al de Vite 7 vuelven las media queries clásicas y los colores se convierten (incluso más: quedan 5 `oklch()` de 27), pero la salida
+  tampoco es idéntica a la de esbuild. Si se quiere Vite 8, es la vía: decidir antes qué navegadores se soportan.
+- Lo demás, sin cambios: cabeceras de `vite preview` idénticas, `verificar-csp` sin violaciones, el guardián del SDK de Supabase sigue viéndolo con Rolldown
+  (1 chunk con cuentas, ninguno sin ellas), unitarias 248/248, suite de navegador 22/23 (la que falló, `prueba-audio` «Espacio reanuda», es intermitente: pasó a
+  la tercera) y capturas en Chromium indistinguibles del ruido entre dos pasadas. Build: de ~3 s a ~0,9 s; el worker de metadatos baja un 15 % y aparece un chunk
+  `ParseError` aparte.
+- `npm audit`: la misma cadena de antes (picomatch ≤ 4.0.7, solo herramientas de desarrollo); plugin-react 6 aparece porque depende de vite.

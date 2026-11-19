@@ -890,9 +890,11 @@ Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio br
 
 - [x] `docs/AUDITORIA_ANIMACIONES.md`: las 20 leyes y el resto de la lista, punto por punto (estado, evidencia, propuesta y prioridad), medición con trazas de Chromium con la CPU 4× más lenta, propuestas que cambian lo visible (N8 aparte) y flujos para grabar en el teléfono a 0,25×.
 - [x] Aplicado sin cambiar lo que se ve: un solo lector de duraciones en JS (`tokenMs`) y movimiento reducido en el cierre por arrastre.
-- [ ] Propuestas B1 (lotes de metadatos tras importar) y B2 (montaje del reproductor en el toque): las más caras medidas; B2 condiciona N8.
+- [x] B1 (lotes de metadatos tras importar), B2 (reproductor y cola montados y ocultos, precarga en reposo, foco de ida y vuelta con prueba), B3 (el título no se funde al abrir) y la salida de la cola que no pasaba al compositor (2026-11-18): cero tareas largas en esos flujos con la CPU 4×; tabla antes y después en `docs/AUDITORIA_ANIMACIONES.md` §5. Queda la ingesta (≈ 1,8 s al elegir la carpeta y ≈ 0,3 s al escribir las pistas en IndexedDB). N8 ya puede partir de un reproductor montado.
 
-Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max.
+Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max. En B1–B3 (2026-11-18): ponytail, design-motion-principles (modo crear), make-interfaces-feel-better, impeccable.
+
+- [x] Vite 8 + plugin-react 6 (2026-11-18): aplicados y revertidos porque Vite 8 sube el objetivo de navegadores y el CSS deja `oklch()` y media queries de rango que Chrome 107–110 y Safari 16.0–16.3 no entienden. Detalle y vía para retomarlo (fijar `build.target`) en `docs/DEPENDENCIAS.md`.
 
 ### 11.1q Auditoría de CSS (2026-11-17)
 
@@ -902,6 +904,16 @@ Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-int
 - Descartado: icono con desenfoque (choca con §3 y `motion.test.ts`; el transporte no se anima) y `mix-blend-mode: multiply` (las portadas no son fotos sobre blanco).
 
 Skills aplicadas: ponytail, impeccable, make-interfaces-feel-better, design-taste-frontend, ui-ux-pro-max (solo lectura de criterio; sin cambios de tema).
+
+### 11.1r Pausas rápidas desde los controles del sistema con la página oculta (2026-11-18)
+
+Síntoma (Poco F7 Pro, Chrome, audífonos Bluetooth, producción 271b726): con Satin en segundo plano, varias pausas rápidas desde la isla de HyperOS (MediaSession) dejaron un silencio largo y la música volvió despacio. El informe de `?diag=1` no lo recogió: el búfer de 300 líneas ya lo había desplazado.
+
+- [x] **`?diag=1`**: cada orden con su origen (`orden: pause ← mediaSession:pause`, botón, teclado, barra o la app); inicio y fin de cada rampa (pausa, reanudación, búsqueda, volumen, fundido entre pistas) con el valor final; lo ocurrido con la página oculta se guarda aparte (hasta 5 000 líneas) y va en su propia sección del informe. Falso «corte» del `<audio>` corregido: una pausa más corta que un tic (250 ms) caía entre dos medidas; ahora `play`/`pause` reinician la medida.
+- [x] **Reproducción en Chromium** con la página oculta de verdad (Chromium lanzado a mano y CDP: con Playwright conectado nunca pasa a `hidden`): 10 alternancias por MediaSession cada 150–250 ms → la ganancia vuelve a 1 en ≤ 27 ms y `currentTime` avanza en ≤ 72 ms, también con el frenado de un móvil emulado (temporizadores a 1 s, sin rAF). **Hipótesis descartada para nuestro código:** el camino de play no usa temporizadores ni rAF, las rampas ya iban en el reloj de audio y el contexto se reanuda antes de subir la ganancia. Chromium de escritorio ni siquiera frena los temporizadores de una página oculta con el AudioContext en marcha.
+- [x] **Lo que sí dependía de temporizadores** (con el frenado de 1 s): el `<audio>.pause()` tras la rampa (el `<audio>` seguía mudo hasta 1 s y la canción avanzaba 0,6–1 s en silencio en cada pausa) y el salto de una búsqueda (`seekto` callado hasta 1 s). Ahora los dispara el `ended` de una fuente muda programada en el reloj de audio (`atAudioTime`), con un temporizador de respaldo por si el contexto se para. Con el frenado: pausa real en 40 ms (antes 588 ms) y `seekto` en 74 ms (antes 1 021 ms).
+- [x] Pruebas: `prueba-pausa.mjs` §3 (oculta, con y sin frenado: reanudación, pausa real, el último toque gana, `seekto`; con el motor anterior fallan 2), 3 unitarias nuevas en `PlayerEngine.test.ts`; `prueba-audio.mjs` «Espacio reanuda» espera a que avance la posición (hasta 3 s) en vez de 600 ms fijos: 10 de 10.
+- **Sin confirmar en el teléfono:** la causa del silencio largo. Lo que queda fuera de nuestro código: Android/HyperOS cerrando la salida de audio o el Bluetooth al quedar la página en silencio, y su vuelta lenta. El panel nuevo debería registrarlo.
 
 ### 11.2 Funciones nuevas (alcance)
 

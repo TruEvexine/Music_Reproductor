@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import { CircleHelp, CircleUser, Library, ListMusic, Settings } from "lucide-react";
 import { isNative } from "../platform";
@@ -26,7 +26,7 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
 import { TutorialHint, useEncounter } from "./Tutorial";
-import { usePresence } from "./motion";
+import { tokenMs, useKeptPanel } from "./motion";
 import { PaletteContext } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
@@ -50,10 +50,22 @@ function Shell() {
   const [account, setAccount] = useState(false);
   const track = useCurrentTrack();
   const palette = usePaletteOf(track?.coverHash, track && trackCoverSeed(track));
-  // Los paneles salen con animación (--exit): se mantienen montados mientras salen. La cola en columna fija (escritorio, sin
-  // reproductor grande) no se anima, así que se desmonta al instante.
-  const playerPanel = usePresence(panel === "player");
-  const queuePanel = usePresence(queue, panel === "player" || !matchMedia("(min-width: 1000px)").matches);
+  // Los paneles salen con animación (--exit) y después quedan montados y ocultos: reabrirlos es solo la transición. Se precargan en reposo
+  // tras la primera pista (en una transición, que React trocea; primero el reproductor y en otro reposo la cola, para que ningún montaje sea
+  // una tarea larga), así ni el primer toque paga el montaje. La cola en columna fija (escritorio, sin reproductor grande) no se anima, así que
+  // se oculta al instante.
+  const [preloaded, setPreloaded] = useState(0);
+  const hasTrack = Boolean(track);
+  useEffect(() => {
+    if (!hasTrack || preloaded === 2) return;
+    const idle = window.requestIdleCallback ?? ((run: () => void) => window.setTimeout(run, 500));
+    idle(() => {
+      tokenMs("--exit"); // leída aquí (sin estilo pendiente) y no en el primer cierre, donde forzaría el recálculo de estilo
+      startTransition(() => setPreloaded(preloaded + 1));
+    });
+  }, [hasTrack, preloaded]);
+  const playerPanel = useKeptPanel(panel === "player", preloaded >= 1);
+  const queuePanel = useKeptPanel(queue, preloaded >= 2, panel === "player" || !matchMedia("(min-width: 1000px)").matches);
   useShortcuts(queue);
   const playing = usePlayer((state) => state.isPlaying);
   const shortcutsOn = useBackground((state) => state.shortcuts);
@@ -126,9 +138,9 @@ function Shell() {
           {path === "/app/playlists" ? <PlaylistsView auth={auth} onAccount={() => setAccount(true)} /> : path === "/app/ajustes" ? <SettingsView auth={auth} /> : path === "/app/ayuda" ? <HelpView /> : <LibraryView path={path} />}
         </main>
         <TutorialHint enabled={panel !== "player"} slot="dock" />
-        {queuePanel.mounted && <QueuePanel closing={queuePanel.closing} />}
+        {queuePanel.render && <QueuePanel closed={queuePanel.closed} closing={queuePanel.closing} />}
         <PlayerBar queueOpen={queue} />
-        {playerPanel.mounted && <NowPlaying backdrop={<Backdrop />} closing={playerPanel.closing} queueOpen={queue} />}
+        {playerPanel.render && <NowPlaying backdrop={<Backdrop active={!playerPanel.closed} />} closed={playerPanel.closed} closing={playerPanel.closing} queueOpen={queue} />}
         {account && (
           <AuthDialog
             auth={auth}

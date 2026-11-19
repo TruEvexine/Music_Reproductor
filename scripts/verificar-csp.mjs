@@ -2,7 +2,7 @@
 // Levanta `vite preview` (que sirve las mismas cabeceras), importa audio sintético, reproduce,
 // intenta un inicio de sesión falso y falla si el navegador registra una violación de CSP.
 import { chromium } from "@playwright/test";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import "./requiere-audio.mjs";
@@ -14,8 +14,9 @@ const fixtures = join(import.meta.dirname, "..", "tests", "fixtures", "audio");
 const files = readdirSync(fixtures).filter((f) => /\.(flac|mp3|m4a)$/.test(f)).map((f) => join(fixtures, f));
 
 let exitCode = 1;
-const browser = await chromium.launch();
+let browser;
 try {
+  browser = await chromium.launch();
   for (let i = 0; i < 50; i++) {
     if (await fetch(url).then((r) => r.ok, () => false)) break;
     await new Promise((r) => setTimeout(r, 200));
@@ -71,9 +72,9 @@ try {
   console.log(JSON.stringify(result, null, 2));
   exitCode = result.csp && covers > 0 && playing && backdrop === 1 && menu === 1 && violations.length === 0 ? 0 : 1;
 } finally {
-  await browser.close();
-  // En Windows `shell: true` deja vite como proceso hijo del shell: se mata el árbol completo.
-  if (process.platform === "win32") spawn("taskkill", ["/pid", String(server.pid), "/T", "/F"], { stdio: "ignore" });
+  await browser?.close().catch(() => {});
+  // En Windows `shell: true` deja vite como proceso hijo del shell: se mata el árbol completo y se espera (process.exit llega justo después).
+  if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(server.pid), "/T", "/F"], { stdio: "ignore" });
   else server.kill();
 }
 process.exit(exitCode);

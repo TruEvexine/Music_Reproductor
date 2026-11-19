@@ -186,14 +186,14 @@ const smallTargets = (page) =>
   const header = page.locator('.now-header button[aria-label="Menú del reproductor"]');
   await header.tap();
   await page.waitForTimeout(400);
-  check("móvil: el ≡ del reproductor expandido abre el menú", (await menu(page).count()) === 1 && (await page.locator(".now-playing").count()) === 1);
+  check("móvil: el ≡ del reproductor expandido abre el menú", (await menu(page).count()) === 1 && (await page.locator(".now-playing:not([data-closed])").count()) === 1);
   await page.screenshot({ path: join(shots, "menu-06-desde-expandido-390x844.png") });
   await page.keyboard.press("Escape");
   await page.waitForTimeout(200);
-  check("móvil: Escape cierra el menú pero no el reproductor expandido", (await menu(page).count()) === 0 && (await page.locator(".now-playing").count()) === 1);
+  check("móvil: Escape cierra el menú pero no el reproductor expandido", (await menu(page).count()) === 0 && (await page.locator(".now-playing:not([data-closed])").count()) === 1);
   check("móvil: Aleatorio y Repetir siguen a un toque en el expandido", (await page.locator(".now-controls .transport-large").getByRole("button", { name: /Aleatorio/ }).count()) === 1 && (await page.locator(".now-controls .transport-large").getByRole("button", { name: /Repet/ }).count()) === 1);
   // La cola es una capa sobre el reproductor grande: no lo cierra, y "atrás" cierra primero la cola.
-  const count = (selector) => page.locator(selector).count();
+  const count = (selector) => page.locator(`${selector}:not([data-closed])`).count(); // el reproductor y la cola cerrados siguen montados (ocultos, con data-closed): cuentan solo los abiertos
   await page.locator('.now-header button[aria-label="Cola de reproducción"]').tap();
   await page.waitForTimeout(400);
   check("móvil: abrir la cola no cierra el reproductor (siguen montados los dos)", (await count(".queue-panel")) === 1 && (await count(".now-playing")) === 1);
@@ -340,10 +340,10 @@ const smallTargets = (page) =>
   check("escritorio: desde el expandido el popover se abre debajo del icono", popover.y >= headBox.y + headBox.height && popover.x + popover.width <= 1440);
   await page.screenshot({ path: join(shots, "menu-09-desde-expandido-1440x900.png") });
   await page.keyboard.press("Escape");
-  check("escritorio: Escape no cierra también el reproductor expandido", (await page.locator(".now-playing").count()) === 1);
+  check("escritorio: Escape no cierra también el reproductor expandido", (await page.locator(".now-playing:not([data-closed])").count()) === 1);
 
   // Cola como cajón encima del reproductor grande; Escape la cierra primero.
-  const count = (selector) => page.locator(selector).count();
+  const count = (selector) => page.locator(`${selector}:not([data-closed])`).count(); // el reproductor y la cola cerrados siguen montados (ocultos, con data-closed): cuentan solo los abiertos
   await page.locator('.now-header button[aria-label="Cola de reproducción"]').click();
   await page.waitForTimeout(400);
   const drawer = await page.locator(".queue-panel").boundingBox();

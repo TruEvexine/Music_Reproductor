@@ -18,7 +18,8 @@ const oklch = typeof CSS !== "undefined" && CSS.supports("background-image", "li
 
 // Fondo del reproductor. Portada / Ritmo: lienzo WebGL animado (con el interruptor HDR, con curva de contraste y reflejos). Estático: degradado CSS fijo. AMOLED: nada (negro).
 // Respaldo CSS (mismo aspecto, sin movimiento) si no hay WebGL, se pierde el contexto o el sistema pide menos movimiento.
-// El lienzo solo existe mientras este componente está montado: con el reproductor colapsado no hay bucle ni contexto.
+// El lienzo existe mientras este componente está montado, y el reproductor sigue montado tras abrirse o precargarse (useKeptPanel): con él
+// cerrado (`active` en falso) el bucle se para y el contexto sigue, para que abrir no lo cree en el toque.
 
 const BLACK: Rgb = [0, 0, 0];
 
@@ -46,12 +47,12 @@ interface Stats {
   lastAnalysis: number;
 }
 
-/** Bucle de dibujo. Devuelve la función que lo detiene y libera todo. */
-function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { settings: BackgroundSettings; colors: Rgb[]; hdr: HdrLook } }, onFail: () => void): () => void {
+/** Bucle de dibujo. Devuelve `stop` (lo detiene y libera todo) y `sync` (pausa o reanuda según `active` y la visibilidad de la página). */
+function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { settings: BackgroundSettings; colors: Rgb[]; hdr: HdrLook; active: boolean } }, onFail: () => void) {
   const renderer = createRenderer(canvas, onFail);
   if (!renderer) {
     onFail();
-    return () => undefined;
+    return { stop: () => undefined, sync: () => undefined };
   }
   const nav = navigator as NavigatorExtras;
   const device = (): Device => ({ cores: nav.hardwareConcurrency, memoryGb: nav.deviceMemory, saveData: nav.connection?.saveData });
@@ -143,20 +144,27 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     stats.intensity = settings.intensity;
     stats.rate = frame.rate;
     stats.swell = frame.swell;
+    if (!live.current.active) sync(); // creado con el reproductor cerrado: un cuadro dibujado (abrir no enseña el lienzo vacío) y se para
   }
 
-  const onVisibility = () => {
+  // Página oculta o reproductor cerrado: sin bucle. El análisis y las luces ven un reloj continuo, sin el hueco.
+  const sync = () => {
     cancelAnimationFrame(raf);
     raf = 0;
-    if (document.hidden) hiddenAt ||= performance.now();
+    if (document.hidden || (!live.current.active && stats.frames > 0)) hiddenAt ||= performance.now();
     else {
-      if (hiddenAt) hiddenFor += performance.now() - hiddenAt;
+      if (hiddenAt) {
+        hiddenFor += performance.now() - hiddenAt;
+        // Lo que cambió mientras estaba parado (otra pista, otra intensidad) aparece ya puesto, sin barrido de color al abrir.
+        shown.forEach((color, i) => color.splice(0, 3, ...live.current.colors[i % live.current.colors.length]));
+        shownIntensity = live.current.settings.intensity;
+      }
       hiddenAt = 0;
       last = performance.now() - hiddenFor;
       raf = requestAnimationFrame(tick);
     }
   };
-  document.addEventListener("visibilitychange", onVisibility);
+  document.addEventListener("visibilitychange", sync);
   if (!document.hidden) raf = requestAnimationFrame(tick);
 
   // Con el ahorro automático, batería ≤ 20 % sin cargar baja la calidad (solo Chromium expone la API).
@@ -173,10 +181,10 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     manager.addEventListener("chargingchange", checkBattery);
   });
 
-  return () => {
+  const stop = () => {
     stopped = true;
     cancelAnimationFrame(raf);
-    document.removeEventListener("visibilitychange", onVisibility);
+    document.removeEventListener("visibilitychange", sync);
     observer.disconnect();
     battery?.removeEventListener("levelchange", checkBattery);
     battery?.removeEventListener("chargingchange", checkBattery);
@@ -184,10 +192,11 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     const all = (window as unknown as { __backdrop?: Stats[] }).__backdrop;
     if (all && all.includes(stats)) all.splice(all.indexOf(stats), 1);
   };
+  return { stop, sync };
 }
 
 /** Llena a su contenedor posicionado (debe ser `position: relative/absolute/fixed`). Va detrás del contenido (z-index -1). */
-export function Backdrop() {
+export function Backdrop({ active = true }: { active?: boolean }) {
   const settings = useBackground();
   const palette = useContext(PaletteContext);
   const hdr = useHdrLook();
@@ -195,9 +204,10 @@ export function Backdrop() {
   const reduced = useReducedMotion();
   const [failed, setFailed] = useState(false);
   const host = useRef<HTMLDivElement>(null);
-  const live = useRef({ settings, colors, hdr });
+  const live = useRef({ settings, colors, hdr, active });
+  const loop = useRef<ReturnType<typeof run>>(undefined);
   useLayoutEffect(() => {
-    live.current = { settings, colors, hdr };
+    live.current = { settings, colors, hdr, active };
   });
 
   const animated = isAnimated(settings.mode) && !reduced && !failed;
@@ -207,12 +217,14 @@ export function Backdrop() {
     const canvas = document.createElement("canvas");
     canvas.className = "backdrop-canvas";
     host.current.append(canvas);
-    const stop = run(host.current, canvas, live, () => setFailed(true));
+    loop.current = run(host.current, canvas, live, () => setFailed(true));
     return () => {
-      stop();
+      loop.current?.stop();
+      loop.current = undefined;
       canvas.remove();
     };
   }, [animated]);
+  useEffect(() => loop.current?.sync(), [active]);
 
   if (animated) return <div aria-hidden="true" className="backdrop" ref={host} />;
   if (settings.mode === "amoled") return null;

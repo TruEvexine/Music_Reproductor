@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { memo, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -45,7 +45,7 @@ import { MenuButton } from "./PlayerMenu";
 import { queueAction } from "./toast";
 import { TutorialHint, useEncounter } from "./Tutorial";
 import { Range } from "./Range";
-import { motionReduced } from "./motion";
+import { motionReduced, PanelHidden, usePanelFocus } from "./motion";
 import { VirtualList } from "./VirtualList";
 
 export function useCurrentTrack(): Track | undefined {
@@ -107,7 +107,8 @@ function Transport({ large = false }: { large?: boolean }) {
 }
 
 function Seek() {
-  const position = usePlayer((state) => state.position);
+  const hidden = useContext(PanelHidden); // en el reproductor cerrado la posición no re-renderiza; al abrir se lee la real
+  const position = usePlayer((state) => (hidden ? 0 : state.position));
   const duration = usePlayer((state) => state.duration);
   const empty = usePlayer((state) => state.queue.current === null);
   return (
@@ -131,8 +132,8 @@ function Seek() {
   );
 }
 
-/** Barra persistente: mini reproductor en móvil, barra completa en escritorio. */
-export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
+/** Barra persistente: mini reproductor en móvil, barra completa en escritorio. memo: abrir un panel no la re-renderiza. */
+export const PlayerBar = memo(function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
   const track = useCurrentTrack();
   const isPlaying = usePlayer((state) => state.isPlaying);
   const progress = usePlayer((state) => (state.duration > 0 ? (state.position / state.duration) * 100 : 0));
@@ -179,7 +180,7 @@ export function PlayerBar({ queueOpen }: { queueOpen: boolean }) {
       </div>
     </footer>
   );
-}
+});
 
 /** Carga la letra (vive aparte de la pista) y abre su ventana; sin letra, no abre nada. */
 function LyricsLoader({ id, title, onClose }: { id: string; title: string; onClose: () => void }) {
@@ -230,7 +231,43 @@ function useNeighbors() {
   return { key: queue.current?.key, nextKey: next?.key, previousKey: previous?.key, next: find(next), previous: find(previous) };
 }
 
-export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNode; closing?: true; queueOpen: boolean }) {
+export function NowPlaying({ backdrop, closing, closed, queueOpen }: { backdrop: ReactNode; closing?: true; closed?: true; queueOpen: boolean }) {
+  const open = !closing && !closed;
+  const hasTrack = Boolean(useCurrentTrack());
+  const sheet = useRef<HTMLElement>(null);
+  const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
+  const wide = useMedia("(min-width: 1000px)");
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const hidden = useRef(false);
+  hidden.current = Boolean(closed);
+  usePanelFocus(sheet, closeButton, open, Boolean(closed));
+  useEncounter("player-touch", open);
+  useEncounter("player-pointer", open);
+  if (!hasTrack) return null;
+  return (
+    <section
+      aria-hidden={closed}
+      aria-label="Reproduciendo ahora"
+      className="now-playing"
+      data-closed={closed}
+      data-closing={closing}
+      // La cola no es modal: en ancho es un cajón al lado y el reproductor sigue usable. En estrecho lo tapa entero: inert para
+      // que Tab y el lector de pantalla no entren en lo oculto. `wide` se recalcula al rotar o redimensionar con la cola abierta.
+      inert={closed || closing || (queueOpen && !wide)}
+      {...drag}
+      onPointerDown={(event) => !(event.target as HTMLElement).closest("dialog") && drag.onPointerDown(event)} // la letra tiene su propio scroll
+      ref={sheet}
+    >
+      <PanelHidden.Provider value={Boolean(closed)}>
+        {backdrop}
+        <PlayerContent closeButton={closeButton} hidden={hidden} queueOpen={queueOpen} />
+      </PanelHidden.Provider>
+    </section>
+  );
+}
+
+/** Lo de dentro del reproductor, aparte (memo): abrir y cerrar no lo re-renderiza; solo cambian la sección y lo que lee PanelHidden. */
+const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOpen }: { closeButton: RefObject<HTMLButtonElement | null>; hidden: RefObject<boolean>; queueOpen: boolean }) {
   const track = useCurrentTrack();
   const neighbors = useNeighbors();
   const nextPalette = usePaletteOf(neighbors.next?.coverHash, neighbors.next && trackCoverSeed(neighbors.next));
@@ -249,8 +286,6 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
   // Se edita la pista que sonaba al abrir: si en medio pasa a la siguiente, «Guardar» no debe escribir en otra.
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = useLibrary((state) => (editingId ? state.tracks.find((item) => item.id === editingId) : undefined));
-  const sheet = useRef<HTMLElement>(null);
-  const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
   // Portada que se va al cambiar de pista sin gesto (botón, atajo o fin de pista): se disuelve sobre la nueva. Tras un gesto no hace falta: la portada ya llegó deslizando.
   const swiped = useRef(false);
   const shown = useRef(track);
@@ -259,28 +294,16 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
     const before = shown.current;
     shown.current = track;
     if (swiped.current) swiped.current = false;
-    else if (before && track && before.id !== track.id && !motionReduced() && document.documentElement.dataset.input !== "key") setLeaving(before);
+    else if (!hidden.current && before && track && before.id !== track.id && !motionReduced() && document.documentElement.dataset.input !== "key") setLeaving(before);
   }, [neighbors.key]);
   const wide = useMedia("(min-width: 1000px)");
-  useEncounter("player-touch");
-  useEncounter("player-pointer");
+  const mountedKey = useRef(neighbors.key); // el título se funde al cambiar de pista, no al montar el reproductor
   if (!track) return null;
   return (
-    <section
-      aria-label="Reproduciendo ahora"
-      className="now-playing"
-      data-closing={closing}
-      // La cola no es modal: en ancho es un cajón al lado y el reproductor sigue usable. En estrecho lo tapa entero: inert para
-      // que Tab y el lector de pantalla no entren en lo oculto. `wide` se recalcula al rotar o redimensionar con la cola abierta.
-      inert={closing || (queueOpen && !wide)}
-      {...drag}
-      onPointerDown={(event) => !(event.target as HTMLElement).closest("dialog") && drag.onPointerDown(event)} // la letra tiene su propio scroll
-      ref={sheet}
-    >
-      {backdrop}
+    <>
       <span aria-hidden="true" className="now-grabber" />
       <header className="now-header">
-        <IconButton label="Cerrar reproductor" onClick={closePanel}>
+        <IconButton label="Cerrar reproductor" onClick={closePanel} ref={closeButton}>
           <ChevronDown {...icon} />
         </IconButton>
         <div className="now-actions">
@@ -337,7 +360,7 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
       </div>
       <div className="now-controls">
         <TutorialHint slot="player" />
-        <div className="now-copy" key={neighbors.key}>
+        <div className="now-copy" data-fade={(neighbors.key !== mountedKey.current && !hidden.current) || undefined} key={neighbors.key}>
           <h2 className="now-title">
             <Marquee>{track.title}</Marquee>
           </h2>
@@ -355,9 +378,9 @@ export function NowPlaying({ backdrop, closing, queueOpen }: { backdrop: ReactNo
       </div>
       {lyrics && track.hasLyrics && <LyricsLoader id={track.id} onClose={() => setLyrics(false)} title={track.title} />}
       {editing && <EditDialog onClose={() => setEditingId(null)} track={editing} />}
-    </section>
+    </>
   );
-}
+});
 
 type RowState = "played" | "current" | "next" | "later";
 
@@ -434,53 +457,65 @@ function QueueRow({ entryKey, track, index, first, last, state, repeated }: { en
   );
 }
 
-export function QueuePanel({ closing }: { closing?: true }) {
-  const order = usePlayer((state) => state.queue.order);
-  const current = usePlayer((state) => state.queue.current);
-  const tracks = useLibrary((state) => state.tracks);
-  const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
-  const repeat = usePlayer((state) => state.queue.repeat);
-  const currentAt = current === null ? -1 : order.findIndex((item) => item.key === current.key);
+// memo: el Shell se re-renderiza con cada cambio de ruta (abrir o cerrar cualquier panel); la cola solo cuando cambian sus props.
+export const QueuePanel = memo(function QueuePanel({ closing, closed }: { closing?: true; closed?: true }) {
+  const open = !closing && !closed;
+  const count = usePlayer((state) => state.queue.order.length);
   const panel = useRef<HTMLElement>(null);
   const drag = useDragDismiss(panel, closePanel, { touchOnly: true }); // móvil: arrastrar la cabecera hacia abajo la cierra
   // Panel no modal: un clic en una zona vacía de fuera lo cierra; los controles de fuera funcionan sin cerrarlo.
   useEffect(() => {
+    if (!open) return;
     const outside = (event: PointerEvent) => {
       const target = event.target as Element;
       if (!panel.current?.contains(target) && !target.closest("button, input, select, textarea, a, label, dialog, .range")) closePanel();
     };
     document.addEventListener("pointerdown", outside);
     return () => document.removeEventListener("pointerdown", outside);
-  }, []);
+  }, [open]);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  usePanelFocus(panel, closeButton, open, Boolean(closed));
   return (
-    <aside aria-label="Cola de reproducción" className="queue-panel" data-closing={closing} inert={closing} ref={panel}>
-      <span aria-hidden="true" className="now-grabber" />
-      <header className="queue-header" {...drag}>
-        <h2>Cola</h2>
-        <span className="subtitle">
-          {order.length} {order.length === 1 ? "canción" : "canciones"}
-        </span>
-        <IconButton disabled={order.length === 0} label="Vaciar cola" onClick={player.clear}>
-          <Trash2 {...iconSmall} />
-        </IconButton>
-        <IconButton label="Cerrar cola" onClick={closePanel}>
-          <X {...icon} />
-        </IconButton>
-      </header>
-      {order.length === 0 ? (
-        <p className="queue-empty">La cola está vacía. Toca una canción para empezar.</p>
-      ) : (
-        <div className="queue-list">
-          <VirtualList className="queue-rows" getKey={(item) => item.key} items={order} label="Canciones en cola" ordered rowHeight={64}>
-            {(item, index) => {
-              const track = byId.get(item.id);
-              if (!track) return null;
-              const state = index === currentAt ? "current" : index === currentAt + 1 ? "next" : index < currentAt ? "played" : "later";
-              return <QueueRow entryKey={item.key} first={index === 0} last={index === order.length - 1} index={index} repeated={repeat === "track"} state={state} track={track} />;
-            }}
-          </VirtualList>
-        </div>
-      )}
+    <aside aria-hidden={closed} aria-label="Cola de reproducción" className="queue-panel" data-closed={closed} data-closing={closing} inert={closed || closing} ref={panel}>
+      <PanelHidden.Provider value={Boolean(closed)}>
+        <span aria-hidden="true" className="now-grabber" />
+        <header className="queue-header" {...drag}>
+          <h2>Cola</h2>
+          <span className="subtitle">
+            {count} {count === 1 ? "canción" : "canciones"}
+          </span>
+          <IconButton disabled={count === 0} label="Vaciar cola" onClick={player.clear}>
+            <Trash2 {...iconSmall} />
+          </IconButton>
+          <IconButton label="Cerrar cola" onClick={closePanel} ref={closeButton}>
+            <X {...icon} />
+          </IconButton>
+        </header>
+        <QueueList />
+      </PanelHidden.Provider>
     </aside>
   );
-}
+});
+
+/** Las filas, aparte (memo): abrir y cerrar la cola no las re-renderiza. */
+const QueueList = memo(function QueueList() {
+  const order = usePlayer((state) => state.queue.order);
+  const current = usePlayer((state) => state.queue.current);
+  const tracks = useLibrary((state) => state.tracks);
+  const byId = useMemo(() => new Map(tracks.map((track) => [track.id, track])), [tracks]);
+  const repeat = usePlayer((state) => state.queue.repeat);
+  const currentAt = current === null ? -1 : order.findIndex((item) => item.key === current.key);
+  if (order.length === 0) return <p className="queue-empty">La cola está vacía. Toca una canción para empezar.</p>;
+  return (
+    <div className="queue-list">
+      <VirtualList className="queue-rows" getKey={(item) => item.key} items={order} label="Canciones en cola" ordered rowHeight={64}>
+        {(item, index) => {
+          const track = byId.get(item.id);
+          if (!track) return null;
+          const state = index === currentAt ? "current" : index === currentAt + 1 ? "next" : index < currentAt ? "played" : "later";
+          return <QueueRow entryKey={item.key} first={index === 0} last={index === order.length - 1} index={index} repeated={repeat === "track"} state={state} track={track} />;
+        }}
+      </VirtualList>
+    </div>
+  );
+});

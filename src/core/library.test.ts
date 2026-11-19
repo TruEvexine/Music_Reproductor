@@ -116,6 +116,18 @@ describe("vistas", () => {
     expect(sortGroups(groupTracks(tracks, "album"), "year")[0].label).toBe("Zeta");
   });
 
+  it("re-ordenar desde un orden anterior da exactamente el orden estable, también con empates, altas y bajas", () => {
+    const names = ["Ola", "ola", "Río", "Ébano", "agua", "Álbum desconocido"];
+    const before = Array.from({ length: 300 }, (_, i) => track(`t${i}`, { title: names[i % 6], album: names[i % 4], artist: names[i % 5], trackNumber: i % 7 || undefined, addedAt: i % 3, duration: i % 9 }));
+    // Un lote de metadatos: cambian algunas pistas (objetos nuevos), entra una y sale otra.
+    const after = [...before.slice(1).map((item, i) => (i % 13 === 0 ? { ...item, title: names[(i + 1) % 6], album: "Zeta" } : item)), track("nueva", { title: "ola" })];
+    for (const sort of ["title", "artist", "album", "added", "duration"] as const) {
+      const previous = sortTracks(before, sort);
+      expect(sortTracks(after, sort, previous)).toEqual(sortTracks(after, sort));
+      expect(sortTracks([...after, after[0]], sort, previous)).toEqual(sortTracks([...after, after[0]], sort)); // repetida: sin atajo
+    }
+  });
+
   it("recientes: lo último que sonó o entró", () => {
     expect(recentTracks(tracks).map((item) => item.id)).toEqual(["3", "1", "2"]);
     expect(recentTracks(tracks, 1)).toHaveLength(1);

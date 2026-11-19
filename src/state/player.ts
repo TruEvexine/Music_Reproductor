@@ -303,17 +303,27 @@ export const player = {
   analyser: () => engine.analyser,
   /** Solo para el panel `?diag=1` (ui/diag.ts). */
   diagnostics: () => engine.diagnostics(),
+  /** Solo para el panel `?diag=1`: órdenes con su origen y rampas del motor. */
+  trace: (listener: (text: string) => void) => (engine.trace = listener),
 };
 
 // --- Sistema: pantalla de bloqueo, notificación y auriculares. ---
 
+/** Para `?diag=1`: la orden del sistema se anota con su origen justo antes de ejecutarse. */
+const fromSystem =
+  <A extends unknown[]>(action: string, run: (...args: A) => void) =>
+  (...args: A) => {
+    engine.trace?.(`origen: mediaSession:${action}`);
+    run(...args);
+  };
+
 audioSession.setHandlers({
-  play: player.play,
-  pause: player.pause,
-  next: player.next,
-  previous: player.previous,
-  seekTo: player.seek,
-  seekBy: player.seekBy,
+  play: fromSystem("play", player.play),
+  pause: fromSystem("pause", player.pause),
+  next: fromSystem("nexttrack", player.next),
+  previous: fromSystem("previoustrack", player.previous),
+  seekTo: fromSystem("seekto", player.seek),
+  seekBy: fromSystem("seekforward/seekbackward", player.seekBy),
 });
 
 /** `immediate`: ficha sin portada ya, y la portada cuando esté lista. Sin él, solo se reaplica la ficha completa. */

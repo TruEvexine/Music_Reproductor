@@ -4,6 +4,7 @@ body:has(.legal) {
 }
 
 .legal {
+  max-width: var(--page-max);
   padding: calc(var(--s5) + var(--safe-top)) calc(var(--gutter) + var(--safe-right)) calc(var(--s7) + var(--safe-bottom)) calc(var(--gutter) + var(--safe-left));
 }
 
@@ -11,7 +12,6 @@ body:has(.legal) {
   display: grid;
   gap: var(--s4);
   max-width: 44rem;
-  margin: 0 auto;
 }
 
 .legal-text .link {

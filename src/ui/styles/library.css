@@ -209,6 +209,11 @@
   box-shadow: 0 12px 32px oklch(0 0 0 / 0.4);
 }
 
+.split-menu[data-end="true"] {
+  right: 0;
+  left: auto;
+}
+
 .split-menu button {
   display: flex;
   align-items: center;
@@ -713,9 +718,9 @@ ol.track-list .row-album {
 }
 
 @media (min-width: 1000px) {
-  .settings:not(.help) {
+  .settings {
     container-type: inline-size;
-    max-width: calc(96rem + 2 * var(--gutter));
+    max-width: var(--page-max);
   }
 }
 
@@ -791,19 +796,11 @@ ol.track-list .row-album {
   }
 }
 
-/* Ayuda en escritorio: empezar y atajos en una columna, gestos y preguntas en la otra (alturas parecidas), hasta 88 rem y centrado.
+/* Ayuda en escritorio: empezar y atajos en una columna, gestos y preguntas en la otra (alturas parecidas), en el contenedor de Ajustes.
    Dos columnas fijas (no `columns`): abrir una pregunta no hace saltar secciones de una columna a otra. */
 .help-columns,
 .help-col {
   display: contents;
-}
-
-@media (min-width: 1000px) {
-  .help {
-    container-type: inline-size;
-    max-width: calc(88rem + 2 * var(--gutter));
-    margin-inline: auto;
-  }
 }
 
 @container (min-width: 47rem) {

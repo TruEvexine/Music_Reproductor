@@ -62,6 +62,7 @@
   align-content: start;
   gap: var(--s4);
   padding: var(--s5) var(--gutter) var(--s6);
+  max-width: var(--page-max);
 }
 
 .view-header {
