@@ -199,6 +199,26 @@ try {
     const seekMs = await until((s) => (dipped ||= s.gain < 0.01) && s.gain >= 0.999);
     check(`${mode}: seekto vuelve a sonar en < 250 ms`, seekMs < 250, `${Math.round(seekMs)} ms`);
   }
+
+  // 4. Isla de HyperOS: el sistema cree que está en pausa (playbackState desfasado) y manda play una y otra vez estando ya en reproducción.
+  // Cada orden responde con el estado real en el mismo manejador, ninguna se convierte en pausa, y `?diag=1` lo anota («estado al sistema»).
+  await run(`(() => { window.__said = []; window.__engine.trace = (text) => text.startsWith("estado al sistema") && window.__said.push(text); })()`);
+  const said = () => run(`({ state: navigator.mediaSession.playbackState, said: window.__said.splice(0), paused: window.__engine.decks[window.__engine.active].audio.paused })`);
+  const repeated = [];
+  for (let i = 0; i < 9; i++) {
+    await run(`navigator.mediaSession.playbackState = "paused"`);
+    await system("play");
+    repeated.push(await said());
+    await wait(60);
+  }
+  check(
+    "4. 9 play repetidos estando en reproducción: el sistema vuelve a oír «playing» en cada uno y sigue sonando",
+    repeated.every((item) => item.state === "playing" && !item.paused && item.said.at(-1) === "estado al sistema: playing"),
+    JSON.stringify(repeated.find((item) => item.state !== "playing" || item.paused || item.said.at(-1) !== "estado al sistema: playing") ?? ""),
+  );
+  await system("pause");
+  const paused = await said();
+  check("4. … y pause se publica como «paused» en el mismo manejador", paused.state === "paused" && paused.said.at(-1) === "estado al sistema: paused", JSON.stringify(paused));
   socket.close();
 } finally {
   chrome.kill();
