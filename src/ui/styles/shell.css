@@ -24,6 +24,7 @@
 
 .nav {
   grid-area: nav;
+  position: relative;
   display: flex;
   padding: 0 var(--safe-right) var(--safe-bottom) var(--safe-left);
   background: var(--surface-1);
@@ -47,7 +48,51 @@
 }
 
 .nav-link[aria-current="page"] {
-  color: var(--accent);
+  color: var(--ink);
+}
+
+/* Pestaña activa en móvil: una píldora del color de la portada (opaca, sobre --surface-1) bajo el icono, que se desliza al cambiar de
+   pestaña. Tono, no línea ni brillo (DESIGN.md §2 y §3). La vista cambia en el mismo toque: la píldora acompaña, no retrasa. Solo
+   transform, --fast y --ease (salida decelerada); con teclado salta y con movimiento reducido también (regla global). */
+.nav-indicator {
+  position: absolute;
+  top: 0;
+  left: var(--safe-left);
+  width: calc((100% - var(--safe-left) - var(--safe-right)) / var(--tabs));
+  height: var(--tap-l);
+  pointer-events: none;
+  transition: transform var(--fast) var(--ease);
+}
+
+html[data-input="key"] .nav-indicator {
+  transition: none;
+}
+
+.nav-pill,
+.nav-pill-fade {
+  position: absolute;
+  overflow: hidden;
+  border-radius: var(--s4);
+  background: color-mix(in oklab, var(--accent) 40%, var(--surface-1)); /* oklab: sin interpolar el tono hacia el de --surface-1 */
+}
+
+/* Centrada en el icono (arriba del bloque icono + etiqueta, que va centrado en 56 px). */
+.nav-pill {
+  top: 3px;
+  left: 50%;
+  width: var(--tap-l);
+  height: var(--s6);
+  margin-left: calc(var(--tap-l) / -2);
+}
+
+/* Al cambiar de pista, el color anterior se funde sobre el nuevo (ui/parts.tsx: ColorFade). */
+.nav-pill-fade {
+  inset: 0;
+  animation: exit-fade var(--base) var(--ease) forwards;
+}
+
+.nav-link {
+  position: relative; /* encima de la píldora */
 }
 
 /* La pestaña activa no depende solo del color: el icono gana trazo. */
@@ -123,6 +168,10 @@
   .nav-link[aria-current="page"] {
     background: var(--surface-2);
     color: var(--ink);
+  }
+
+  .nav-indicator {
+    display: none; /* en la columna lateral la activa ya va en --surface-2 */
   }
 
   .view {

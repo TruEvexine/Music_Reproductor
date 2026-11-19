@@ -214,6 +214,17 @@ async function closeWith(page, selector, close) {
   await page.getByRole("button", { name: "Cerrar reproductor" }).tap();
   await wait(page, 400);
   check("foco (móvil): cerrar el reproductor lo devuelve al mini reproductor", (await active(page))?.startsWith("Abrir reproductor"), await active(page));
+  // Barra inferior: la píldora de la pestaña activa se desliza (solo transform, --fast); la vista ya cambió en el mismo toque.
+  const pill = () => page.locator(".nav-indicator").evaluate((el) => ({ ms: Math.round(parseFloat(getComputedStyle(el).transitionDuration) * 1000), x: Math.round(new DOMMatrix(getComputedStyle(el).transform).m41) }));
+  await page.getByRole("link", { name: "Ajustes" }).tap();
+  await wait(page, 20);
+  const sliding = await pill();
+  const settings = await page.locator(".view").first().isVisible();
+  await wait(page, 300);
+  const landed = await pill();
+  check("barra inferior: la píldora se desliza a la pestaña nueva en --fast, sin esperar a la vista", sliding.ms === 120 && sliding.x < landed.x && landed.x > 100 && settings, `${JSON.stringify(sliding)} → ${JSON.stringify(landed)}`);
+  await page.getByRole("link", { name: "Biblioteca" }).tap();
+  await wait(page, 300);
   // Gestos simulados con eventos táctiles de CDP (el navegador los convierte en Pointer Events): arrastrar el mini hacia arriba abre,
   // la cabecera hacia abajo cierra, a mitad se puede volver, un tirón corto decide por velocidad y lo horizontal es del carrusel.
   const cdp = await context.newCDPSession(page);
@@ -287,6 +298,8 @@ async function closeWith(page, selector, close) {
   await page.getByRole("button", { name: "Cerrar reproductor" }).click();
   await wait(page, 30);
   check("movimiento reducido: el reproductor grande se oculta al instante", await closed(page, ".now-playing"));
+  const pillMs = await page.locator(".nav-indicator").evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration) * 1000);
+  check("movimiento reducido: la píldora de la barra inferior cambia al instante", pillMs < 1, `${pillMs} ms`);
   check("sin errores de página (movimiento reducido)", errors.length === 0, errors.join(" | "));
   await context.close();
 }
