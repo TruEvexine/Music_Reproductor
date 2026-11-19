@@ -219,6 +219,27 @@ try {
   await system("pause");
   const paused = await said();
   check("4. … y pause se publica como «paused» en el mismo manejador", paused.state === "paused" && paused.said.at(-1) === "estado al sistema: paused", JSON.stringify(paused));
+
+  // 5. Rampas (lo que anota `?diag=1`): 25 pausas y reanudaciones sin fundido. Cada rampa se da por terminada en su valor final (×0 / ×1, no ×0.068
+  // ni ×0.932 leídos antes de tiempo) y el <audio> solo se pausa después, con la ganancia en ×0 (si no, chasquido). Cada vuelta empieza en 0,5 s: con los
+  // temporizadores frenados cada espera dura hasta 1 s y la pista (8 s) se acabaría a mitad.
+  await run(`(async () => {
+    const e = window.__engine, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    window.__ramps = [];
+    e.trace = (text) => /^fin rampa de (pausa|reanudación)|^pausa del|interrumpida/.test(text) && window.__ramps.push(text);
+    await e.play(0);
+    await wait(300);
+    for (let i = 0; i < 25; i++) { e.seek(0.5); await wait(100); e.pause(0); await wait(180 + Math.random() * 60); await e.play(0); await wait(180 + Math.random() * 60); }
+    await wait(300);
+  })()`);
+  const ramps = await run("window.__ramps");
+  const ends = (kind) => ramps.filter((text) => text.startsWith(`fin rampa de ${kind}`)).map((text) => text.split("×")[1]);
+  check("5. 25 rampas de pausa terminan en ×0 y 25 de reanudación en ×1", ends("pausa").length === 25 && ends("pausa").every((v) => v === "0") && ends("reanudación").length >= 25 && ends("reanudación").every((v) => v === "1"), `pausa ${ends("pausa").join(" ")} | reanudación ${ends("reanudación").join(" ")}`);
+  check(
+    "5. el <audio> se pausa siempre después del fin de su rampa y con ×0",
+    ramps.filter((text) => text.startsWith("pausa del")).length === 25 && ramps.every((text, i) => !text.startsWith("pausa del") || (text.endsWith("×0") && ramps[i - 1]?.startsWith("fin rampa de pausa"))),
+    ramps.filter((text) => text.startsWith("pausa del")).join(" | "),
+  );
   socket.close();
 } finally {
   chrome.kill();

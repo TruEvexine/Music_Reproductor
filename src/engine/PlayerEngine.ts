@@ -16,6 +16,7 @@ const PAUSE_MARGIN = 0.02; // s tras la rampa antes de pausar el <audio>
 export const CUT_RAMP = 0.02; // s: rampa mínima al pausar y reanudar aunque el fundido del usuario esté apagado (sin ella, chasquido)
 const SEEK_DIP = 0.04; // s de bajada (y de subida) alrededor de una búsqueda: sin chasquido al saltar
 const SEEK_GIVE_UP = 1000; // ms: si `seeked` no llega, el volumen vuelve igual
+const round = (x: number) => Math.round(x * 1000) / 1000;
 // "playback": búfer de salida más grande, que aguanta con la página en segundo plano (con "interactive" Android lo vacía y raspa).
 // El motor no necesita baja latencia: rampas y pausas van programadas en el reloj de audio; solo se oyen y se ven (luces) unos ms después.
 const LATENCY_HINT: AudioContextLatencyCategory = "playback";
@@ -187,9 +188,13 @@ export class PlayerEngine {
     const ramp = (this.ramp = { from: value, to: target, start: now, end: now + seconds });
     const trace = this.trace;
     if (trace && seconds > 0) {
-      const round = (x: number) => Math.round(x * 1000) / 1000;
       trace(`rampa ${why}: volumen ×${round(value)} → ×${round(target)} en ${Math.round(seconds * 1000)} ms`);
-      this.atAudioTime(ramp.end, () => trace(this.ramp === ramp ? `fin rampa ${why}: volumen ×${round(gain.value)}` : `rampa ${why} interrumpida por otra`));
+      // Dos cuantos de render (2 × 128 muestras) después del final: `gain.value` va un cuanto por detrás del aviso y, leído justo en `end`, a veces
+      // daba el de unas muestras antes (×0.068 en una pausa de 20 ms, ×0.932 al reanudar) aunque la rampa sí terminaba (medido: 25 de 25 exactas así).
+      this.atAudioTime(ramp.end + 256 / this.context!.sampleRate, () => {
+        const finished = this.ramp === ramp || this.ramp.start >= ramp.end; // otra rampa empezó justo después: esta terminó
+        trace(finished ? `fin rampa ${why}: volumen ×${round(this.ramp === ramp ? gain.value : ramp.to)}` : `rampa ${why} interrumpida por otra`);
+      });
     }
     return now + seconds;
   }
@@ -373,6 +378,8 @@ export class PlayerEngine {
       const done = () => {
         if (turn !== this.turn || this.pauseTimer === undefined) return;
         clearTimeout(this.pauseTimer);
+        // Para `?diag=1`: siempre ×0 (PAUSE_MARGIN después del fin de la rampa, en reloj de audio); otro valor sería un chasquido.
+        this.trace?.(`pausa del <audio>: volumen ×${round(master.gain.value)}`);
         hardPause();
       };
       // Reloj de audio, no el de JS: el <audio> se para solo cuando la rampa ya se calculó entera.
