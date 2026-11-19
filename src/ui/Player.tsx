@@ -139,20 +139,60 @@ export const PlayerBar = memo(function PlayerBar({ queueOpen }: { queueOpen: boo
   const isPlaying = usePlayer((state) => state.isPlaying);
   const progress = usePlayer((state) => (state.duration > 0 ? (state.position / state.duration) * 100 : 0));
   const drag = useMorphDrag("open"); // móvil: arrastrar hacia arriba abre; tocar también
+  // Móvil: deslizar a los lados cambia de pista con vista previa (el mismo carrusel que la portada del grande). Lo vertical es de `drag`.
+  const wide = useMedia("(min-width: 1000px)");
+  const neighbors = useNeighbors();
+  const slide = useRef<HTMLSpanElement>(null);
+  const swipe = useCoverSwipe(slide, {
+    onNext: neighbors.next && player.next,
+    onPrevious: neighbors.previous && neighbors.previousKey ? () => player.playEntry(neighbors.previousKey!) : undefined,
+    resetKey: neighbors.key,
+    reducedPreview: false,
+  });
   if (!track) return null;
+  // Cada lado lleva la clave de su entrada de la cola: la vecina que llega al centro es el mismo nodo (su portada no parpadea). Las vecinas usan
+  // otras clases (peek-*): `.bar-track .title` y `.bar-cover` siguen siendo solo la actual (pruebas y playerMorph).
+  const slots = [
+    ["current", track, neighbors.key],
+    ...(wide
+      ? []
+      : ([
+          ["next", neighbors.next, neighbors.nextKey],
+          ["prev", neighbors.previous, neighbors.previousKey === neighbors.nextKey ? `prev:${neighbors.previousKey}` : neighbors.previousKey],
+        ] as const)),
+  ] as const;
   return (
     <footer aria-label="Reproductor" className="player-bar" {...drag}>
       <ColorFade className="bar-fade" />
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
-      <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => morphButton(1, () => openPanel("player"))} type="button">
-        <Cover className="bar-cover" seed={trackCoverSeed(track)} hash={track.coverHash} />
-        <span className="bar-copy">
-          <span className="title">
-            <Marquee>{track.title}</Marquee>
-          </span>
-          <span className="subtitle">
-            <Marquee>{track.artist}</Marquee>
-          </span>
+      <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => morphButton(1, () => openPanel("player"))} type="button" {...(wide ? {} : swipe)}>
+        <span className="bar-slide" ref={slide}>
+          {slots.map(([side, item, key]) => {
+            if (!item) return null;
+            if (side === "current")
+              return (
+                <span className="bar-slot" key={key ?? "current"}>
+                  <Cover className="bar-cover" seed={trackCoverSeed(item)} hash={item.coverHash} />
+                  <span className="bar-copy">
+                    <span className="title">
+                      <Marquee>{item.title}</Marquee>
+                    </span>
+                    <span className="subtitle">
+                      <Marquee>{item.artist}</Marquee>
+                    </span>
+                  </span>
+                </span>
+              );
+            return (
+              <span aria-hidden="true" className="bar-slot" data-side={side} key={key}>
+                <Cover className="peek-cover" seed={trackCoverSeed(item)} hash={item.coverHash} />
+                <span className="bar-copy">
+                  <span className="peek-title marquee">{item.title}</span>
+                  <span className="peek-sub marquee">{item.artist}</span>
+                </span>
+              </span>
+            );
+          })}
         </span>
       </button>
       <div className="bar-center">

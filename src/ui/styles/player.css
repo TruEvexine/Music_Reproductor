@@ -93,15 +93,65 @@
   display: flex;
   flex: 1;
   align-items: center;
-  gap: var(--s3);
   min-width: 0;
   min-height: var(--tap);
   border-radius: var(--radius-s);
   text-align: left;
 }
 
-.bar-cover {
+/* Carril (gestures.tsx: useCoverSwipe): la pista actual y, fuera del recorte, la siguiente y la anterior, que entran al deslizar. */
+.bar-slide {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  transform: translateX(var(--dx, 0px));
+}
+
+.bar-slot {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.bar-slot[data-side] {
+  position: absolute;
+  inset-block: 0;
+  width: 100%;
+}
+
+.bar-slot[data-side="next"] {
+  left: calc(100% + var(--gutter));
+}
+
+.bar-slot[data-side="prev"] {
+  right: calc(100% + var(--gutter) + var(--safe-left));
+}
+
+.peek-title {
+  font-weight: 550;
+}
+
+.peek-sub {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.bar-cover,
+.peek-cover {
   width: 44px;
+}
+
+@media (max-width: 999px) {
+  /* El recorte llega al borde de la pantalla, así lo que sale y lo que entra lo hacen desde ahí y no a 16 px; a la derecha, junto a play. */
+  .bar-track {
+    margin-left: calc((var(--gutter) + var(--safe-left)) * -1);
+    padding-left: calc(var(--gutter) + var(--safe-left));
+    border-radius: 0;
+    overflow: clip;
+  }
 }
 
 .bar-copy {

@@ -290,15 +290,24 @@ const FLICK = 0.45; // px/ms: un gesto rápido lo completa aunque sea corto
  * o con un gesto rápido se completa y, si no, vuelve. Eje bloqueado: un gesto que empieza en vertical es del cierre de la hoja.
  * `onProgress(p)`: -1…1 mientras se arrastra (negativo, hacia la siguiente). Solo dedo o lápiz; los botones de transporte son la alternativa.
  * `resetKey` (la entrada actual de la cola): al cambiar, el carril vuelve a 0 en el mismo cuadro en que la vecina pasa a ser la actual.
+ * `reducedPreview: false` (mini reproductor): con movimiento reducido no sigue al dedo; decide al soltar, con el mismo umbral, y cambia sin animar.
+ * Lo usan el reproductor grande (portada) y el mini (portada y título).
  */
 export function useCoverSwipe(
   track: RefObject<HTMLElement | null>,
-  { onNext, onPrevious, onProgress, resetKey }: { onNext?: () => void; onPrevious?: () => void; onProgress: (progress: number) => void; resetKey: string | undefined },
+  {
+    onNext,
+    onPrevious,
+    onProgress,
+    resetKey,
+    reducedPreview = true,
+  }: { onNext?: () => void; onPrevious?: () => void; onProgress?: (progress: number) => void; resetKey: string | undefined; reducedPreview?: boolean },
 ) {
   const gesture = useRef<{ x: number; y: number; dx: number; mode: "idle" | "drag"; distance: { next: number; prev: number }; samples: { t: number; x: number }[] } | null>(null);
   const settling = useRef(false);
+  const preview = () => reducedPreview || !motionReduced();
   const set = (dx: number, transition = "none") => {
-    if (!track.current) return;
+    if (!track.current || !preview()) return;
     track.current.style.transition = transition;
     track.current.style.setProperty("--dx", `${dx}px`);
   };
@@ -306,7 +315,7 @@ export function useCoverSwipe(
     settling.current = false;
     set(0);
     track.current?.removeAttribute("data-dragging");
-    onProgress(0);
+    onProgress?.(0);
     // onProgress cambia en cada render; solo importa el cambio de pista
   }, [resetKey]);
 
@@ -314,6 +323,7 @@ export function useCoverSwipe(
     const g = gesture.current;
     gesture.current = null;
     if (!g || g.mode !== "drag") return;
+    swallowNextClick(); // el mini es un botón (abre el reproductor): soltar tras deslizar no debe abrirlo
     const run = g.dx < 0 ? onNext : onPrevious;
     const distance = g.dx < 0 ? g.distance.next : g.distance.prev;
     const last = g.samples[g.samples.length - 1];
@@ -323,12 +333,12 @@ export function useCoverSwipe(
     if (!run || event.type === "pointercancel" || (Math.abs(g.dx) < distance * COMMIT && !flick)) {
       set(0, "transform var(--base) var(--ease)");
       track.current?.removeAttribute("data-dragging");
-      onProgress(0);
+      onProgress?.(0);
       return;
     }
     // Se completa: la vecina llega al centro y entonces cambia la pista (el efecto de `resetKey` deja el carril en 0 sin salto).
     settling.current = true;
-    onProgress(g.dx < 0 ? -1 : 1);
+    onProgress?.(g.dx < 0 ? -1 : 1);
     set(Math.sign(g.dx) * distance, "transform var(--base) var(--ease-move)");
     let done = false;
     const commit = () => {
@@ -337,6 +347,7 @@ export function useCoverSwipe(
       tutorials.done("player-touch"); // ya sabe deslizar la portada
       run();
     };
+    if (!preview()) return void commit(); // sin vista previa: cambia al soltar
     track.current?.addEventListener("transitionend", commit, { once: true });
     window.setTimeout(commit, 320); // movimiento reducido (transición de 0,01 ms) o una transición que no llegó a empezar
   };
@@ -369,7 +380,7 @@ export function useCoverSwipe(
       const distance = dx < 0 ? g.distance.next : g.distance.prev;
       g.dx = toward ? dx : 0;
       set(toward ? dx : dx * 0.2); // sin vecina: resistencia, y vuelve al soltar
-      onProgress(toward && distance > 0 ? Math.max(-1, Math.min(1, dx / distance)) : 0);
+      onProgress?.(toward && distance > 0 ? Math.max(-1, Math.min(1, dx / distance)) : 0);
     },
     onPointerUp: finish,
     onPointerCancel: finish,
