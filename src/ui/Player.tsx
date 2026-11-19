@@ -311,7 +311,6 @@ const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOp
   if (!track) return null;
   return (
     <>
-      <span aria-hidden="true" className="now-grabber" />
       <header className="now-header">
         <IconButton label="Cerrar reproductor" onClick={() => morphButton(0, closePanel)} ref={closeButton}>
           <ChevronDown {...icon} />

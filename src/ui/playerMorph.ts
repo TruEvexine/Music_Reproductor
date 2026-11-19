@@ -19,7 +19,7 @@ interface Geometry {
   barH: number;
   /** Lado del halo de luz sin escalar (px). */
   bloomSize: number;
-  parts: Record<"surface" | "bloom" | "backdrop" | "art" | "header" | "grabber" | "controls", HTMLElement | null>;
+  parts: Record<"surface" | "bloom" | "backdrop" | "art" | "header" | "controls", HTMLElement | null>;
   nav: HTMLElement | null;
 }
 
@@ -58,7 +58,6 @@ function poses(at: number, g: Geometry): Pose[] {
     [g.parts.backdrop, { opacity: String(ramp(at, 0.25, 0.9)) }],
     [g.parts.art, { transform: `translate(${artX}px, ${artY}px) scale(${s})` }],
     [g.parts.header, { opacity: fadeIn(0.5) }],
-    [g.parts.grabber, { opacity: fadeIn(0.5) }],
     [g.parts.controls, { opacity: fadeIn(0.45), transform: `translateY(${(1 - at) * 32}px)` }],
     [g.nav, { opacity: String(1 - ramp(at, 0, 0.5)) }],
   ];
@@ -102,7 +101,6 @@ function measure(sheet: HTMLElement): Geometry | null {
     backdrop: sheet.querySelector<HTMLElement>(":scope > .backdrop"),
     art: sheet.querySelector<HTMLElement>(".now-art"),
     header: sheet.querySelector<HTMLElement>(".now-header"),
-    grabber: sheet.querySelector<HTMLElement>(".now-grabber"),
     controls: sheet.querySelector<HTMLElement>(".now-controls"),
   };
   for (const el of [sheet, parts.art]) if (el) el.style.transform = ""; // rectángulos de diseño
