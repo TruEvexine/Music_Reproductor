@@ -250,7 +250,6 @@ for (const type of [firefox, webkit]) {
   }
   await page.waitForFunction(() => document.querySelectorAll(".track-row").length >= 5, null, { timeout: 30_000 });
   await scanDone(page);
-  const count = await rows(page).count();
   const unsupported = await page.locator(".track-row .warn").count();
   console.log(`     (${name}: ${unsupported} pistas marcadas como formato no compatible según canPlayType)`);
   const opfs = await page.evaluate(() => navigator.storage.getDirectory().then(() => true, () => false));
@@ -266,9 +265,11 @@ for (const type of [firefox, webkit]) {
     await browser.close();
     continue;
   }
+  // Las canciones de la cabecera, no las filas pintadas: la lista es virtual y cuántas filas caben cambia con lo que haya encima (avisos).
+  const songs = await header(page);
   await page.reload();
   await page.waitForFunction(() => document.querySelectorAll(".track-row").length >= 5, null, { timeout: 15_000 }).catch(() => {});
-  check(`${name}: la copia en OPFS sobrevive a la recarga`, (await rows(page).count()) === count, `${count} → ${await rows(page).count()}`);
+  check(`${name}: la copia en OPFS sobrevive a la recarga`, (await header(page)) === songs, `${songs} → ${await header(page)}`);
   await row(page, "Amanecer").click();
   await page.waitForTimeout(1500);
   check(`${name}: reproduce la copia guardada`, (await title(page).catch(() => "")) === "Amanecer en La" && (await position(page)) > 0.2, `pos=${await position(page).catch(() => -1)}`);

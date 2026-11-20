@@ -894,6 +894,10 @@ Síntomas del usuario en Android/Chrome por HTTPS (en PC todo bien): silencio br
 
 Skills aplicadas: ponytail, design-motion-principles (modo auditoría), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max. En B1–B3 (2026-11-18): ponytail, design-motion-principles (modo crear), make-interfaces-feel-better, impeccable.
 
+- [x] **N8** (2026-11-18): acento más vivo (el color más vivo y abundante de la portada, ≥ 4,5:1 sobre `--surface-3`; grises, el de la app); barra ↔ reproductor grande como transformación de contenedor (`ui/playerMorph.ts`: arrastre en móvil, la misma animación por tiempo al tocar, con ⌄, Escape, atrás y en escritorio; fundido con movimiento reducido); mini en negro teñido por la portada; píldora deslizante en la barra inferior; los colores del mini y de la píldora se funden al cambiar de pista. `prueba-movimiento` abre y cierra con gestos táctiles simulados (lento, rápido, interrumpido, horizontal, barra de progreso, atrás). Medido con `scripts/medir-gestos.mjs` alternando con N8-0: tabla en `docs/AUDITORIA_ANIMACIONES.md` §6. Sin cumplir del todo el objetivo de ≤ 2 cuadros en el arrastre lento de apertura, el interrumpido y cerrar con ⌄ (3–4), con tareas de ≈ 60 ms intermitentes del lienzo WebGL por software; falta confirmarlo en un teléfono.
+
+Skills aplicadas (N8): ponytail, design-motion-principles (modo crear), make-interfaces-feel-better, impeccable (contexto y animate), ui-ux-pro-max, design-taste-frontend (pantalla de app, refinamiento sobre DESIGN.md).
+
 - [x] Vite 8 + plugin-react 6 (2026-11-18): aplicados y revertidos porque Vite 8 sube el objetivo de navegadores y el CSS deja `oklch()` y media queries de rango que Chrome 107–110 y Safari 16.0–16.3 no entienden. Detalle y vía para retomarlo (fijar `build.target`) en `docs/DEPENDENCIAS.md`.
 
 ### 11.1q Auditoría de CSS (2026-11-17)
@@ -914,6 +918,20 @@ Síntoma (Poco F7 Pro, Chrome, audífonos Bluetooth, producción 271b726): con S
 - [x] **Lo que sí dependía de temporizadores** (con el frenado de 1 s): el `<audio>.pause()` tras la rampa (el `<audio>` seguía mudo hasta 1 s y la canción avanzaba 0,6–1 s en silencio en cada pausa) y el salto de una búsqueda (`seekto` callado hasta 1 s). Ahora los dispara el `ended` de una fuente muda programada en el reloj de audio (`atAudioTime`), con un temporizador de respaldo por si el contexto se para. Con el frenado: pausa real en 40 ms (antes 588 ms) y `seekto` en 74 ms (antes 1 021 ms).
 - [x] Pruebas: `prueba-pausa.mjs` §3 (oculta, con y sin frenado: reanudación, pausa real, el último toque gana, `seekto`; con el motor anterior fallan 2), 3 unitarias nuevas en `PlayerEngine.test.ts`; `prueba-audio.mjs` «Espacio reanuda» espera a que avance la posición (hasta 3 s) en vez de 600 ms fijos: 10 de 10.
 - **Sin confirmar en el teléfono:** la causa del silencio largo. Lo que queda fuera de nuestro código: Android/HyperOS cerrando la salida de audio o el Bluetooth al quedar la página en silencio, y su vuelta lenta. El panel nuevo debería registrarlo.
+
+### 11.1s Reproductor, alineación óptica, portadas m4a, isla del sistema y rampas (2026-11-19)
+
+- [x] Reproductor grande en móvil sin asa (tiene ⌄; toda la hoja sigue arrastrando para cerrar). El asa queda en cola y menús.
+- [x] Título, artista y formato terminan en el margen de la portada; el marquee se funde ahí con una máscara de 16 px (`prueba-menu`).
+- [x] Alineación óptica medida (centroide de la tinta frente al centro del botón y bordes de la tinta frente a los márgenes): play, lápiz, ⌄/≡, mini, filas, barra y cabecera de escritorio, «‹ Volver», botones con icono y hueco de la barra de desplazamiento a los dos lados.
+- [x] Mini reproductor: deslizar a los lados cambia de pista con vista previa (`useCoverSwipe`, el carrusel del grande); movimiento reducido: cambia al soltar (`prueba-movil`).
+- [x] Portadas m4a: fixtures AAC/ALAC con moov al principio y al final (`tests/fixtures/audio/m4a`); el lector extrae covr en los cuatro casos en Chromium, Firefox y WebKit (lee por acceso aleatorio). Causa corregida: un hash de portada se daba por guardado antes de escribirlo; al arrancar se releen las pistas con portada perdida o lectura fallida (`prueba-portadas-m4a`).
+- [x] Isla del sistema: cada orden de MediaSession devuelve playbackState y posición en su manejador; `?diag=1` anota «estado al sistema» (`prueba-pausa` §4).
+- [x] Rampas: el `<audio>` ya se pausaba siempre a ×0; la traza leía `gain.value` un cuanto de render antes de tiempo. Fin de rampa anotado dos cuantos después y «pausa del <audio>: volumen ×…» (`prueba-pausa` §5).
+- [x] Dependabot «npm-menores-y-parches» (supabase-js, react-virtual, lucide-react, react, react-dom, @playwright/test): con `npx playwright install` pasan prueba-privacidad y prueba-enlace-magico; aplicadas las 6.
+- **Sin probar en un teléfono:** la isla de HyperOS, el deslizamiento del mini con un dedo real y m4a reales con portada que fallaran (los de prueba y los locales cargan).
+
+Skills aplicadas: ponytail, make-interfaces-feel-better (alineación óptica, márgenes, icono junto a texto), impeccable (Operate: precisión sobre expresión), design-motion-principles (el mini reutiliza el gesto del grande; movimiento reducido sin vista previa), ui-ux-pro-max (44 px, alternativa por botón), design-taste-frontend (refinamiento sin cambiar la dirección). Se leyeron sus `SKILL.md` y las referencias de óptica y gotchas de movimiento; no se ejecutaron sus scripts.
 
 ### 11.2 Funciones nuevas (alcance)
 

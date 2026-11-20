@@ -29,6 +29,15 @@ const BLACK: Rgb = [0, 0, 0];
  */
 export const backdropPreview: { palette: Palette | null; amount: number } = { palette: null, amount: 0 };
 
+/** Despierto aunque el reproductor siga cerrado: mientras la transformación desde la barra lo enseña (ui/playerMorph.ts). */
+let awake = false;
+const wakers = new Set<() => void>();
+export function wakeBackdrop(on: boolean) {
+  if (awake === on) return;
+  awake = on;
+  for (const wake of wakers) wake();
+}
+
 type BatteryManager = EventTarget & { charging: boolean; level: number };
 type NavigatorExtras = Navigator & { getBattery?: () => Promise<BatteryManager>; connection?: { saveData?: boolean }; deviceMemory?: number };
 
@@ -144,14 +153,14 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     stats.intensity = settings.intensity;
     stats.rate = frame.rate;
     stats.swell = frame.swell;
-    if (!live.current.active) sync(); // creado con el reproductor cerrado: un cuadro dibujado (abrir no enseña el lienzo vacío) y se para
+    if (!live.current.active && !awake) sync(); // creado con el reproductor cerrado: un cuadro dibujado (abrir no enseña el lienzo vacío) y se para
   }
 
   // Página oculta o reproductor cerrado: sin bucle. El análisis y las luces ven un reloj continuo, sin el hueco.
   const sync = () => {
     cancelAnimationFrame(raf);
     raf = 0;
-    if (document.hidden || (!live.current.active && stats.frames > 0)) hiddenAt ||= performance.now();
+    if (document.hidden || (!live.current.active && !awake && stats.frames > 0)) hiddenAt ||= performance.now();
     else {
       if (hiddenAt) {
         hiddenFor += performance.now() - hiddenAt;
@@ -165,6 +174,7 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     }
   };
   document.addEventListener("visibilitychange", sync);
+  wakers.add(sync);
   if (!document.hidden) raf = requestAnimationFrame(tick);
 
   // Con el ahorro automático, batería ≤ 20 % sin cargar baja la calidad (solo Chromium expone la API).
@@ -185,6 +195,7 @@ function run(host: HTMLElement, canvas: HTMLCanvasElement, live: { current: { se
     stopped = true;
     cancelAnimationFrame(raf);
     document.removeEventListener("visibilitychange", sync);
+    wakers.delete(sync);
     observer.disconnect();
     battery?.removeEventListener("levelchange", checkBattery);
     battery?.removeEventListener("chargingchange", checkBattery);

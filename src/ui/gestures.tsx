@@ -3,6 +3,10 @@ import type { PointerEvent, ReactNode, RefObject } from "react";
 import { DISMISS_PX, LONG_PRESS_MS } from "../core/gestures";
 import { tutorials } from "../state/tutorials";
 import { motionReduced, tokenMs } from "./motion";
+import { morphActive, morphDrag, morphStart, morphTo } from "./playerMorph";
+import { closePanel, openPanel, playerOpen } from "./router";
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 import { buzz } from "./toast";
 import { useEncounter } from "./Tutorial";
 
@@ -49,6 +53,90 @@ export function useDragDismiss(target: RefObject<HTMLElement | null>, onDismiss:
       }
       gesture.dy = Math.max(0, dy - SLOP); // sin salto al decidir el eje
       target.current.style.transform = `translateY(${gesture.dy}px)`;
+    },
+    onPointerUp: end,
+    onPointerCancel: end,
+  };
+}
+
+const VERTICAL = 1.4; // el gesto vertical solo es suyo si |dy| > 1,4·|dx| (≈ 35° de la vertical): lo diagonal no abre ni cierra
+const FLICK_Y = 0.45; // px/ms: un gesto rápido decide la dirección aunque sea corto (el mismo umbral que el carrusel)
+
+/**
+ * Arrastrar entre la barra y el reproductor grande (playerMorph): `open` en la barra (hacia arriba), `close` en la hoja (hacia abajo).
+ * La posición del dedo es el avance; al soltar deciden la velocidad (> 0,45 px/ms) y, si no, la distancia (DISMISS_PX desde donde
+ * empezó). Un toque durante la animación la agarra donde va. Solo dedo o lápiz y solo en estrecho (en escritorio no hay arrastre).
+ * Con movimiento reducido no sigue al dedo: decide al soltar y abre con un fundido o cierra al instante. Al llegar, la URL se pone al día.
+ */
+export function useMorphDrag(direction: "open" | "close") {
+  const gesture = useRef<{ x: number; y: number; lockY: number; from: number; travel: number; mode: "idle" | "drag"; samples: { t: number; y: number }[]; grabbed: boolean } | null>(null);
+  const sheet = () => document.querySelector<HTMLElement>(".now-playing");
+  // La URL se pone al día al soltar, tras el primer cuadro de la animación: no al llegar (caía dentro de un cuadro, con la pintura: 60–69 ms
+  // con la CPU 4×) ni en el mismo toque (el render de React retrasaba la entrega de la animación al compositor). Si vuelve a donde estaba, nada.
+  const go = (target: 0 | 1, velocity?: number) => {
+    const el = sheet();
+    if (!el) return;
+    morphTo(el, target, { velocity });
+    requestAnimationFrame(() =>
+      setTimeout(() => {
+        if (target === 1 && !playerOpen()) openPanel("player");
+        else if (target === 0 && playerOpen()) closePanel();
+      }),
+    );
+  };
+  const end = (event: PointerEvent<HTMLElement>) => {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g) return;
+    if (g.mode === "idle") return void (g.grabbed && go(g.from > 0.5 ? 1 : 0)); // agarrada y soltada sin mover: termina hacia el lado más cerca
+    swallowNextClick(); // el arrastre empezó quizá sobre un botón (la barra entera lo es)
+    const last = g.samples[g.samples.length - 1];
+    const first = g.samples.find((sample) => last.t - sample.t <= 100) ?? g.samples[0];
+    const vy = (last.y - first.y) / Math.max(last.t - first.t, 1); // px/ms, positivo hacia abajo
+    const moved = (g.lockY - event.clientY) / g.travel; // en p, positivo hacia arriba (abrir)
+    const at = clamp01(g.from + moved);
+    let target: 0 | 1;
+    if (event.type === "pointercancel") target = g.from > 0.5 ? 1 : 0;
+    else if (Math.abs(vy) > FLICK_Y) target = vy < 0 ? 1 : 0;
+    else if (g.from === 0 || g.from === 1) target = Math.abs(moved) * g.travel >= DISMISS_PX ? ((1 - g.from) as 0 | 1) : g.from;
+    else target = at > 0.5 ? 1 : 0;
+    go(target, motionReduced() ? undefined : -vy / g.travel);
+  };
+  return {
+    onPointerDown(event: PointerEvent<HTMLElement>) {
+      const el = sheet();
+      if (!el || event.pointerType === "mouse" || !event.isPrimary || matchMedia("(min-width: 1000px)").matches) return;
+      if ((event.target as HTMLElement).closest("input, a, .range, dialog, textarea, select")) return; // un deslizador es suyo
+      const grabbed = morphActive() && !motionReduced();
+      const start = grabbed ? morphStart(el) : null; // a mitad de camino: se congela donde va y el dedo la lleva desde ahí
+      gesture.current = { x: event.clientX, y: event.clientY, lockY: event.clientY, from: start?.at ?? (direction === "open" ? 0 : 1), travel: start?.travel ?? 1, mode: "idle", samples: [], grabbed };
+      if (grabbed) event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    onPointerMove(event: PointerEvent<HTMLElement>) {
+      const g = gesture.current;
+      if (!g) return;
+      if (g.mode === "idle") {
+        const dx = event.clientX - g.x;
+        const dy = event.clientY - g.y;
+        if (Math.abs(dx) < SLOP && Math.abs(dy) < SLOP) return;
+        const wrongWay = !g.grabbed && (direction === "open" ? dy > 0 : dy < 0);
+        if (Math.abs(dy) <= Math.abs(dx) * VERTICAL || wrongWay) {
+          if (g.grabbed) go(g.from > 0.5 ? 1 : 0);
+          return void (gesture.current = null);
+        }
+        g.mode = "drag";
+        g.lockY = event.clientY; // sin salto al decidir el eje
+        event.currentTarget.setPointerCapture(event.pointerId);
+        if (!g.grabbed && !motionReduced()) {
+          const start = morphStart(sheet()!);
+          if (!start) return void (gesture.current = null);
+          g.from = start.at;
+          g.travel = start.travel;
+        }
+      }
+      g.samples.push({ t: event.timeStamp, y: event.clientY });
+      if (g.samples.length > 8) g.samples.shift();
+      if (!motionReduced()) morphDrag(g.from + (g.lockY - event.clientY) / g.travel);
     },
     onPointerUp: end,
     onPointerCancel: end,
@@ -202,15 +290,24 @@ const FLICK = 0.45; // px/ms: un gesto rápido lo completa aunque sea corto
  * o con un gesto rápido se completa y, si no, vuelve. Eje bloqueado: un gesto que empieza en vertical es del cierre de la hoja.
  * `onProgress(p)`: -1…1 mientras se arrastra (negativo, hacia la siguiente). Solo dedo o lápiz; los botones de transporte son la alternativa.
  * `resetKey` (la entrada actual de la cola): al cambiar, el carril vuelve a 0 en el mismo cuadro en que la vecina pasa a ser la actual.
+ * `reducedPreview: false` (mini reproductor): con movimiento reducido no sigue al dedo; decide al soltar, con el mismo umbral, y cambia sin animar.
+ * Lo usan el reproductor grande (portada) y el mini (portada y título).
  */
 export function useCoverSwipe(
   track: RefObject<HTMLElement | null>,
-  { onNext, onPrevious, onProgress, resetKey }: { onNext?: () => void; onPrevious?: () => void; onProgress: (progress: number) => void; resetKey: string | undefined },
+  {
+    onNext,
+    onPrevious,
+    onProgress,
+    resetKey,
+    reducedPreview = true,
+  }: { onNext?: () => void; onPrevious?: () => void; onProgress?: (progress: number) => void; resetKey: string | undefined; reducedPreview?: boolean },
 ) {
   const gesture = useRef<{ x: number; y: number; dx: number; mode: "idle" | "drag"; distance: { next: number; prev: number }; samples: { t: number; x: number }[] } | null>(null);
   const settling = useRef(false);
+  const preview = () => reducedPreview || !motionReduced();
   const set = (dx: number, transition = "none") => {
-    if (!track.current) return;
+    if (!track.current || !preview()) return;
     track.current.style.transition = transition;
     track.current.style.setProperty("--dx", `${dx}px`);
   };
@@ -218,7 +315,7 @@ export function useCoverSwipe(
     settling.current = false;
     set(0);
     track.current?.removeAttribute("data-dragging");
-    onProgress(0);
+    onProgress?.(0);
     // onProgress cambia en cada render; solo importa el cambio de pista
   }, [resetKey]);
 
@@ -226,6 +323,7 @@ export function useCoverSwipe(
     const g = gesture.current;
     gesture.current = null;
     if (!g || g.mode !== "drag") return;
+    swallowNextClick(); // el mini es un botón (abre el reproductor): soltar tras deslizar no debe abrirlo
     const run = g.dx < 0 ? onNext : onPrevious;
     const distance = g.dx < 0 ? g.distance.next : g.distance.prev;
     const last = g.samples[g.samples.length - 1];
@@ -235,12 +333,12 @@ export function useCoverSwipe(
     if (!run || event.type === "pointercancel" || (Math.abs(g.dx) < distance * COMMIT && !flick)) {
       set(0, "transform var(--base) var(--ease)");
       track.current?.removeAttribute("data-dragging");
-      onProgress(0);
+      onProgress?.(0);
       return;
     }
     // Se completa: la vecina llega al centro y entonces cambia la pista (el efecto de `resetKey` deja el carril en 0 sin salto).
     settling.current = true;
-    onProgress(g.dx < 0 ? -1 : 1);
+    onProgress?.(g.dx < 0 ? -1 : 1);
     set(Math.sign(g.dx) * distance, "transform var(--base) var(--ease-move)");
     let done = false;
     const commit = () => {
@@ -249,6 +347,7 @@ export function useCoverSwipe(
       tutorials.done("player-touch"); // ya sabe deslizar la portada
       run();
     };
+    if (!preview()) return void commit(); // sin vista previa: cambia al soltar
     track.current?.addEventListener("transitionend", commit, { once: true });
     window.setTimeout(commit, 320); // movimiento reducido (transición de 0,01 ms) o una transición que no llegó a empezar
   };
@@ -281,7 +380,7 @@ export function useCoverSwipe(
       const distance = dx < 0 ? g.distance.next : g.distance.prev;
       g.dx = toward ? dx : 0;
       set(toward ? dx : dx * 0.2); // sin vecina: resistencia, y vuelve al soltar
-      onProgress(toward && distance > 0 ? Math.max(-1, Math.min(1, dx / distance)) : 0);
+      onProgress?.(toward && distance > 0 ? Math.max(-1, Math.min(1, dx / distance)) : 0);
     },
     onPointerUp: finish,
     onPointerCancel: finish,

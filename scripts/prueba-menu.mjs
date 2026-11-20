@@ -403,6 +403,26 @@ const smallTargets = (page) =>
   check("marquee: con movimiento reducido no se anima (queda el recorte «…»)", (await animations()) === 0);
   await marquee.evaluate((el) => (el.style.width = ""));
   await page.emulateMedia({ reducedMotion: "no-preference" });
+  // Título largo en móvil: el bloque termina en el margen de la portada, no en el borde de la pantalla, y moviéndose se funde ahí (máscara).
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(400);
+  const edges = await page.evaluate(() => {
+    const text = document.querySelector(".now-title .marquee > span").firstChild;
+    const before = text.data;
+    text.data = "Giorgio by Moroder (Drumless Edition)"; // el mismo nodo: React lo sigue reconociendo
+    const cover = document.querySelector(".now-slot:not([data-side]) .now-cover").getBoundingClientRect();
+    const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+    const result = { cover: [cover.left, cover.right], boxes: [".now-title .marquee", ".now-artist .marquee", ".now-copy"].map((selector) => [box(selector).left, box(selector).right]) };
+    text.data = before;
+    return result;
+  });
+  check("móvil: título, artista y formato terminan en el margen de la portada", edges.boxes.every(([left, right]) => Math.abs(left - edges.cover[0]) < 1 && Math.abs(right - edges.cover[1]) < 1), JSON.stringify(edges));
+  await marquee.evaluate((el) => (el.style.width = "40px"));
+  await page.waitForTimeout(300);
+  check("marquee: moviéndose, el borde se funde con una máscara", await marquee.evaluate((el) => el.hasAttribute("data-moving") && getComputedStyle(el).maskImage.includes("linear-gradient")));
+  await marquee.evaluate((el) => (el.style.width = ""));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(300);
   await page.keyboard.press("Escape");
   await page.waitForTimeout(300);
   check("escritorio: un segundo Escape cierra el reproductor", (await count(".now-playing")) === 0);

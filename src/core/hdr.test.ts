@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { oklchToRgb, swatchColors } from "./palette";
+import { accentFor, oklchToRgb, swatchColors } from "./palette";
 import type { Gamut, Rgb } from "./palette";
 
 // Las cifras salen de tokens.css (`--hdr-*`): si cambian allí, cambian aquí. Aquí se comprueba el peor caso del HDR simulado.
 const looks: { name: string; gamut: Gamut; gain: number; cmax: number; peak: number }[] = [
-  { name: "sRGB", gamut: "srgb", gain: 1.2, cmax: 0.15, peak: 0.86 },
-  { name: "Display P3", gamut: "p3", gain: 1.5, cmax: 0.18, peak: 0.86 },
-  { name: "Display P3 + HDR declarado", gamut: "p3", gain: 1.5, cmax: 0.18, peak: 0.9 },
+  { name: "sRGB", gamut: "srgb", gain: 1.2, cmax: 0.23, peak: 0.86 },
+  { name: "Display P3", gamut: "p3", gain: 1.5, cmax: 0.29, peak: 0.86 },
+  { name: "Display P3 + HDR declarado", gamut: "p3", gain: 1.5, cmax: 0.29, peak: 0.9 },
 ];
 
 const linear = (v: number) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
@@ -21,9 +21,10 @@ describe("HDR simulado: contraste y saturación en el peor caso", () => {
   for (const look of looks) {
     it(`${look.name}: el acento realzado se lee sobre el negro y con el texto sobre acento (≥ 4,5:1) en todos los tonos`, () => {
       for (let hue = 0; hue < 360; hue += 5) {
-        for (const chroma of [0.07, 0.1, 0.14]) {
-          // El acento de la portada llega con L 0,82 y croma 0,07–0.14; el CSS le aplica ganancia, tope de croma y techo de luminosidad.
-          const accent = oklchToRgb(Math.min(0.82, look.peak), Math.min(chroma * look.gain, look.cmax), hue, look.gamut);
+        for (const chroma of [0.03, 0.07, 0.1, 0.14, 0.3]) {
+          // El acento de la portada llega de accentFor; el CSS (tokens.css) le aplica ganancia con tope, sin bajar nunca su croma, y techo de luminosidad.
+          const { l, c } = accentFor(hue, chroma);
+          const accent = oklchToRgb(Math.min(l, look.peak), Math.max(c, Math.min(c * look.gain, look.cmax)), hue, look.gamut);
           const onAccent = oklchToRgb(0.2, 0.03, hue, look.gamut);
           const y = luminance(accent, look.gamut);
           expect(ratio(y, 0), `${look.name} h${hue} c${chroma} sobre negro`).toBeGreaterThanOrEqual(4.5);

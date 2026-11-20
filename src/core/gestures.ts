@@ -32,14 +32,14 @@ export const GESTURES: readonly GestureHelp[] = [
   {
     id: "swipe-cover",
     title: "Deslizar la portada",
-    how: "En el reproductor grande, desliza la portada a la izquierda para pasar a la siguiente canción y a la derecha para volver a la anterior.",
+    how: "En el reproductor grande, desliza la portada a la izquierda para pasar a la siguiente canción y a la derecha para volver a la anterior. En el mini reproductor, igual: ves entrar la canción antes de soltar y, si no llegas, vuelve a su sitio.",
     alternative: "Los botones anterior y siguiente, o las flechas ← y → del teclado.",
   },
   {
     id: "drag-close",
-    title: "Arrastrar para cerrar",
-    how: "Arrastra hacia abajo la cabecera de una hoja, del reproductor grande o de la cola para cerrarlos.",
-    alternative: "El botón de cerrar, la tecla Escape o el gesto atrás del sistema.",
+    title: "Arrastrar para abrir y cerrar",
+    how: "Arrastra hacia arriba el mini reproductor para abrir el reproductor grande: sigue a tu dedo y, si a mitad cambias de idea, vuelve y suelta. Arrastra hacia abajo la cabecera de una hoja, del reproductor grande o de la cola para cerrarlos.",
+    alternative: "Toca el mini reproductor para abrir; para cerrar, el botón de cerrar, la tecla Escape o el gesto atrás del sistema.",
   },
   {
     id: "fine-seek",

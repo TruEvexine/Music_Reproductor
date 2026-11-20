@@ -17,9 +17,9 @@ describe("versión del algoritmo de la paleta", () => {
     const { accent, glow, hue, swatches } = paletteFromPixels(pixels);
     expect({ version: PALETTE_VERSION, accent, glow, hue: Math.round(hue), swatches }).toMatchInlineSnapshot(`
       {
-        "accent": "oklch(0.820 0.119 49.0)",
-        "glow": "oklch(0.320 0.090 49.0)",
-        "hue": 49,
+        "accent": "oklch(0.675 0.182 47.9)",
+        "glow": "oklch(0.320 0.090 47.9)",
+        "hue": 48,
         "swatches": [
           {
             "chroma": 0.1457068762597102,
@@ -38,7 +38,7 @@ describe("versión del algoritmo de la paleta", () => {
             "hue": 7.899307999487121,
           },
         ],
-        "version": 1,
+        "version": 2,
       }
     `);
   });

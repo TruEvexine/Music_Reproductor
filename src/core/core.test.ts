@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { cssMs, formatTime, isHiRes, matchesSearch, qualityLabel, searchKey } from "./format";
-import { APP_BACKGROUND_L, colorsFromHue, contrastOfLightness, fallbackPalette, oklchToRgb, paletteColors, paletteFromPixels, rgbToOklch } from "./palette";
+import { ACCENT_TEXT_SURFACE, accentFor, APP_BACKGROUND_L, colorsFromHue, contrastOfLightness, contrastRatio, fallbackPalette, luminance, oklchToRgb, paletteColors, paletteFromPixels, rgbToOklch } from "./palette";
 import { fileTrackId, titleFromFileName, trackV1Id } from "./track";
 
 describe("identidad de pista", () => {
@@ -90,6 +90,53 @@ describe("paleta", () => {
     const hue = Number(paletteFromPixels(solid(30, 60, 220)).accent.match(/([\d.]+)\)$/)?.[1]);
     expect(hue).toBeGreaterThan(240);
     expect(hue).toBeLessThan(290);
+  });
+
+  const lch = (color: string) => color.match(/oklch\(([\d.]+) ([\d.]+) ([\d.]+)\)/)!.slice(1).map(Number) as [number, number, number];
+  const textContrast = (color: string) => contrastRatio(luminance(oklchToRgb(...lch(color))), ACCENT_TEXT_SURFACE);
+
+  it("el acento de cualquier tono y croma da ≥ 4,5:1 (WCAG real) sobre la superficie más clara con texto en acento, y su texto encima también", () => {
+    for (let hue = 0; hue < 360; hue += 5) {
+      for (const chroma of [0.03, 0.06, 0.1, 0.2, 0.3]) {
+        const { l, c } = accentFor(hue, chroma);
+        const y = luminance(oklchToRgb(l, c, hue));
+        expect(contrastRatio(y, ACCENT_TEXT_SURFACE), `h${hue} c${chroma}`).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(y, luminance(oklchToRgb(0.2, 0.04, hue))), `h${hue} c${chroma} con --on-accent`).toBeGreaterThanOrEqual(4.5);
+      }
+    }
+  });
+
+  it("toma el color más vivo y abundante, no la media: rojo y azul a partes iguales no dan un morado apagado", () => {
+    const halves = [...solid(220, 40, 50), ...solid(40, 70, 210)];
+    const [, c, h] = lch(paletteFromPixels(halves).accent);
+    expect(c).toBeGreaterThan(0.15);
+    expect(Math.min(Math.abs(h - 29), Math.abs(h - 265))).toBeLessThan(10); // uno de los dos, no el morado de en medio (≈ 320)
+  });
+
+  it("una portada apagada da un acento propio que se nota; una casi gris o con una mota de color, el de la app", () => {
+    const muted = paletteFromPixels(solid(150, 104, 88)); // terracota gastada, croma ≈ 0,06
+    expect(muted).not.toBe(fallbackPalette);
+    expect(lch(muted.accent)[1]).toBeGreaterThanOrEqual(0.11);
+    expect(textContrast(muted.accent)).toBeGreaterThanOrEqual(4.5);
+    expect(paletteFromPixels(solid(140, 135, 128))).toBe(fallbackPalette); // sepia lavado, croma < ACCENT_MIN_CHROMA
+    const speck = solid(120, 120, 120);
+    speck.splice(0, 4, 230, 30, 30, 255); // 1 píxel rojo de 64
+    expect(paletteFromPixels(speck)).toBe(fallbackPalette);
+  });
+
+  it("el amarillo sube de luminosidad en vez de volverse oliva", () => {
+    const [l, c] = lch(paletteFromPixels(solid(250, 210, 30)).accent);
+    expect(l).toBeGreaterThan(0.8);
+    expect(c).toBeGreaterThan(0.15);
+  });
+
+  it("el mini reproductor (22 % de acento sobre negro, player.css) deja la tinta secundaria y el progreso legibles", () => {
+    for (let hue = 0; hue < 360; hue += 15) {
+      const { l, c } = accentFor(hue, 0.3);
+      const bar = luminance(oklchToRgb(l * 0.22, c * 0.22, hue));
+      expect(contrastRatio(luminance(oklchToRgb(0.78, 0.008, 85)), bar), `h${hue} --ink-2`).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(luminance(oklchToRgb(l, c, hue)), bar), `h${hue} progreso`).toBeGreaterThanOrEqual(3);
+    }
   });
 });
 

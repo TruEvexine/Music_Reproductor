@@ -18,7 +18,7 @@ import { AdoptDialog, AuthDialog } from "./dialogs";
 import { Landing } from "./Landing";
 import { LEGAL_PATHS, LegalPage } from "./LegalPage";
 import { LibraryView } from "./LibraryView";
-import { icon } from "./parts";
+import { ColorFade, icon } from "./parts";
 import { NowPlaying, PlayerBar, QueuePanel, useCurrentTrack } from "./Player";
 import { PlaylistsView } from "./PlaylistsView";
 import { SettingsView } from "./SettingsView";
@@ -26,7 +26,7 @@ import { ShortcutsHelp } from "./ShortcutsHelp";
 import { closePanel, navigate, useRoute } from "./router";
 import { Toaster } from "./toast";
 import { TutorialHint, useEncounter } from "./Tutorial";
-import { tokenMs, useKeptPanel } from "./motion";
+import { tokenMs, tokenValue, useKeptPanel } from "./motion";
 import { PaletteContext } from "./usePalette";
 import { useShortcuts } from "./useShortcuts";
 
@@ -60,7 +60,9 @@ function Shell() {
     if (!hasTrack || preloaded === 2) return;
     const idle = window.requestIdleCallback ?? ((run: () => void) => window.setTimeout(run, 500));
     idle(() => {
-      tokenMs("--exit"); // leída aquí (sin estilo pendiente) y no en el primer cierre, donde forzaría el recálculo de estilo
+      // Leídos aquí (sin estilo pendiente) y no en el primer toque o cierre, donde forzarían el recálculo de estilo.
+      for (const token of ["--exit", "--fast", "--slow"]) tokenMs(token);
+      tokenValue("--ease");
       startTransition(() => setPreloaded(preloaded + 1));
     });
   }, [hasTrack, preloaded]);
@@ -103,27 +105,34 @@ function Shell() {
   }, [panel]);
 
   const style = { "--accent-in": palette.accent, "--on-accent": palette.onAccent, "--glow-in": palette.glow } as CSSProperties;
+  const section = ["/app/playlists", "/app/ajustes", "/app/ayuda"].indexOf(path) + 1; // 0 = Biblioteca (y sus vistas)
 
   return (
     <PaletteContext.Provider value={palette}>
       <div className="shell" data-panel={panel ?? undefined} data-queue={queue || undefined} style={style}>
         {panel !== "player" && <Tint />}
         <Toaster /> {/* fijo en pantalla; va antes que las vistas para no ser el último role=status del DOM */}
-        <nav aria-label="Secciones" className="nav">
+        <nav aria-label="Secciones" className="nav" style={{ "--tabs": auth.isConfigured ? 5 : 4 } as CSSProperties}>
           <span className="brand">{APP_NAME}</span>
-          <NavLink active={path !== "/app/playlists" && path !== "/app/ajustes" && path !== "/app/ayuda"} to="/app">
+          {/* Móvil: la píldora teñida por la portada se desliza bajo el icono de la pestaña activa (la vista cambia en el mismo toque). */}
+          <span aria-hidden="true" className="nav-indicator" style={{ transform: `translateX(${section * 100}%)` }}>
+            <span className="nav-pill">
+              <ColorFade className="nav-pill-fade" />
+            </span>
+          </span>
+          <NavLink active={section === 0} to="/app">
             <Library {...icon} />
             <span>Biblioteca</span>
           </NavLink>
-          <NavLink active={path === "/app/playlists"} to="/app/playlists">
+          <NavLink active={section === 1} to="/app/playlists">
             <ListMusic {...icon} />
             <span>Playlists</span>
           </NavLink>
-          <NavLink active={path === "/app/ajustes"} to="/app/ajustes">
+          <NavLink active={section === 2} to="/app/ajustes">
             <Settings {...icon} />
             <span>Ajustes</span>
           </NavLink>
-          <NavLink active={path === "/app/ayuda"} to="/app/ayuda">
+          <NavLink active={section === 3} to="/app/ayuda">
             <CircleHelp {...icon} />
             <span>Ayuda</span>
           </NavLink>

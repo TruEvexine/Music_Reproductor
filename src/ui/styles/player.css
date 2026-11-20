@@ -62,8 +62,22 @@
   display: flex;
   align-items: center;
   gap: var(--s2);
-  padding: var(--s2) calc(var(--s2) + var(--safe-right)) var(--s2) calc(var(--s3) + var(--safe-left));
-  background: var(--surface-2);
+  /* Márgenes ópticos: la portada en el margen de la página (alineada con las portadas de la lista) y, a la derecha, la tinta del último
+     icono en ese mismo margen (un botón de 44 px con icono de 22 deja 11 px de aire, más el blanco del propio dibujo). Antes: 12 px | 22 px. */
+  padding: var(--s2) calc(var(--gutter) - 12px + var(--safe-right)) var(--s2) calc(var(--gutter) + var(--safe-left));
+  isolation: isolate; /* el color que se va (.bar-fade) pinta encima del fondo y debajo del contenido */
+  background: var(--bar-bg);
+  touch-action: none; /* arrastrar hacia arriba abre el reproductor (gestures.tsx: useMorphDrag); el navegador no debe tomar el gesto */
+}
+
+/* Al cambiar de pista, el tinte anterior se funde sobre el nuevo (ui/parts.tsx: ColorFade). La misma mezcla que --bar-bg, con su --accent. */
+.bar-fade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in oklch, var(--accent) 22%, black);
+  pointer-events: none;
+  animation: exit-fade var(--base) var(--ease) forwards;
 }
 
 .bar-progress {
@@ -79,15 +93,65 @@
   display: flex;
   flex: 1;
   align-items: center;
-  gap: var(--s3);
   min-width: 0;
   min-height: var(--tap);
   border-radius: var(--radius-s);
   text-align: left;
 }
 
-.bar-cover {
+/* Carril (gestures.tsx: useCoverSwipe): la pista actual y, fuera del recorte, la siguiente y la anterior, que entran al deslizar. */
+.bar-slide {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  transform: translateX(var(--dx, 0px));
+}
+
+.bar-slot {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--s3);
+  min-width: 0;
+}
+
+.bar-slot[data-side] {
+  position: absolute;
+  inset-block: 0;
+  width: 100%;
+}
+
+.bar-slot[data-side="next"] {
+  left: calc(100% + var(--gutter));
+}
+
+.bar-slot[data-side="prev"] {
+  right: calc(100% + var(--gutter) + var(--safe-left));
+}
+
+.peek-title {
+  font-weight: 550;
+}
+
+.peek-sub {
+  color: var(--ink-2);
+  font-size: var(--text-s);
+}
+
+.bar-cover,
+.peek-cover {
   width: 44px;
+}
+
+@media (max-width: 999px) {
+  /* El recorte llega al borde de la pantalla, así lo que sale y lo que entra lo hacen desde ahí y no a 16 px; a la derecha, junto a play. */
+  .bar-track {
+    margin-left: calc((var(--gutter) + var(--safe-left)) * -1);
+    padding-left: calc(var(--gutter) + var(--safe-left));
+    border-radius: 0;
+    overflow: clip;
+  }
 }
 
 .bar-copy {
@@ -114,9 +178,9 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 34rem) minmax(0, 1fr);
     gap: var(--s5);
     padding: var(--s2) var(--s5);
-    background: var(--surface-1);
   }
   .bar-progress,
+  .bar-fade,
   .bar-mini {
     display: none;
   }
@@ -144,6 +208,7 @@
     align-items: center;
     justify-content: flex-end;
     gap: var(--s3);
+    margin-right: -11px; /* la tinta del icono de la cola en el margen de la barra, como la portada al otro lado (antes 24 | 37 px) */
   }
   .bar-end .icon-button {
     position: relative;
@@ -159,17 +224,62 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   padding: var(--safe-top) calc(var(--gutter) + var(--safe-right)) calc(var(--s5) + var(--safe-bottom))
     calc(var(--gutter) + var(--safe-left));
-  background: var(--bg); /* el fondo animado (Backdrop) va detrás del contenido, ver backdrop.css */
-  --in: var(--slow);
-  --t0: translateY(24px);
-  --o0: 0;
-  --o1: 0;
+  /* Sin fondo propio ni transición: abrir y cerrar es la transformación desde la barra (ui/playerMorph.ts, WAAPI y estilos en línea).
+     Debajo del contenido, la superficie (del color de la barra) y el ambiente (Backdrop, backdrop.css). */
+  --t0: none;
+  --t1: none;
+  --o0: 1;
+  --o1: 1;
+}
+
+.shell .now-playing {
+  overflow: clip; /* la luz que nace de la miniatura no sale de la tarjeta */
+  transition: none;
+}
+
+/* La tarjeta que crece desde la barra: un bloque de color plano, así escalarlo en vertical no deforma nada. */
+.now-surface {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--bar-bg);
+  transform-origin: top;
+}
+
+/* AMOLED: sin ambiente; la tarjeta es negro puro (se funde sobre el mini, teñido, en el primer 12 % del recorrido). */
+:root[data-bg="amoled"] .now-surface {
+  background: var(--bg);
+}
+
+/* La luz de la portada al abrir (playerMorph.ts): un halo de su acento que sale de la miniatura y se apaga cuando el ambiente ya está.
+   Es el nacimiento del ambiente del reproductor, el único degradado permitido (DESIGN.md §3). Quieto, invisible. */
+.now-bloom {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100vmax;
+  height: 100vmax;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklch, var(--accent) 45%, transparent), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.now-art {
+  transform-origin: 0 0;
+}
+
+/* Mientras se arrastra o se anima desde la barra, cerrado pero visible. */
+.shell .now-playing[data-closed][data-morph] {
+  visibility: visible;
 }
 
 .now-header {
   display: flex;
   justify-content: space-between;
-  margin: var(--s2) calc(var(--s2) * -1);
+  /* Los iconos de los extremos (⌄ y ≡) con su tinta en el borde de la portada, no 4–8 px por dentro: el botón sobresale lo que mide su aire. */
+  margin: var(--s2) calc(var(--s3) * -1);
 }
 
 .now-header .icon-button {
@@ -229,6 +339,9 @@
 
 .now-copy {
   display: grid;
+  /* Sin minmax(0, …) la columna crecía hasta el título entero (min-width: auto) y un título largo llegaba al borde de la pantalla,
+     más allá de la portada; así termina en su margen y el marquee recorta ahí. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--s1);
   min-width: 0;
   transition: opacity var(--fast) var(--ease);
@@ -270,8 +383,13 @@ html[data-input="key"] .now-copy {
   white-space: nowrap;
 }
 
+/* Moviéndose, el borde derecho de la caja (el margen de la portada en el reproductor grande) se funde en --fade px con una máscara: el texto
+   no se corta en seco ni llega al borde de la pantalla. La máscara no pinta color (no es un degradado decorativo); el recorrido suma --fade
+   para que el final del texto se lea entero (Marquee.tsx). */
 .marquee[data-moving] {
   text-overflow: clip;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--fade)), transparent);
 }
 
 .marquee[data-moving] > span {
@@ -407,10 +525,6 @@ html[data-input="key"] .now-copy {
 
 @media (max-width: 999px) {
   .now-playing {
-    --t0: translateY(100%);
-    --t1: translateY(100%);
-    --o0: 1;
-    --o1: 1;
     overscroll-behavior: none;
   }
 }

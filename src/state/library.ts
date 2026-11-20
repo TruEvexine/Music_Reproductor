@@ -166,6 +166,7 @@ async function applyMetadata(job: Job, reply: MetadataReply) {
   if (reply.cover?.small && reply.cover.large) {
     const { hash, small, large, master, largeSide } = reply.cover;
     await storage.write("covers", [{ hash, small, large, master, largeSide }]);
+    rememberCovers([hash]);
   }
   const lyrics = reply.lyrics ?? (await lyricsFile(job.lrc));
   await storeLyrics(track, lyrics);
@@ -401,9 +402,18 @@ export const library = {
   },
   /** Carga lo guardado. Rápido: una lectura de cada tabla, sin tocar archivos ni permisos de escritura. */
   async init() {
-    const [savedRoots, savedTracks, savedEdits] = await Promise.all([storage.list<LibraryRoot>("roots"), storage.list<Track>("tracks"), storage.list<TrackEdit>("edits")]);
+    const [savedRoots, read, savedEdits, storedCovers] = await Promise.all([
+      storage.list<LibraryRoot>("roots"),
+      storage.list<Track>("tracks"),
+      storage.list<TrackEdit>("edits"),
+      storage.keys("covers"),
+    ]);
     for (const root of savedRoots) roots.set(root.id, root);
     for (const edit of savedEdits) edits.set(edit.id, edit);
+    // Pistas que apuntan a una portada que no llegó a guardarse: sin hash hasta releerlas (así la portada aparece al llegar, sin recargar).
+    const stored = storedCovers && new Set(storedCovers);
+    const lost = new Set(read.filter((track) => stored && track.coverHash && !stored.has(track.coverHash)).map((track) => track.id));
+    const savedTracks = read.map((track) => (lost.has(track.id) ? { ...track, coverHash: undefined } : track));
     rememberCovers(savedTracks.flatMap((track) => (track.coverHash ? [track.coverHash] : [])));
     useLibrary.setState((state) => ({ tracks: [...savedTracks.map(withEdit), ...state.tracks], ready: true }));
     publishRoots();
@@ -417,8 +427,12 @@ export const library = {
     // Permisos después de pintar: queryPermission no muestra nada al usuario.
     await Promise.all(savedRoots.map(async (root) => access.set(root.id, await localLibrary.access(root))));
     publishRoots();
-    // Lecturas que una recarga interrumpió: se retoman donde hay acceso.
-    const interrupted = savedTracks.filter((track) => track.metadataStatus === "loading" && access.get(track.rootId ?? "") === "granted");
+    // Se vuelven a leer, donde hay acceso: lo que una recarga interrumpió, lo que falló (tiempo agotado, worker caído) y lo que apunta a una portada
+    // que no se llegó a guardar. El escaneo por diferencias no las relee (el archivo no cambió) y las copias privadas no se reescanean.
+    // shortcut: un archivo que falla siempre se reintenta en cada arranque; si molesta, guardar cuándo falló.
+    const interrupted = savedTracks.filter(
+      (track) => (track.metadataStatus === "loading" || track.metadataStatus === "error" || lost.has(track.id)) && access.get(track.rootId ?? "") === "granted",
+    );
     if (interrupted.length > 0) {
       const jobs = await Promise.all(
         interrupted.map(async (track) => ({ id: track.id, file: await localLibrary.readFile(roots.get(track.rootId!)!, track.path).catch(() => new Blob()) })),

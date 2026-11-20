@@ -221,10 +221,44 @@ En un Android de gama media o baja, con la grabación de pantalla del sistema (o
 
 **¿Se puede construir encima la transición guiada por el dedo (A1)?** Sí, con la condición que pedía ya cumplida: tras la precarga (o tras la primera apertura) el reproductor está montado y abrir no tiene tareas largas, así que el gesto puede empezar moviendo algo que ya existe. Faltará: quitar `data-closed` al primer `pointermove` (un cambio de atributo, sin montaje) y llevar el `transform` en línea como ya hace el cierre por arrastre; el caso del primer segundo tras la primera pista, antes de la precarga, montaría en el gesto. Los 1–3 cuadros caídos que quedan al abrir son de Chromium sin GPU: hay que confirmarlo en un Android de gama media (flujos 1 y 2 de §4).
 
-## 6. Límites de esta auditoría
+## 6. N8: transformación barra ↔ reproductor grande, medida (2026-11-18)
+
+| Commit | Qué |
+|---|---|
+| `d3a4cc5` | Acento: el color más vivo y abundante de la portada (sector de tono con más croma²), croma 0,11–0,19 y la luminosidad que da ≥ 4,5:1 sobre `--surface-3`; grises y casi monocromas, el de la app. |
+| `fda8a8a` | A1: `ui/playerMorph.ts`. La tarjeta crece desde la barra, la portada viaja en arco, los controles llegan, un halo del acento nace de la miniatura y la barra inferior se apaga. Arrastre en móvil (el dedo es el avance; al soltar deciden velocidad y distancia; se agarra a mitad) y la misma transformación por tiempo al tocar, con ⌄, Escape, atrás y en escritorio. |
+| `ec64ade` | A2 (color): el mini en negro profundo teñido por la portada, con fundido del tinte al cambiar de pista. |
+| `db55656` | A3: píldora del color de la portada que se desliza bajo la pestaña activa. |
+| (este) | Medición, `scripts/medir-gestos.mjs`, y lo que salió de ella (abajo). |
+
+**Método**, el de §2: build de producción con `vite preview`, Chromium sin ventana, CPU 4×, 390×844 táctil DPR 2 y 1440×900, una traza por gesto desde el primer contacto hasta 700 ms después de soltar. Los gestos son eventos táctiles de CDP (que el navegador convierte en Pointer Events). Lento: 560 px en 60 pasos de 16 ms. Rápido: 160–200 px en 6 pasos de 8 ms. Interrumpido: sube 360 px y vuelve al punto de partida. Toque: el mini y ⌄. Con la reproducción en pausa, porque las pistas de prueba duran 6–8 s y su final caía dentro de las trazas. Para que la carga del equipo (un 45 % de CPU de fondo durante la sesión) no decida, N8-0 (`f2bed44`, en un worktree y otro puerto) y N8 se midieron **alternados**: 3 vueltas de 2 pasadas cada uno, 6 muestras por fila. «Caídos» = `STATE_DROPPED` de `PipelineReporter`: mediana (peor) / cuadros con actualización.
+
+| Gesto | N8-0 (antes): tareas largas · caídos | N8 (ahora): tareas largas · caídos | Layout por gesto (ahora) |
+|---|---|---|---|
+| Móvil: arrastre lento, abrir | no existía | 1 de 77 ms en 6 · 4 (6) / 321 | 7 (8 ms) |
+| Móvil: arrastre lento, cerrar | (la hoja bajaba entera) no comparable | ninguna · 0 (1) / 222 | 6 (6 ms) |
+| Móvil: arrastre rápido, abrir | no existía | ninguna · 1 (1) / 69 | 5 (6 ms) |
+| Móvil: arrastre rápido, cerrar | no comparable | ninguna · 1 (2) / 55 | 6 (6 ms) |
+| Móvil: arrastre interrumpido | no existía | 59, 61, 65 ms en 3 de 6 · 3 (4) / 201 | 5 (4 ms) |
+| Móvil: toque, abrir | 54, 57 ms · 5 (8) / 86 | ninguna · 3 (3) / 63 | 5 (6 ms) |
+| Móvil: toque, cerrar (⌄) | ninguna · 1 (1) / 48 | ninguna · 3 (4) / 42 | 7 (8 ms) |
+| Escritorio: clic, abrir (sin arrastre) | 51, 52, 54 ms · 5 (5) / 90 | ninguna · 3 (4) / 92 | 7 (14 ms) |
+| Escritorio: clic, cerrar (⌄) | ninguna · 2 (2) / 51 | ninguna · 1 (1) / 47 | 6 (6 ms) |
+
+**Lectura.**
+
+- **Layout por cuadro: ninguno.** 5–8 layouts por gesto, los mismos que antes y casi todos de React al cambiar la URL. Las medidas se toman una vez al empezar. Por cuadro solo se escriben `transform` y `opacity` en línea (arrastre) o corre una animación WAAPI en el compositor (lo guiado por tiempo y el final de un arrastre).
+- **Objetivo cumplido** (sin tareas largas y ≤ 2 caídos) en: arrastre lento para cerrar, arrastre rápido para abrir y para cerrar, y cerrar en escritorio. **Mejor que N8-0 sin llegar** en abrir con un toque (3 caídos frente a 5, sin las tareas de 54–57 ms) y abrir en escritorio (3 frente a 5, sin las de 51–54 ms). **Peor que N8-0** en cerrar con ⌄ en móvil (3 frente a 1): antes se animaba una sola capa y ahora cinco. **Sin cumplir** en el arrastre lento de apertura (4 de mediana) y el interrumpido (3, con tareas de ≈ 60 ms en la mitad de las pasadas).
+- **De qué están hechas las tareas que quedan** (`DESGLOSE=1`): `Commit → LayerTreeHost::DoUpdateLayers` de 23–65 ms dentro de un cuadro, que es la entrega de la textura del lienzo WebGL del ambiente en Chromium sin GPU (WebGL por software). Varían mucho de una corrida a otra; en una de 3 pasadas no apareció ninguna. Hay que confirmarlas en un teléfono (flujo 1 de §4).
+- **Qué se cambió por lo medido**: (1) la URL se pone al día un cuadro después de arrancar la animación (en los botones y al soltar un arrastre). Con la URL primero, el render de React retrasaba la entrega de la animación al compositor, y al soltar caía dentro de un cuadro junto con la pintura (60–69 ms). (2) Abrir por la URL (Escape, atrás) mide en el cuadro siguiente: medir justo después del cambio de DOM de React forzaba un recálculo de estilo de 14–18 ms dentro del toque. (3) El contenido del mini no se anima: la superficie, opaca y del mismo color, lo tapa en el primer 12 %, y eran 4–6 capas más que crear en el primer cuadro.
+- **Lo que se probó y se descartó**: `will-change` en las partes durante el arrastre (crear 13 capas al empezar era una tarea de 60–99 ms) y en el halo (un `DoUpdateLayers` de unos 95 ms al acabar el arrastre interrumpido). También apagar el lienzo durante el arrastre: sin diferencia que se distinga del ruido.
+- **La luz que nace de la miniatura se queda.** Con el halo y el recorte de la hoja quitados, la comparación alternada en escritorio no sale mejor (tareas de 50–82 ms y 7–12 caídos en las dos variantes, alternadas en 3 vueltas). Lo que pesa en escritorio es el lienzo: sin él, el clic de abrir no tiene tareas largas y pierde 2 cuadros. El lienzo ya estaba en N8-0 y no se quitó.
+
+## 7. Límites de esta auditoría
 
 - **Sin dispositivo real.** La CPU 4× es una emulación en un PC, y Chromium sin ventana dibuja sin GPU, así que los cuadros caídos del compositor pueden ser más o menos que en un teléfono.
 - **El arrastre táctil sintético no desplazaba** la lista en Chromium sin ventana (ni `synthesizeScrollGesture` ni `dispatchTouchEvent`), así que el desplazamiento en móvil se midió con la rueda. Por eso la fila «con metadatos en curso» del móvil es en realidad la página quieta: las 9 tareas largas son solo los lotes de metadatos.
 - La causa del `compositeFailed` de la salida de la cola no estaba confirmada; apareció en una de dos pasadas. Resuelto en §5 (`0e00666`).
 - No se revisó cada componente en sus seis estados (7.1). A dónde vuelve el foco al cerrar el reproductor y la cola (6.3): resuelto y con prueba en §5 (`af123fe`).
 - WebKit (iPhone) no se probó.
+- N8 (§6): sin dispositivo; Chromium sin ventana dibuja el WebGL por software, que es lo que deja las tareas largas que quedan. Chromium sin ventana tampoco genera el clic del primer toque tras un arrastre táctil simulado (pasa igual en N8-0); `medir-gestos.mjs` da un toque neutro antes del toque que mide.

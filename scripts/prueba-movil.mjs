@@ -266,6 +266,63 @@ await page.waitForTimeout(300);
 titles = await page.locator(".queue-row .title").allInnerTexts();
 check("quitar una copia deja la otra y la que suena sigue", JSON.stringify(titles) === JSON.stringify([A, M, N]) && (await nowTitle()) === A, titles.join(" | "));
 await closeQueue();
+
+// ───────────── Mini reproductor: deslizar a los lados cambia de pista con vista previa ─────────────
+{
+  await settle();
+  await row(0).locator(".row-main").tap(); // cola = la lista: Amanecer → Marea → Noventa
+  await page.waitForTimeout(500);
+  const pause = page.locator(".bar-mini").getByRole("button", { name: "Pausar" });
+  if (await pause.count()) await pause.tap(); // las pistas duran segundos: en pausa no cambian solas
+  await page.waitForTimeout(300);
+  const first = await nowTitle();
+  const bar = await center(page.locator(".bar-track"));
+  const rail = () => page.locator(".bar-slide").evaluate((el) => el.style.getPropertyValue("--dx"));
+  const rest = async () => ["", "0px"].includes(await rail());
+  check("mini: en reposo la siguiente espera fuera del recorte", await page.locator('.bar-slot[data-side="next"]').evaluate((el) => el.getBoundingClientRect().left >= el.closest(".bar-track").getBoundingClientRect().right));
+  // A mitad del gesto entran la portada y el título de la siguiente; la pista aún no cambia.
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: bar.x + 60, y: bar.y }] });
+  for (let i = 1; i <= 8; i++) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: bar.x + 60 - i * 15, y: bar.y + 1 }] });
+    await page.waitForTimeout(16);
+  }
+  const peekMini = await page.locator('.bar-slot[data-side="next"]').evaluate((el) => ({ left: el.getBoundingClientRect().left, edge: el.closest(".bar-track").getBoundingClientRect().right, title: el.querySelector(".peek-title").textContent, cover: Boolean(el.querySelector(".peek-cover")) }));
+  check("mini: a mitad del gesto sigue al dedo y entran la portada y el título de la siguiente", (await rail()) === "-120px" && peekMini.left < peekMini.edge && peekMini.cover && peekMini.title === "Marea de Fase", JSON.stringify(peekMini));
+  check("mini: la pista no cambia hasta soltar", (await nowTitle()) === first && (await page.locator(".bar-mini").getByRole("button", { name: "Reproducir" }).count()) === 1);
+  if (process.env.CAPTURA_MINI) await page.screenshot({ path: process.env.CAPTURA_MINI });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(600);
+  check("mini: al soltar pasado el umbral pasa a la siguiente, sin abrir el reproductor grande", (await nowTitle()) === "Marea de Fase" && (await rest()) && (await count(".now-playing")) === 0, `${await nowTitle()} · ${await rail()}`);
+  await touch({ x: bar.x + 40, y: bar.y }, { x: bar.x + 10, y: bar.y + 2 }, { steps: 6 }); // corto y lento
+  await page.waitForTimeout(500);
+  check("mini: si no pasa el umbral vuelve a su sitio", (await nowTitle()) === "Marea de Fase" && (await rest()));
+  await touch({ x: bar.x + 40, y: bar.y }, { x: bar.x, y: bar.y + 1 }, { steps: 2 }); // 40 px en ~30 ms: decide la velocidad
+  await page.waitForTimeout(600);
+  check("mini: un gesto rápido y corto también pasa (decide la velocidad)", (await nowTitle()) === "Noventa y Seis Mil", await nowTitle());
+  await touch({ x: bar.x - 60, y: bar.y }, { x: bar.x + 100, y: bar.y + 2 }, { steps: 8 });
+  await page.waitForTimeout(600);
+  check("mini: deslizar a la derecha vuelve a la anterior", (await nowTitle()) === "Marea de Fase", await nowTitle());
+  // El arrastre vertical sigue abriendo el reproductor grande, con la misma detección de intención.
+  await touch({ x: bar.x, y: bar.y }, { x: bar.x + 10, y: bar.y - 320 }, { steps: 8 });
+  await page.waitForTimeout(700);
+  check("mini: arrastrar hacia arriba sigue abriendo el reproductor grande", (await count(".now-playing")) === 1 && (await nowTitle()) === "Marea de Fase");
+  await settle();
+  await page.locator('.now-header button[aria-label="Cerrar reproductor"]').tap();
+  await page.waitForTimeout(500);
+  check("mini: el ⌄ lo devuelve a la barra", (await count(".now-playing")) === 0);
+  // Movimiento reducido: sin vista previa; cambia al soltar.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: bar.x + 60, y: bar.y }] });
+  for (let i = 1; i <= 8; i++) {
+    await cdp.send("Input.dispatchTouchEvent", { type: "touchMove", touchPoints: [{ x: bar.x + 60 - i * 15, y: bar.y + 1 }] });
+    await page.waitForTimeout(16);
+  }
+  const still = await rest();
+  await cdp.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+  await page.waitForTimeout(150);
+  check("mini con movimiento reducido: no sigue al dedo y cambia al soltar", still && (await nowTitle()) === "Noventa y Seis Mil" && (await rest()), `${await nowTitle()} · quieto: ${still}`);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
+}
 check("sin errores de página", errors.length === 0, errors.join(" | "));
 await context.close();
 

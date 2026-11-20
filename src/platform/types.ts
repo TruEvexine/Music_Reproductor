@@ -12,6 +12,8 @@ export interface Storage {
   delete(key: string): Promise<void>;
   list<T>(table: Table): Promise<T[]>;
   read<T>(table: Table, key: IDBValidKey): Promise<T | undefined>;
+  /** Solo las claves (sin leer los valores); undefined si no se pudo leer. */
+  keys(table: Table): Promise<IDBValidKey[] | undefined>;
   /** Escribe y borra en una sola transacción. */
   write(table: Table, put: unknown[], remove?: IDBValidKey[]): Promise<void>;
   /** Añade con clave autoincremental (outbox) y la devuelve. */

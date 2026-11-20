@@ -73,7 +73,6 @@ function run(slot: Slot) {
     slot.worker.removeEventListener("message", onMessage);
     slot.worker.removeEventListener("error", onError);
     slot.busy = false;
-    if (reply.cover) knownCovers.add(reply.cover.hash);
     task.resolve(reply);
     run(slot);
   };
@@ -93,7 +92,7 @@ function run(slot: Slot) {
   slot.worker.postMessage({ id, ...task.job } satisfies MetadataJob);
 }
 
-/** Portadas que ya están guardadas: los workers no las vuelven a reducir. */
+/** Portadas que ya están guardadas: los workers no las vuelven a reducir. Solo tras escribirlas: un hash «conocido» sin registro dejaba la pista sin portada para siempre. */
 export function rememberCovers(hashes: Iterable<string>) {
   const fresh = [...hashes].filter((hash) => !knownCovers.has(hash));
   for (const hash of fresh) knownCovers.add(hash);

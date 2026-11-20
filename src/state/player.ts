@@ -309,13 +309,24 @@ export const player = {
 
 // --- Sistema: pantalla de bloqueo, notificación y auriculares. ---
 
-/** Para `?diag=1`: la orden del sistema se anota con su origen justo antes de ejecutarse. */
+/**
+ * Para `?diag=1`, la orden del sistema se anota con su origen justo antes de ejecutarse. Después, en el mismo manejador, se le devuelve el estado
+ * real aunque no haya cambiado: un `play` estando ya en reproducción no cambia nada, y sin respuesta la isla de HyperOS seguía creyendo que estaba
+ * en pausa (mostraba ▶ y cada toque mandaba otro `play`).
+ */
 const fromSystem =
   <A extends unknown[]>(action: string, run: (...args: A) => void) =>
   (...args: A) => {
     engine.trace?.(`origen: mediaSession:${action}`);
     run(...args);
+    publishState(usePlayer.getState());
   };
+
+/** playbackState y posición al sistema (isla, notificación, pantalla de bloqueo), y en `?diag=1` qué se le dijo. */
+function publishState({ isPlaying, position, duration, audio }: PlayerState) {
+  audioSession.setState({ playing: isPlaying, position, duration, rate: audio.speed });
+  engine.trace?.(`estado al sistema: ${isPlaying ? "playing" : "paused"}`);
+}
 
 audioSession.setHandlers({
   play: fromSystem("play", player.play),
@@ -339,8 +350,7 @@ function publishTrack(immediate: boolean) {
 /** Android a veces ignora la ficha fijada antes de que haya reproducción real: se reaplica al empezar a sonar. */
 function republishSession() {
   publishTrack(false);
-  const { isPlaying, position, duration, audio } = usePlayer.getState();
-  audioSession.setState({ playing: isPlaying, position, duration, rate: audio.speed });
+  publishState(usePlayer.getState());
 }
 
 function syncSession(state: PlayerState, previous: PlayerState) {
@@ -353,9 +363,7 @@ function syncSession(state: PlayerState, previous: PlayerState) {
   }
   // La posición se publica al cambiar de estado o de duración, no en cada tic: el sistema la extrapola solo.
   const speed = state.audio.speed;
-  if (state.isPlaying !== previous.isPlaying || state.duration !== previous.duration || speed !== previous.audio.speed || Math.abs(state.position - previous.position) > 2) {
-    audioSession.setState({ playing: state.isPlaying, position: state.position, duration: state.duration, rate: speed });
-  }
+  if (state.isPlaying !== previous.isPlaying || state.duration !== previous.duration || speed !== previous.audio.speed || Math.abs(state.position - previous.position) > 2) publishState(state);
 }
 let lastSessionCard: string | undefined;
 

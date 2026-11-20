@@ -33,12 +33,13 @@ import type { Track } from "../core/track";
 import { usePaletteOf } from "../state/covers";
 import { library, useLibrary } from "../state/library";
 import { player, usePlayer } from "../state/player";
-import { Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
+import { ColorFade, Cover, Dialog, icon, IconButton, iconSmall } from "./parts";
 import { closePanel, openPanel } from "./router";
 import { ActionSheet } from "./ActionSheet";
 import { EditDialog } from "./EditDialog";
 import { backdropPreview } from "./Backdrop";
-import { SwipeRow, useCoverSwipe, useDragDismiss } from "./gestures";
+import { SwipeRow, useCoverSwipe, useDragDismiss, useMorphDrag } from "./gestures";
+import { morphButton, morphTo } from "./playerMorph";
 import { useMedia } from "./useMedia";
 import { Marquee } from "./Marquee";
 import { MenuButton } from "./PlayerMenu";
@@ -137,19 +138,61 @@ export const PlayerBar = memo(function PlayerBar({ queueOpen }: { queueOpen: boo
   const track = useCurrentTrack();
   const isPlaying = usePlayer((state) => state.isPlaying);
   const progress = usePlayer((state) => (state.duration > 0 ? (state.position / state.duration) * 100 : 0));
+  const drag = useMorphDrag("open"); // móvil: arrastrar hacia arriba abre; tocar también
+  // Móvil: deslizar a los lados cambia de pista con vista previa (el mismo carrusel que la portada del grande). Lo vertical es de `drag`.
+  const wide = useMedia("(min-width: 1000px)");
+  const neighbors = useNeighbors();
+  const slide = useRef<HTMLSpanElement>(null);
+  const swipe = useCoverSwipe(slide, {
+    onNext: neighbors.next && player.next,
+    onPrevious: neighbors.previous && neighbors.previousKey ? () => player.playEntry(neighbors.previousKey!) : undefined,
+    resetKey: neighbors.key,
+    reducedPreview: false,
+  });
   if (!track) return null;
+  // Cada lado lleva la clave de su entrada de la cola: la vecina que llega al centro es el mismo nodo (su portada no parpadea). Las vecinas usan
+  // otras clases (peek-*): `.bar-track .title` y `.bar-cover` siguen siendo solo la actual (pruebas y playerMorph).
+  const slots = [
+    ["current", track, neighbors.key],
+    ...(wide
+      ? []
+      : ([
+          ["next", neighbors.next, neighbors.nextKey],
+          ["prev", neighbors.previous, neighbors.previousKey === neighbors.nextKey ? `prev:${neighbors.previousKey}` : neighbors.previousKey],
+        ] as const)),
+  ] as const;
   return (
-    <footer aria-label="Reproductor" className="player-bar">
+    <footer aria-label="Reproductor" className="player-bar" {...drag}>
+      <ColorFade className="bar-fade" />
       <span aria-hidden="true" className="bar-progress" style={{ "--progress": `${progress}%` } as CSSProperties} />
-      <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => openPanel("player")} type="button">
-        <Cover className="bar-cover" seed={trackCoverSeed(track)} hash={track.coverHash} />
-        <span className="bar-copy">
-          <span className="title">
-            <Marquee>{track.title}</Marquee>
-          </span>
-          <span className="subtitle">
-            <Marquee>{track.artist}</Marquee>
-          </span>
+      <button aria-label={`Abrir reproductor: ${track.title}`} className="bar-track" onClick={() => morphButton(1, () => openPanel("player"))} type="button" {...(wide ? {} : swipe)}>
+        <span className="bar-slide" ref={slide}>
+          {slots.map(([side, item, key]) => {
+            if (!item) return null;
+            if (side === "current")
+              return (
+                <span className="bar-slot" key={key ?? "current"}>
+                  <Cover className="bar-cover" seed={trackCoverSeed(item)} hash={item.coverHash} />
+                  <span className="bar-copy">
+                    <span className="title">
+                      <Marquee>{item.title}</Marquee>
+                    </span>
+                    <span className="subtitle">
+                      <Marquee>{item.artist}</Marquee>
+                    </span>
+                  </span>
+                </span>
+              );
+            return (
+              <span aria-hidden="true" className="bar-slot" data-side={side} key={key}>
+                <Cover className="peek-cover" seed={trackCoverSeed(item)} hash={item.coverHash} />
+                <span className="bar-copy">
+                  <span className="peek-title marquee">{item.title}</span>
+                  <span className="peek-sub marquee">{item.artist}</span>
+                </span>
+              </span>
+            );
+          })}
         </span>
       </button>
       <div className="bar-center">
@@ -235,12 +278,17 @@ export function NowPlaying({ backdrop, closing, closed, queueOpen }: { backdrop:
   const open = !closing && !closed;
   const hasTrack = Boolean(useCurrentTrack());
   const sheet = useRef<HTMLElement>(null);
-  const drag = useDragDismiss(sheet, closePanel, { touchOnly: true }); // arrastrar hacia abajo cierra; el botón ⌄ y Escape siguen
+  const drag = useMorphDrag("close"); // arrastrar hacia abajo lo devuelve a la barra; el botón ⌄, Escape y atrás siguen
   const wide = useMedia("(min-width: 1000px)");
   const closeButton = useRef<HTMLButtonElement>(null);
   const hidden = useRef(false);
   hidden.current = Boolean(closed);
   usePanelFocus(sheet, closeButton, open, Boolean(closed));
+  // Abrir y cerrar por la URL (toque, Escape, atrás): la misma transformación desde la barra, guiada por tiempo. Si un arrastre ya la
+  // llevó a su sitio, no hace nada.
+  useLayoutEffect(() => {
+    if (sheet.current && (open || closing)) morphTo(sheet.current, open ? 1 : 0);
+  }, [open, closing, hasTrack]);
   useEncounter("player-touch", open);
   useEncounter("player-pointer", open);
   if (!hasTrack) return null;
@@ -259,7 +307,9 @@ export function NowPlaying({ backdrop, closing, closed, queueOpen }: { backdrop:
       ref={sheet}
     >
       <PanelHidden.Provider value={Boolean(closed)}>
+        <span aria-hidden="true" className="now-surface" />
         {backdrop}
+        <span aria-hidden="true" className="now-bloom" />
         <PlayerContent closeButton={closeButton} hidden={hidden} queueOpen={queueOpen} />
       </PanelHidden.Provider>
     </section>
@@ -301,14 +351,14 @@ const PlayerContent = memo(function PlayerContent({ closeButton, hidden, queueOp
   if (!track) return null;
   return (
     <>
-      <span aria-hidden="true" className="now-grabber" />
       <header className="now-header">
-        <IconButton label="Cerrar reproductor" onClick={closePanel} ref={closeButton}>
+        <IconButton label="Cerrar reproductor" onClick={() => morphButton(0, closePanel)} ref={closeButton}>
           <ChevronDown {...icon} />
         </IconButton>
         <div className="now-actions">
           <IconButton label="Editar información" onClick={() => setEditingId(track.id)}>
-            <Pencil {...icon} />
+            {/* A 20 px: en diagonal llena su caja entera (tinta 20 × 20 a 22 px) y pesaba más que el micrófono, la cola y el menú de al lado. */}
+            <Pencil {...icon} size={20} />
           </IconButton>
           {track.hasLyrics && (
             <IconButton label="Letra" onClick={() => setLyrics(true)}>
